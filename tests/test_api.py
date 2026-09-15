@@ -9,6 +9,7 @@ import xpublish
 from fastapi.testclient import TestClient
 
 from xpublish_erddap import ErddapPlugin
+from xpublish_erddap.catalog import check_axes
 
 
 @pytest.fixture(scope="session")
@@ -136,3 +137,32 @@ def test_unsupported_filetype_is_400(client):
 def test_bad_constraint_is_400(client):
     resp = client.get("/erddap/griddap/testgrid.csv?tos[0][0]")
     assert resp.status_code == 400
+
+
+def test_non_monotonic_axis_is_refused_like_erddap(grid_dataset):
+    """ERDDAP refuses non-monotonic axes; serving them corrupts index ranges."""
+    broken = grid_dataset.copy()
+    times = broken.time.values.copy()
+    times[-1] = times[0]  # duplicate, breaking monotonicity
+    broken = broken.assign_coords(time=times)
+
+    rest = xpublish.Rest({"broken": broken}, plugins={"erddap": ErddapPlugin()})
+    body = TestClient(rest.app).get("/erddap/griddap/index.csv").text
+    assert "broken" not in body
+
+    lax = xpublish.Rest(
+        {"broken2": broken},
+        plugins={"erddap": ErddapPlugin(strict_axes=False)},
+    )
+    body = TestClient(lax.app).get("/erddap/griddap/index.csv").text
+    assert "broken2" in body
+
+
+def test_check_axes_reports_the_break():
+    t = pd.to_datetime(["2020-01-01", "2020-01-03", "2020-01-02"])
+    ds = xr.Dataset({"v": ("time", [1.0, 2.0, 3.0])}, coords={"time": t})
+    problems = check_axes(ds, ("time",))
+    assert len(problems) == 1
+    assert problems[0].axis == "time"
+    assert "not strictly monotonic" in problems[0].reason
+    assert "index 1" in problems[0].reason

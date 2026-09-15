@@ -8,6 +8,7 @@ datasets -- one per distinct dimension signature.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 
@@ -15,7 +16,19 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-__all__ = ["ErddapDataset", "REQUIRED_GLOBALS", "build_catalog", "sanitize_id"]
+__all__ = [
+    "AxisProblem",
+    "ErddapDataset",
+    "REQUIRED_GLOBALS",
+    "build_catalog",
+    "check_axes",
+    "sanitize_id",
+]
+
+logger = logging.getLogger("uvicorn")
+
+#: An axis needs at least two values before monotonicity means anything.
+_MIN_AXIS_LEN = 2
 
 #: Global attributes ERDDAP requires on every dataset.
 REQUIRED_GLOBALS = (
@@ -130,6 +143,57 @@ _AXIS_ALIASES = {
 }
 
 
+@dataclass(frozen=True)
+class AxisProblem:
+    """An axis that ERDDAP would reject."""
+
+    axis: str
+    reason: str
+
+    def __str__(self) -> str:
+        """Human-readable description."""
+        return f"axis {self.axis!r}: {self.reason}"
+
+
+def check_axes(ds: xr.Dataset, dims: tuple[str, ...]) -> list[AxisProblem]:
+    """Find axes ERDDAP would refuse.
+
+    ERDDAP requires every axis to be strictly monotonic. Serving a
+    non-monotonic axis anyway is worse than refusing: coordinate-value
+    requests still look right (nearest-match lands on the first occurrence)
+    while index ranges spanning the break silently return a series that jumps
+    backwards in time, with no error for the user to notice.
+    """
+    problems: list[AxisProblem] = []
+    for dim in dims:
+        if dim not in ds:
+            continue
+        values = np.asarray(ds[dim].values)
+        if values.size < _MIN_AXIS_LEN:
+            continue
+        numeric = (
+            values.astype("datetime64[ns]").astype("int64")
+            if np.issubdtype(values.dtype, np.datetime64)
+            else values.astype("float64")
+        )
+        diffs = np.diff(numeric)
+        if (diffs > 0).all() or (diffs < 0).all():
+            continue
+        bad = int(np.flatnonzero(diffs <= 0)[0]) if (diffs <= 0).any() else 0
+        n_dup = int(values.size - np.unique(values).size)
+        problems.append(
+            AxisProblem(
+                axis=dim,
+                reason=(
+                    f"not strictly monotonic; first break at index {bad} "
+                    f"({values[bad]} -> {values[bad + 1]}), "
+                    f"{n_dup} duplicate value(s) of {values.size}"
+                ),
+            ),
+        )
+    return problems
+
+
 def _axis_units(name: str, da: xr.DataArray) -> str:
     """Units ERDDAP would infer for an axis that has none declared."""
     if np.issubdtype(getattr(da, "dtype", np.dtype("O")), np.datetime64):
@@ -186,6 +250,7 @@ def build_catalog(
     ds: xr.Dataset,
     *,
     metadata: dict | None = None,
+    strict_axes: bool = True,
 ) -> list[ErddapDataset]:
     """Split one xarray Dataset into ERDDAP-compatible datasets.
 
@@ -199,6 +264,9 @@ def build_catalog(
         ds: the source dataset.
         metadata: extra global attributes to merge in (the equivalent of
             ERDDAP's ``datasets.xml`` ``addAttributes``).
+        strict_axes: when true (the default, matching ERDDAP), datasets whose
+            axes are not strictly monotonic are dropped from the catalog with
+            a logged warning rather than served with silently wrong results.
 
     Returns:
         One ``ErddapDataset`` per dimension signature, largest group first.
@@ -235,6 +303,22 @@ def build_catalog(
         for key, value in _FALLBACK_GLOBALS.items():
             attrs.setdefault(key, value)
         sub.attrs = attrs
+
+        problems = check_axes(sub, sig)
+        if problems:
+            detail = "; ".join(str(p) for p in problems)
+            if strict_axes:
+                logger.warning(
+                    "ERDDAP: refusing dataset %r -- %s. "
+                    "Fix the source data, or pass strict_axes=False to serve "
+                    "it anyway (index ranges spanning the break will be wrong).",
+                    dataset_id, detail,
+                )
+                continue
+            logger.warning(
+                "ERDDAP: serving dataset %r with a bad axis -- %s",
+                dataset_id, detail,
+            )
 
         out.append(
             ErddapDataset(

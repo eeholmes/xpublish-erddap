@@ -95,10 +95,20 @@ scheme. Four cases found the hard way, all covered by tests:
 4. `actual_range` must be rendered `"min, max"`, not Python's `"[min, max]"`,
    or `rerddap` silently coerces it to `NA`.
 
-One further constraint is structural rather than cosmetic: an ERDDAP dataset is
-a single rectangular hypercube, so a source whose variables have different
+Two further constraints are structural rather than cosmetic:
+
+**One hypercube per dataset.** An ERDDAP dataset has a single set of axes that
+every data variable shares, so a source whose variables have differing
 dimensions maps to *several* ERDDAP datasets. `catalog.build_catalog` does that
-split, suffixing the extra datasets with their distinguishing dimension.
+split, suffixing the extra datasets with their distinguishing dimension. Tested
+against a real CEFI group of 92 variables, which splits into three.
+
+**Axes must be strictly monotonic.** ERDDAP refuses a dataset whose axes are
+not, and so does this package (`strict_axes=True`, the default), logging which
+axis broke and where. Serving such data anyway is worse than refusing it:
+coordinate-value requests still look correct, because nearest-match lands on the
+first occurrence, while index ranges spanning the break silently return a series
+that jumps backwards in time. Pass `strict_axes=False` to override.
 
 ## Demos
 

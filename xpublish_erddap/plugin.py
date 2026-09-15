@@ -53,6 +53,9 @@ class ErddapPlugin(Plugin):
     #: Global attributes merged into every dataset (ERDDAP's ``addAttributes``).
     metadata: dict = {}
 
+    #: Drop datasets whose axes are not strictly monotonic, as ERDDAP does.
+    strict_axes: bool = True
+
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:  # noqa: ARG002, PLR0915
         """Create the ERDDAP router.
@@ -73,7 +76,12 @@ class ErddapPlugin(Plugin):
             out: dict[str, ErddapDataset] = {}
             for source_id in _resolve(request, _dataset_ids_dep):
                 ds = _resolve(request, _dataset_dep, source_id)
-                for entry in build_catalog(source_id, ds, metadata=plugin.metadata):
+                entries = build_catalog(
+                    source_id, ds,
+                    metadata=plugin.metadata,
+                    strict_axes=plugin.strict_axes,
+                )
+                for entry in entries:
                     out[entry.dataset_id] = entry
             if cache is not None:
                 cache.put(key, out, 99999)
