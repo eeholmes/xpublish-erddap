@@ -104,7 +104,8 @@ def test_stride_is_honoured(client):
 def test_netcdf_roundtrip(client):
     resp = client.get("/erddap/griddap/testgrid.nc?tos[0:1:2][0:1:2][0:1:1]")
     assert resp.headers["content-type"] == "application/x-netcdf"
-    ds = xr.open_dataset(io.BytesIO(resp.content))
+    assert resp.content[:3] == b"CDF", "ERDDAP serves netCDF-3 classic for .nc"
+    ds = xr.open_dataset(io.BytesIO(resp.content), engine="scipy")
     assert ds.tos.shape == (3, 3, 2)
     assert ds.time.dtype.kind == "M"
 

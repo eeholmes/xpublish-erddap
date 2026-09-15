@@ -294,7 +294,10 @@ def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
         if _is_time(out[name]):
             encoding[name] = {"units": TIME_UNITS, "dtype": "float64"}
             out[name].attrs.pop("units", None)
-    return out.to_netcdf(encoding=encoding)
+    # Pin the engine: xarray's default for an in-memory write depends on which
+    # backends happen to be installed, which is not reproducible. scipy writes
+    # netCDF-3 classic, which is also what ERDDAP returns for ".nc".
+    return out.to_netcdf(encoding=encoding, engine="scipy")
 
 
 def info_table(ed) -> tuple[list[str], list[list]]:

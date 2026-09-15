@@ -2,4 +2,4 @@ xpublish>=0.4.0
 xarray
 numpy
 pandas
-netcdf4
+scipy
