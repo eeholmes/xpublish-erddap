@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xpublish-erddap"
+version = "0.1.0.dev0"
+description = "ERDDAP-compatible griddap router for Xpublish"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["xarray", "xpublish", "erddap", "griddap", "icechunk", "zarr"]
+license = "Apache-2.0"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+test = ["pytest", "httpx", "pandas"]
+demo = ["pydap", "uvicorn"]
+
+[project.entry-points."xpublish.plugin"]
+erddap = "xpublish_erddap.plugin:ErddapPlugin"
+
+[tool.setuptools]
+packages = ["xpublish_erddap"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.ruff.lint]
+select = ["A", "B", "C4", "D", "E", "F", "I", "PL", "UP", "W"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = ["D", "PLR2004"]
+"demo/*" = ["D", "E402"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
