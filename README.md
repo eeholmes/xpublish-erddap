@@ -1,5 +1,8 @@
 # xpublish-erddap
 
+[![tests](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml/badge.svg)](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Prototype.** An ERDDAP-compatible `griddap` router for [Xpublish](https://github.com/xpublish-community/xpublish),
 so that existing **[erddapy](https://ioos.github.io/erddapy/)** and
 **[rerddap](https://docs.ropensci.org/rerddap/)** code keeps working when the data
