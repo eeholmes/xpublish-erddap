@@ -35,26 +35,7 @@ OUR_SERVER = "http://testserver/erddap"
 
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
-KNOWN: list[tuple[str, str]] = [
-    (r"\.das$", "numbers not in ERDDAP's format, e.g. 4.734288e+8"),
-    (
-        r"/index\.(csv|json)$",
-        "info: Data Type is always String; dimension Value lacks "
-        "evenlySpaced/averageSpacing; variable Value lacks its dimensions; "
-        "newlines in values not escaped as \\n",
-    ),
-    (
-        r"\.ncml$",
-        "globals belong directly under <netcdf>, with type=, not in an "
-        "NC_GLOBAL group; location should be the dataset URL",
-    ),
-    (r"^CRW\S* \S*\.json\?", "time column's columnType should be String"),
-    (
-        r"\.csv0?p?\?analysed_sst\[last-1:last\]\[100\]\[200\]$",
-        "missing values: CSV should say NaN",
-    ),
-    (r"\.dds\?", "a data request's DDS should list only the GRIDs, not the axes"),
-]
+KNOWN: list[tuple[str, str]] = []
 
 #: The same, for media-type differences.
 KNOWN_MEDIA: list[tuple[str, str]] = [

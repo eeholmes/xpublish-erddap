@@ -94,6 +94,38 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Info, NcML, DAS, small details (2026-09-16)
+
+All 130 content comparisons now match; `KNOWN` is empty. Left on purpose:
+`KNOWN_MEDIA` (ERDDAP 2.31 serves `.das` as text/csv) and the erddapy
+`response="opendap"` xfail (#2). What ERDDAP does, as now implemented:
+
+- **Numbers** are Java `toString`: shortest digits at the value's own
+  precision, scientific below 1e-3 and from 1e7 (`4.734288E8`, `-1.0E34`);
+  the DAS spells the exponent `e+8`. Used in info, NcML, DAS and CSV data.
+- **Float32 axes are rounded to 7 significant digits** before ERDDAP derives
+  `actual_range`, `geospatial_*`, `*most_*` and the spacing (Java
+  `Math2.niceDouble(f, 7)`). Found on erdMH1chla8day (89.979164 ->
+  89.97916); no effect on the 5-digit CRW grids. `catalog.nice_doubles`.
+- **Info**: attribute Data Type from the value (`double`/`float`/`int`/...,
+  Python int -> `int`); dimension Value `nValues=N, evenlySpaced=..,
+  averageSpacing=..` with average = (last - first)/(n - 1), negative when
+  descending; time spacing as `30 days 10h 27m 16s` / `1 day 0h 6m 4s`
+  (zero parts and sub-day spacing are inferred, not observed); evenlySpaced
+  tolerance is a guess (1e-5 relative for float32, 1e-9 otherwise). Variable
+  Value is its dimension list. CSV writes a newline as the two characters `\n`.
+- **NcML**: globals directly under `<netcdf>`, then dimensions, then
+  variables; `type=` on non-String attributes; values space-separated;
+  `'` escaped as `&#39;`. ERDDAP's `location` drops `/erddap`; we give the
+  working URL (normalisation treats them as equal).
+- Every attribute list is sorted ignoring case.
+- `_NCProperties` **is** listed by ERDDAP in DAS/info/NcML but not written
+  into `.nc` (an earlier note here said otherwise).
+- DDS for a data request lists only its GRIDs; axes appear on their own
+  only for the whole dataset or when requested by name.
+- CSV writes missing values as `NaN`; JSON as null, with the time column
+  typed `String`.
+
 ## Subset .nc metadata (2026-09-16)
 
 All 9 `.nc` comparisons now match. In ERDDAP's `.nc` the coverage globals

@@ -143,8 +143,9 @@ class ErddapPlugin(Plugin):
             return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
         def _csv_cell(value) -> str:
-            text = "" if value is None else str(value)
-            if any(c in text for c in ',"\n'):
+            # ERDDAP writes a newline inside a value as the two characters \n
+            text = "" if value is None else str(value).replace("\n", "\\n")
+            if any(c in text for c in ',"'):
                 return '"' + text.replace('"', '""') + '"'
             return text
 
@@ -270,8 +271,9 @@ class ErddapPlugin(Plugin):
             if ext == "das":
                 return PlainTextResponse(formats.das_response(ed, ed.ds))
             if ext == "ncml":
+                base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
                 return Response(
-                    formats.ncml_response(ed),
+                    formats.ncml_response(ed, f"{base}/griddap/{dataset_id}"),
                     media_type="application/xml",
                 )
 
@@ -290,7 +292,12 @@ class ErddapPlugin(Plugin):
 
             if ext == "dds":
                 return PlainTextResponse(
-                    formats.dds_response(ed, sub, parsed.variables),
+                    formats.dds_response(
+                        ed,
+                        sub,
+                        parsed.variables,
+                        all_axes=not query.strip(),
+                    ),
                 )
             if ext == "nc":
                 data = formats.to_netcdf_bytes(ed, sub, parsed.variables)

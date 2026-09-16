@@ -19,6 +19,7 @@ import xarray as xr
 __all__ = [
     "AxisProblem",
     "coverage_globals",
+    "nice_doubles",
     "ErddapDataset",
     "REQUIRED_GLOBALS",
     "build_catalog",
@@ -145,7 +146,8 @@ class ErddapDataset:
         if np.issubdtype(values.dtype, np.datetime64):
             secs = values.astype("datetime64[s]").astype("float64")
             return np.array([secs.min(), secs.max()])
-        return np.array([np.nanmin(values), np.nanmax(values)], dtype=values.dtype)
+        nice = nice_doubles(values)
+        return np.array([np.nanmin(nice), np.nanmax(nice)]).astype(values.dtype)
 
     def missing_required_globals(self) -> list[str]:
         """Required ERDDAP globals that the *source* did not supply.
@@ -249,6 +251,20 @@ def _axis_units(name: str, da: xr.DataArray) -> str:
     return "1"
 
 
+def nice_doubles(values: np.ndarray) -> np.ndarray:
+    """Axis values as the doubles ERDDAP derives metadata from.
+
+    ERDDAP rounds float32 values to 7 significant digits before computing
+    ``actual_range``, the ``geospatial_*`` bounds and the average spacing
+    (checked against real servers: erdMH1chla8day's latitude 89.979164
+    becomes 89.97916). Other types are used as they are.
+    """
+    values = np.asarray(values)
+    if values.dtype == np.float32:
+        return np.array([float(f"{v:.7g}") for v in values.tolist()])
+    return values.astype("float64")
+
+
 #: ERDDAP's bounding-box globals: axis -> (name of the min, name of the max).
 _MOST = {
     "lat": ("Southernmost_Northing", "Northernmost_Northing"),
@@ -267,11 +283,10 @@ def coverage_globals(
     ``rerddap``'s ``info()`` reads ``time_coverage_start``/``_end`` from the
     globals rather than from the time axis, so these are not optional.
 
-    For the full dataset, bounds are doubles as written (a float32 89.975
-    stays 89.975, not 89.9749984741211) and the resolution is
-    ``(max - min) / (n - 1)``. For a ``subset`` (a ``.nc`` download) ERDDAP
-    gives the subset's bounds in the axis's own dtype and keeps the full
-    dataset's resolution, so no resolution is returned.
+    For the full dataset, bounds are doubles (see ``nice_doubles``) and the
+    resolution is ``|last - first| / (n - 1)``. For a ``subset`` (a ``.nc``
+    download) ERDDAP gives the subset's bounds in the axis's own dtype and
+    keeps the full dataset's resolution, so no resolution is returned.
     """
     out: dict[str, object] = {}
     for dim in dims:
@@ -289,13 +304,14 @@ def coverage_globals(
         for axis, names in _AXIS_ALIASES.items():
             if low not in names:
                 continue
+            nice = nice_doubles(values)
+            lo, hi = float(np.nanmin(nice)), float(np.nanmax(nice))
             if subset:
-                lo, hi = np.nanmin(values), np.nanmax(values)
-            else:
-                lo = float(str(np.nanmin(values)))
-                hi = float(str(np.nanmax(values)))
-                if values.size > 1:
-                    out[f"geospatial_{axis}_resolution"] = (hi - lo) / (values.size - 1)
+                lo, hi = values.dtype.type(lo), values.dtype.type(hi)
+            elif values.size > 1:
+                out[f"geospatial_{axis}_resolution"] = abs(nice[-1] - nice[0]) / (
+                    values.size - 1
+                )
             out[f"geospatial_{axis}_min"] = lo
             out[f"geospatial_{axis}_max"] = hi
             out[f"geospatial_{axis}_units"] = (
@@ -368,9 +384,8 @@ def build_catalog(
         sub = sub.drop_vars([c for c in sub.coords if c not in sig], errors="ignore")
 
         attrs = dict(ds.attrs)
-        # xpublish's id tag and netCDF-4's library stamp are not metadata
-        for internal in ("_xpublish_id", "_NCProperties"):
-            attrs.pop(internal, None)
+        # xpublish tags every dataset with its id; not a real attribute
+        attrs.pop("_xpublish_id", None)
         attrs.update(metadata or {})
         supplied = tuple(k for k in REQUIRED_GLOBALS if k in attrs)
         attrs.update(coverage_globals(sub, sig))
