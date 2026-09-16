@@ -94,6 +94,22 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Copilot review on #15 (2026-09-16)
+
+Accepted: `pipefail` in `parity.yml`; NaN fill never cast to an integer
+dtype; **axis-only `.nc` held the whole data grid** (now only the requested
+axes, bounding-box globals only for those, as ERDDAP does -- checked and
+added to the cases); `_unescape` only for reserved names; table routes
+(catalog/info/search/tabledap) 404 on unknown fileTypes, as ERDDAP does;
+missing-fileType message built from `ALL_EXTENSIONS`.
+
+Rejected: comparing exact error codes. oceanwatch's proxy turns ERDDAP query
+errors into a bare 500; a bad request should not get a 500 from us.
+
+Also seen: ERDDAP 2.31 accepts a reversed axis-only range for one axis but
+fails with a 500 ("index (2) >= size (2)") for two, so its acceptance looks
+unintended. We keep refusing it with a 400.
+
 ## Store-level mount (2026-09-16)
 
 `tests/server.py` mounts a second xpublish app at `STORE_PREFIX`

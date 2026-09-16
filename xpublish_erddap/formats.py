@@ -386,9 +386,18 @@ def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
     time is float64 epoch seconds with ``units`` spelled with a ``Z``.
     """
     keep = [v for v in variables if v not in ed.dims]
-    out = sub[keep] if keep else sub
+    globals_ = dict(ed.globals_)
+    if keep:
+        out = sub[keep]
+        dims = ed.dims
+    else:
+        # an axis-only request: the file holds just those axes, never the
+        # data, and (as in ERDDAP) bounding-box globals only for them
+        dims = tuple(v for v in variables if v in ed.dims)
+        out = xr.Dataset(coords={d: sub[d] for d in dims})
+        globals_ = {k: v for k, v in globals_.items() if not _is_bbox_global(k)}
     out = out.copy()
-    out.attrs = {**ed.globals_, **coverage_globals(out, ed.dims, subset=True)}
+    out.attrs = {**globals_, **coverage_globals(out, dims, subset=True)}
     # the netCDF-4 library's stamp; ERDDAP lists it but does not write it
     out.attrs.pop("_NCProperties", None)
     encoding = {}
@@ -418,6 +427,15 @@ def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
     # backends happen to be installed, which is not reproducible. scipy writes
     # netCDF-3 classic, which is also what ERDDAP returns for ".nc".
     return out.to_netcdf(encoding=encoding, engine="scipy")
+
+
+def _is_bbox_global(key: str) -> bool:
+    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in {
+        "Northernmost_Northing",
+        "Southernmost_Northing",
+        "Easternmost_Easting",
+        "Westernmost_Easting",
+    }
 
 
 def _xml_escape(text: str) -> str:

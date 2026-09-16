@@ -295,3 +295,40 @@ def test_full_dataset_gets_bounding_box_globals(client):
     das = client.get("/erddap/griddap/testgrid.das").text
     assert "Float64 Northernmost_Northing 50.0;" in das
     assert "Float64 Easternmost_Easting 240.0;" in das
+
+
+def test_axis_only_netcdf_holds_only_the_axes(client):
+    """Copilot review: ?time[(last)] must not ship the whole data grid."""
+    resp = client.get("/erddap/griddap/testgrid.nc?time[(last)]")
+    ds = xr.open_dataset(io.BytesIO(resp.content), decode_cf=False)
+    assert list(ds.variables) == ["time"]
+    assert ds.sizes == {"time": 1}
+    assert not any(k.startswith("geospatial_") for k in ds.attrs)
+    assert ds.attrs["time_coverage_start"] == "2020-01-06T00:00:00Z"
+
+
+def test_unknown_table_filetypes_are_404(client):
+    """ERDDAP answers 404 for an unknown fileType on its table routes."""
+    for path in (
+        "/erddap/info/testgrid/index.htmlTable",
+        "/erddap/info/index.foo",
+        "/erddap/search/index.foo?searchFor=test",
+        "/erddap/tabledap/index.foo",
+    ):
+        assert client.get(path).status_code == 404, path
+
+
+def test_missing_filetype_message_lists_every_type(client):
+    detail = client.get("/erddap/griddap/testgrid").json()["detail"]
+    assert "ncml" in detail
+    assert "dods" not in detail
+
+
+def test_integer_variable_with_nan_fill_still_serves_metadata():
+    """Copilot review: a NaN fill cannot be cast to an integer dtype."""
+    ds = xr.Dataset({"n": ("x", np.array([1, 2], dtype="int16"))}, coords={"x": [0, 1]})
+    ds.n.encoding.update({"_FillValue": np.nan, "scale_factor": 0.1})
+    c = TestClient(xpublish.Rest({"ints": ds}, plugins={"erddap": ErddapPlugin()}).app)
+    das = c.get("/erddap/griddap/ints.das")
+    assert das.status_code == 200
+    assert "_FillValue" not in das.text

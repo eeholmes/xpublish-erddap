@@ -34,7 +34,10 @@ def _escape(attrs: dict) -> dict:
 
 
 def _unescape(attrs: dict) -> dict:
-    return {k.removeprefix(_ESCAPE): v for k, v in attrs.items()}
+    return {
+        (k.removeprefix(_ESCAPE) if k.removeprefix(_ESCAPE) in _RESERVED else k): v
+        for k, v in attrs.items()
+    }
 
 
 def block_bounds(

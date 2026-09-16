@@ -169,14 +169,16 @@ def _fill_attrs(da: xr.DataArray) -> dict:
     """
     enc = da.encoding
     out = {}
-    packed = "scale_factor" in enc or "add_offset" in enc
+    floating = da.dtype.kind == "f"
+    packed = floating and ("scale_factor" in enc or "add_offset" in enc)
     for key in ("_FillValue", "missing_value"):
         value = enc.get(key)
         if value is None:
             continue
-        if packed:
-            value = np.nan
-        out[key] = np.asarray(value).astype(da.dtype, copy=False).reshape(-1)[0]
+        value = np.asarray(np.nan if packed else value).reshape(-1)[0]
+        if not floating and np.isnan(value):
+            continue  # an integer variable cannot hold a NaN fill
+        out[key] = value.astype(da.dtype)
     return out
 
 

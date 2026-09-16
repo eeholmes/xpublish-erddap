@@ -86,7 +86,9 @@ def test_matches_real_erddap(slug, manifest, entry):
     ours = client.get(f"/erddap/{entry['path']}")
 
     if entry["status"] != HTTP_OK:
-        # ERDDAP refused; so must we (its error bodies are not compared)
+        # ERDDAP refused; so must we. Neither the body nor the exact code is
+        # compared: oceanwatch's proxy turns ERDDAP's query errors into a bare
+        # 500, and a bad request should not get a 500 from us.
         assert ours.status_code >= HTTP_ERROR, ours.text[:500]
         return
 

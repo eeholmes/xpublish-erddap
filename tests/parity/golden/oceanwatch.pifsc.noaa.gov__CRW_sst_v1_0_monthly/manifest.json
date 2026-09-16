@@ -213,6 +213,30 @@
       "file": "34.dds",
       "status": 200,
       "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.nc?time[(last)]",
+      "file": "35.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.nc?time[(last)],latitude[0:1:1]",
+      "file": "36.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.foo",
+      "file": "37.error",
+      "status": 400,
+      "content_type": "text/html; charset=iso-8859-1"
+    },
+    {
+      "path": "info/CRW_sst_v1_0_monthly/index.foo",
+      "file": "38.error",
+      "status": 404,
+      "content_type": "text/html; charset=iso-8859-1"
     }
   ]
 }

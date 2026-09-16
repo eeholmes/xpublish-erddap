@@ -38,6 +38,8 @@ jobs:
       - name: Capture from the live servers
         shell: bash -l {0}
         run: |
+          # bash -l does not set pipefail; without it tee hides a failed capture
+          set -o pipefail
           python tests/parity/capture.py \
             --out "$RUNNER_TEMP/golden" \
             --compare-to tests/parity/golden \

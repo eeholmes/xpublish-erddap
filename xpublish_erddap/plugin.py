@@ -33,6 +33,9 @@ logger = logging.getLogger("uvicorn")
 ERDDAP_JSON = "application/json;charset=UTF-8"
 
 TABULAR = {"csv", "csvp", "csv0", "json"}
+
+#: File types of the catalog, info and search tables.
+TABLE_EXTENSIONS = {"csv", "json"}
 ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds"}
 
 #: Recognised but not served yet. Kept out of ALL_EXTENSIONS so no error
@@ -132,6 +135,13 @@ class ErddapPlugin(Plugin):
             return parse.unquote_plus(request.url.components[3])
 
         def _table(columns, rows, ext: str, name: str) -> Response:
+            if ext not in TABLE_EXTENSIONS:
+                # ERDDAP answers 404 for an unknown table fileType
+                raise HTTPException(
+                    404,
+                    f"Unsupported fileType=.{ext}; use "
+                    f"{', '.join('.' + e for e in sorted(TABLE_EXTENSIONS))}",
+                )
             if ext == "json":
                 # rerddap asserts this exact content-type string
                 return Response(
@@ -266,7 +276,8 @@ class ErddapPlugin(Plugin):
             if "." not in target:
                 raise HTTPException(
                     400,
-                    f"missing fileType: use {target}.nc, .csv, .json, .dds, .das",
+                    f"missing fileType: use {target}.<type>, one of "
+                    f"{', '.join(sorted(ALL_EXTENSIONS))}",
                 )
             dataset_id, _, ext = target.rpartition(".")
             if ext in PLANNED_EXTENSIONS:

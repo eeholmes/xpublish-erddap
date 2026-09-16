@@ -79,6 +79,12 @@ CASES = [
             "griddap/{id}.csvp?time",
             "griddap/{id}.csvp?latitude[(19.3):1:(19.2)]",
             "griddap/{id}.dds?analysed_sst[0:1:1][0:1:2][0:1:3]",
+            # axis-only .nc holds just the axes (never the data)
+            "griddap/{id}.nc?time[(last)]",
+            "griddap/{id}.nc?time[(last)],latitude[0:1:1]",
+            # unknown fileTypes are refused
+            "griddap/{id}.foo",
+            "info/{id}/index.foo",
         ],
     ),
     # Its current replacement: descending latitude, times stamped on the last

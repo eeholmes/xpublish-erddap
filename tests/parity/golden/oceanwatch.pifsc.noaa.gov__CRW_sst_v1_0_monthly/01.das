@@ -85,8 +85,8 @@ Mon Aug  3 06:00:38 2020: ncatted -O -a valid_min,lon,o,f,0.025 coraltemp_v1.0_2
 Mon Aug  3 06:00:36 2020: ncap2 -O -s where(lon<0) lon=lon+360 coraltemp_v1.0_20200801-0-360.nc coraltemp_v1.0_20200801-0-360.nc
 Mon Aug  3 06:00:34 2020: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 coraltemp_v1.0_20200801.nc coraltemp_v1.0_20200801-0-360.nc
 This is the first version of CoralTemp
-2026-09-16T19:47:37Z (local files)
-2026-09-16T19:47:37Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v1_0_monthly.das";
+2026-09-16T22:06:59Z (local files)
+2026-09-16T22:06:59Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v1_0_monthly.das";
     String id "CoralTemp-v1.0";
     String infoUrl "https://coralreefwatch.noaa.gov/satellite/bleaching5km";
     String institution "NOAA/NESDIS/STAR Coral Reef Watch program";
