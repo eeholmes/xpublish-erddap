@@ -38,6 +38,12 @@ write_to = "xpublish_erddap/_version.py"
 [tool.check-manifest]
 ignore = ["xpublish_erddap/_version.py"]
 
+[tool.ruff]
+# claude/ holds session notes and rough scratch tools, not package code.
+# force-exclude so pre-commit, which passes filenames explicitly, honours it.
+extend-exclude = ["claude"]
+force-exclude = true
+
 [tool.ruff.lint]
 select = ["A", "B", "C4", "D", "E", "F", "I", "PL", "UP", "W"]
 

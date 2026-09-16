@@ -4,6 +4,7 @@ include pyproject.toml
 
 graft xpublish_erddap
 
+prune claude
 prune demo
 prune tests
 prune *.egg-info
