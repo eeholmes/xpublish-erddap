@@ -1,7 +1,9 @@
 check-manifest
+erddapy
 httpx
 netCDF4
 nox
+pooch
 pre-commit
 pydap
 pytest
