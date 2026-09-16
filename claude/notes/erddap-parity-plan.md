@@ -1,6 +1,22 @@
-# Plan: parity with a real ERDDAP (issue #1)
+# Parity with a real ERDDAP (issue #1) -- done
 
-Agreed with EH 2026-09-16. Branch `verify-erddap-parity`.
+Agreed with EH 2026-09-16; **merged as PR #15 on 2026-09-16**, which closed
+#1. The definition of done is a comment on #1. This note is the record of
+what was learned; sections run newest first after "Steps".
+
+How to use what it built:
+
+- `python tests/parity/capture.py [id-substring]` recaptures goldens
+  (network). `--out DIR --compare-to tests/parity/golden` reports drift.
+- A new request shape: add it to `tests/parity/cases.py`, recapture that
+  case, run `tests/test_parity.py`. A difference we keep on purpose goes in
+  `KNOWN`/`KNOWN_MEDIA` with a reason (strict xfail).
+- To see *why* a comparison fails, diff `comparable()` (from
+  `tests/parity/compare.py`) of our body against the golden file; pytest's
+  own assertion output is hard to read for long responses. No helper script
+  is committed.
+- The weekly `parity.yml` workflow has **not run yet** (first run: the
+  Monday after the merge, or start it by hand).
 
 ## What "client code" means here
 
@@ -211,7 +227,7 @@ dtype) and each response formats it. Axis-only requests accept one
 selector, refuse reversed ranges, and print columns side by side padded with
 blanks. 138 pass, 33 xfail remain.
 
-## Step 1 status (2026-09-16)
+## Step 1 status (2026-09-16) -- historical; every item below is now resolved
 
 Built: `tests/parity/` (cases, capture, snapshot, compare) and
 `tests/test_parity.py`; goldens committed (~770 KB); weekly workflow
