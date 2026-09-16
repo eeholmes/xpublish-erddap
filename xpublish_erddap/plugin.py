@@ -32,8 +32,21 @@ logger = logging.getLogger("uvicorn")
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
 
-TABULAR = {"csv", "csvp", "csv0", "json", "htmlTable"}
-ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds", "dods"}
+TABULAR = {"csv", "csvp", "csv0", "json"}
+ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds"}
+
+#: Recognised but not served yet. Kept out of ALL_EXTENSIONS so no error
+#: message advertises them, but answered with 501 and a pointer instead of
+#: the generic "unsupported" 400. ``.dods`` will reuse xpublish-opendap's
+#: encoder (issue #2); until then, OPeNDAP clients should use the store's
+#: OPeNDAP endpoint.
+PLANNED_EXTENSIONS = {
+    "dods": (
+        "OPeNDAP binary (.dods) is planned but not implemented yet "
+        "(https://github.com/eeholmes/xpublish-erddap/issues/2). "
+        "For OPeNDAP access, use the dataset's OPeNDAP endpoint instead."
+    ),
+}
 
 
 def _resolve(request: Request, dep, *args):
@@ -243,6 +256,8 @@ class ErddapPlugin(Plugin):
                     f"missing fileType: use {target}.nc, .csv, .json, .dds, .das",
                 )
             dataset_id, _, ext = target.rpartition(".")
+            if ext in PLANNED_EXTENSIONS:
+                raise HTTPException(501, PLANNED_EXTENSIONS[ext])
             if ext not in ALL_EXTENSIONS:
                 raise HTTPException(
                     400,
@@ -298,6 +313,7 @@ class ErddapPlugin(Plugin):
                     formats.to_csv(ed, sub, parsed.variables, style=ext),
                     media_type="text/csv",
                 )
-            raise HTTPException(501, f"fileType {ext!r} is not implemented yet")
+            # every ALL_EXTENSIONS member is handled above
+            raise AssertionError(ext)  # pragma: no cover
 
         return router

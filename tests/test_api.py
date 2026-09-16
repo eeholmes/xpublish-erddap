@@ -200,3 +200,13 @@ def test_ncml_matches_what_erddapy_parses(client):
         assert el is not None, f"{dim} has no actual_range"
         low, high = el.attrib["value"].split()
         assert float(low) <= float(high)
+
+
+def test_dods_is_planned_not_advertised(client):
+    """Issue #2: .dods answers 501 with a pointer, and no error lists it."""
+    resp = client.get("/erddap/griddap/testgrid.dods")
+    assert resp.status_code == 501
+    assert "issues/2" in resp.json()["detail"]
+    other = client.get("/erddap/griddap/testgrid.htmlTable")
+    assert other.status_code == 400
+    assert "dods" not in other.json()["detail"]

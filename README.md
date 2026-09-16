@@ -93,7 +93,7 @@ d <- griddap("my_dataset", url = "http://localhost:9000/erddap/",
 
 | Endpoint | Purpose |
 | --- | --- |
-| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, csv, csvp, csv0, json, das, dds` |
+| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, ncml, csv, csvp, csv0, json, das, dds`; `.dods` is planned ([#2](https://github.com/eeholmes/xpublish-erddap/issues/2)) |
 | `/erddap/griddap/index.{csv,json}` | dataset catalog |
 | `/erddap/tabledap/index.{csv,json}` | empty catalog (rerddap needs it to classify a dataset) |
 | `/erddap/info/{id}/index.{csv,json}` | variable and attribute table |
