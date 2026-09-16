@@ -123,17 +123,21 @@ class ErddapDataset:
             attrs.setdefault("actual_range", self._actual_range(name))
         return attrs
 
-    def _actual_range(self, name: str) -> str:
-        """ERDDAP-style ``actual_range`` (epoch seconds for time axes)."""
+    def _actual_range(self, name: str) -> np.ndarray | str:
+        """ERDDAP-style ``actual_range``: ``[min, max]`` in the axis's dtype.
+
+        Time axes give float64 epoch seconds. Kept numeric so each response
+        can type and format it (``Float32 actual_range -89.975, 89.975``).
+        """
         if name not in self.dims:  # never materialize a data variable
             return ""
         values = np.asarray(self.ds[name].values)
         if values.size == 0:
             return ""
         if np.issubdtype(values.dtype, np.datetime64):
-            secs = values.astype("datetime64[s]").astype("int64")
-            return f"{float(secs.min())}, {float(secs.max())}"
-        return f"{float(np.nanmin(values))}, {float(np.nanmax(values))}"
+            secs = values.astype("datetime64[s]").astype("float64")
+            return np.array([secs.min(), secs.max()])
+        return np.array([np.nanmin(values), np.nanmax(values)], dtype=values.dtype)
 
     def missing_required_globals(self) -> list[str]:
         """Required ERDDAP globals that the *source* did not supply.
@@ -236,12 +240,14 @@ def _derived_globals(ds: xr.Dataset, dims: tuple[str, ...]) -> dict:
         low = str(dim).lower()
         for axis, names in _AXIS_ALIASES.items():
             if low in names:
-                out[f"geospatial_{axis}_min"] = float(np.nanmin(values))
-                out[f"geospatial_{axis}_max"] = float(np.nanmax(values))
+                # float32 axes: use the value as written (89.975), not its
+                # float64 expansion (89.9749984741211), as ERDDAP does
+                lo = float(str(np.nanmin(values)))
+                hi = float(str(np.nanmax(values)))
+                out[f"geospatial_{axis}_min"] = lo
+                out[f"geospatial_{axis}_max"] = hi
                 if values.size > 1:
-                    out[f"geospatial_{axis}_resolution"] = float(
-                        abs(np.diff(values.astype("float64"))).mean(),
-                    )
+                    out[f"geospatial_{axis}_resolution"] = (hi - lo) / (values.size - 1)
                 out[f"geospatial_{axis}_units"] = (
                     "degrees_north" if axis == "lat" else "degrees_east"
                 )
@@ -310,6 +316,8 @@ def build_catalog(
         sub = sub.drop_vars([c for c in sub.coords if c not in sig], errors="ignore")
 
         attrs = dict(ds.attrs)
+        # xpublish tags every dataset with its id; not a real attribute
+        attrs.pop("_xpublish_id", None)
         attrs.update(metadata or {})
         supplied = tuple(k for k in REQUIRED_GLOBALS if k in attrs)
         attrs.update(_derived_globals(sub, sig))

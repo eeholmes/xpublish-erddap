@@ -33,19 +33,11 @@ HTTP_ERROR = 400
 #: The base URL TestClient requests go to.
 OUR_SERVER = "http://testserver/erddap"
 
-#: Axis-only requests the real ERDDAP answers.
-AXIS_ONLY = (
-    r"\.csvp\?(time\[\(last\)\]|latitude\[0:)"
-    r"|^CRW_sst_v3_1_monthly \S*\.csvp\?latitude\[\(19\.3\)"
-)
-
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
 KNOWN: list[tuple[str, str]] = [
     (
         r"\.das$|\.ncml$|/index\.(csv|json)$",
-        "globals: sorted case-sensitively (ERDDAP ignores case); xpublish's "
-        "_xpublish_id leaks; float32 attributes come out as float64; "
         "_FillValue/missing_value dropped (xarray moves them to .encoding)",
     ),
     (r"\.das$", "numbers not in ERDDAP's format, e.g. 4.734288e+8"),
@@ -60,29 +52,13 @@ KNOWN: list[tuple[str, str]] = [
         "globals belong directly under <netcdf>, with type=, not in an "
         "NC_GLOBAL group; location should be the dataset URL",
     ),
-    (
-        r"^CRW\S* griddap/\S*\.(csv|csvp|csv0|json)\?"
-        r"(analysed_sst|sea_surface_temperature|latitude\[0:)"
-        r"|^CRW_sst_v3_1_monthly \S*\.csvp\?latitude\[\(19\.3\)",
-        "float32 values printed at float64 precision (19.225000381469727 "
-        "instead of 19.225)",
-    ),
     (r"^CRW\S* \S*\.json\?", "time column's columnType should be String"),
     (r"\[last-1:last\]\[100\]\[200\]$", "missing values: CSV should say NaN"),
-    (
-        r"\[\(last\)\]\[\(0\.0\)\]\[\(180\.0\)\]$",
-        "nearest-match ties go to the smaller value; ERDDAP picks the larger "
-        "(issue #11)",
-    ),
     (
         r"\.nc\?",
         "subset .nc: ERDDAP rewrites actual_range, geospatial_*, *most_* and "
         "time_coverage_* for the subset; our axes get a _FillValue; time "
         "units spelled +00:00; missing_value dropped",
-    ),
-    (
-        AXIS_ONLY,
-        "an axis variable with [..] selectors is rejected",
     ),
     (r"\.dds\?", "a data request's DDS should list only the GRIDs, not the axes"),
 ]
@@ -93,7 +69,6 @@ KNOWN_MEDIA: list[tuple[str, str]] = [
         r"^etopo5_EDDGridCopy griddap/\S*\.das$",
         "ERDDAP 2.31 serves .das as text/csv; 2.22 says text/plain. Not copied.",
     ),
-    (AXIS_ONLY, "we answer 400 (see KNOWN)"),
 ]
 
 

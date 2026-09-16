@@ -111,10 +111,30 @@ def format_value(value, *, is_time: bool):
     if isinstance(value, np.floating | float):
         if np.isnan(value):
             return ""
-        return float(value)
+        return _shortest_float(value)
     if isinstance(value, np.integer | int):
         return int(value)
     return value
+
+
+def _shortest_float(value) -> float:
+    """The float ERDDAP prints: the shortest repr *at the value's precision*.
+
+    ``float(np.float32(19.225))`` is ``19.225000381469727``; ERDDAP writes
+    ``19.225``, as Java's ``Float.toString`` does.
+    """
+    if isinstance(value, np.float32 | np.float16):
+        return float(str(value))
+    return float(value)
+
+
+def sort_globals(names) -> list[str]:
+    """ERDDAP's order for global attributes: alphabetical, ignoring case.
+
+    rerddap's ``info()`` reads ``time_coverage_end``/``_start`` positionally,
+    so this order is load-bearing.
+    """
+    return sorted(names, key=lambda k: (k.lower(), k))
 
 
 def attr_text(value) -> str:
@@ -124,8 +144,10 @@ def attr_text(value) -> str:
     ``actual_range`` numerically and silently yields NAs on the bracketed form.
     """
     if isinstance(value, list | tuple | np.ndarray):
-        return ", ".join(str(v) for v in np.asarray(value).ravel().tolist())
-    if isinstance(value, np.floating | np.integer):
+        return ", ".join(attr_text(v) for v in np.asarray(value).ravel())
+    if isinstance(value, np.floating):
+        return str(_shortest_float(value))
+    if isinstance(value, np.integer):
         return str(value.item())
     return str(value)
 
@@ -170,15 +192,14 @@ def dds_response(ed, sub: xr.Dataset, variables: list[str]) -> str:
 def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
     out = []
     for key, value in attrs.items():
-        if isinstance(value, list | tuple | np.ndarray):
-            joined = ", ".join(str(v) for v in np.asarray(value).ravel())
-            out.append(f"{indent}Float64 {key} {joined};")
-        elif isinstance(value, bool | np.bool_):
+        if isinstance(value, bool | np.bool_):
             out.append(f'{indent}String {key} "{value}";')
-        elif isinstance(value, np.floating | float):
-            out.append(f"{indent}Float64 {key} {float(value)};")
-        elif isinstance(value, np.integer | int):
-            out.append(f"{indent}Int32 {key} {int(value)};")
+        elif isinstance(value, list | tuple | np.ndarray | np.number | int | float):
+            arr = np.asarray(value)
+            if arr.dtype == np.int64 and isinstance(value, int | list | tuple):
+                arr = arr.astype("int32")  # plain Python ints
+            dap = _DAP_TYPES.get(arr.dtype, "Float64")
+            out.append(f"{indent}{dap} {key} {attr_text(arr)};")
         else:
             escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
             out.append(f'{indent}String {key} "{escaped}";')
@@ -200,7 +221,7 @@ def das_response(ed, sub: xr.Dataset) -> str:
         lines.append("  }")
     lines.append("  NC_GLOBAL {")
     lines.extend(
-        _das_attr_lines({k: ed.globals_[k] for k in sorted(ed.globals_)}, "    "),
+        _das_attr_lines({k: ed.globals_[k] for k in sort_globals(ed.globals_)}, "    "),
     )
     lines.append("  }")
     lines.append("}")
@@ -226,9 +247,11 @@ def _long_form(ed, sub: xr.Dataset, variables: list[str]):
         arrays = [np.asarray(sub[c].values) for c in cols]
 
         def rows():
-            for tup in zip(*arrays, strict=True):
+            # ERDDAP lists each axis in its own column, side by side, padding
+            # the shorter ones with blanks -- not their cartesian product
+            for tup in itertools.zip_longest(*arrays, fillvalue=None):
                 yield [
-                    format_value(v, is_time=is_t)
+                    "" if v is None else format_value(v, is_time=is_t)
                     for v, is_t in zip(tup, times, strict=True)
                 ]
 
@@ -323,10 +346,7 @@ def _actual_range_pair(ed, name: str) -> str:
     values = np.asarray(ed.ds[name].values)
     if values.size == 0:
         return ""
-    if _is_time(ed.ds[name]):
-        secs = values.astype("datetime64[s]").astype("int64")
-        return f"{float(secs.min())} {float(secs.max())}"
-    return f"{float(np.nanmin(values))} {float(np.nanmax(values))}"
+    return attr_text(ed.variable_attrs(name)["actual_range"]).replace(",", "")
 
 
 def ncml_response(ed) -> str:
@@ -368,7 +388,7 @@ def ncml_response(ed) -> str:
         out.append("  </variable>")
 
     out.append('  <group name="NC_GLOBAL">')
-    for key in sorted(ed.globals_):
+    for key in sort_globals(ed.globals_):
         out.append(
             f'    <attribute name="{_xml_escape(key)}" '
             f'value="{_xml_escape(attr_text(ed.globals_[key]))}" />',
@@ -385,9 +405,7 @@ def info_table(ed) -> tuple[list[str], list[list]]:
     """
     columns = ["Row Type", "Variable Name", "Attribute Name", "Data Type", "Value"]
     rows: list[list] = []
-    # ERDDAP emits NC_GLOBAL attributes in alphabetical order, and rerddap
-    # depends on it: print.info() takes time_coverage_end/_start positionally.
-    for key in sorted(ed.globals_):
+    for key in sort_globals(ed.globals_):
         rows.append(
             ["attribute", "NC_GLOBAL", key, "String", attr_text(ed.globals_[key])],
         )

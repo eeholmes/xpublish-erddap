@@ -2,6 +2,7 @@
 
 import io
 
+import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
@@ -210,3 +211,36 @@ def test_dods_is_planned_not_advertised(client):
     other = client.get("/erddap/griddap/testgrid.htmlTable")
     assert other.status_code == 400
     assert "dods" not in other.json()["detail"]
+
+
+def test_float32_values_print_as_written(client):
+    """ERDDAP writes a float32 0.1 as 0.1, not 0.10000000149011612."""
+    rest = xpublish.Rest(
+        {
+            "f32": xr.Dataset(
+                {"v": ("x", np.array([0.1, 0.2], dtype="float32"))},
+                coords={"x": np.array([0.1, 0.2], dtype="float32")},
+            ),
+        },
+        plugins={"erddap": ErddapPlugin()},
+    )
+    c = TestClient(rest.app)
+    assert c.get("/erddap/griddap/f32.csv0?v[0:1:1]").text == "0.1,0.1\n0.2,0.2\n"
+    assert "Float32 actual_range 0.1, 0.2;" in c.get("/erddap/griddap/f32.das").text
+
+
+def test_globals_sort_ignoring_case_and_hide_xpublish_id(client):
+    body = client.get("/erddap/info/testgrid/index.csv").text
+    names = [
+        line.split(",")[2]
+        for line in body.splitlines()
+        if line.startswith("attribute,NC_GLOBAL,")
+    ]
+    assert names == sorted(names, key=str.lower)
+    assert "_xpublish_id" not in names
+
+
+def test_axis_only_columns_sit_side_by_side(client):
+    """ERDDAP pads shorter axis columns with blanks, no cartesian product."""
+    body = client.get("/erddap/griddap/testgrid.csv0?time[(last)],lat[0:1:2]").text
+    assert body == "2020-01-06T00:00:00Z,40.0\n,42.5\n,45.0\n"

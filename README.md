@@ -113,7 +113,8 @@ scheme. Four cases found the hard way, all covered by tests:
    must be uppercase — DAP2's own spelling (`Grid {`) yields zero variables.
 2. `rerddap` asserts `content-type == "application/json;charset=UTF-8"` exactly.
 3. `rerddap`'s `info()` reads `time_coverage_end`/`_start` *positionally*, which
-   only works because ERDDAP emits `NC_GLOBAL` attributes alphabetically.
+   only works because ERDDAP emits `NC_GLOBAL` attributes alphabetically
+   (ignoring case, as checked against real servers).
 4. `actual_range` must be rendered `"min, max"`, not Python's `"[min, max]"`,
    or `rerddap` silently coerces it to `NA`.
 

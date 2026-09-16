@@ -94,6 +94,16 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Fixed on the branch (2026-09-16, PR #15)
+
+Items 1, 2, 3, 8 and the #11 tie rule below. Float32 values and attributes
+now print as written and are typed Float32; computed geospatial_* use the
+written values and (max - min) / (n - 1), which reproduces ERDDAP's
+0.049999999999999996. `actual_range` is now kept numeric (array in the axis
+dtype) and each response formats it. Axis-only requests accept one
+selector, refuse reversed ranges, and print columns side by side padded with
+blanks. 138 pass, 33 xfail remain.
+
 ## Step 1 status (2026-09-16)
 
 Built: `tests/parity/` (cases, capture, snapshot, compare) and
