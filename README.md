@@ -46,7 +46,7 @@ working, unchanged. An example of a similar concept for OPeNDAP access to Icechu
 Working end to end against both clients, on synthetic data and on real NOAA CEFI
 model output served from Icechunk via Earthmover Flux. Not production software:
 no auth, no tabledap, a partial file-type list, and the catalog is built eagerly
-at first request. 
+at first request.
 
 ## Usage
 

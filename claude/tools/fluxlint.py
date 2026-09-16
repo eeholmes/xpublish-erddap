@@ -41,9 +41,11 @@ def main(base):
             d = np.diff(v.astype("f8")); uniq=len(np.unique(v))
             ok = bool((d>0).all()) or bool((d<0).all())
             flag = "OK " if ok else "FAIL"
-            print(f"   [{flag}] {name:8s} n={cnt:6d} unique={uniq:6d} "
-                  f"asc={bool((d>0).all())} dup={cnt-uniq} "
-                  f"range=[{v.min():.4g},{v.max():.4g}]")
+            print(
+                f"   [{flag}] {name:8s} n={cnt:6d} unique={uniq:6d} "
+                f"asc={bool((d>0).all())} dup={cnt-uniq} "
+                f"range=[{v.min():.4g},{v.max():.4g}]",
+            )
             if not ok:
                 bad=np.where(d<=0)[0]
                 print(f"          first break at i={bad[0]}: {v[bad[0]]} -> {v[bad[0]+1]}")
@@ -53,8 +55,10 @@ def main(base):
     # DAS hazards
     print("\n  -- DAS hazards --")
     nans = re.findall(r"^\s+\w+ (\w+) (nan|-?inf\w*);", das, re.M|re.I)
-    print(f"   bare nan/inf attribute literals: {len(nans)}"
-          + (f"  {sorted(set(a for a,_ in nans))}" if nans else ""))
+    print(
+        f"   bare nan/inf attribute literals: {len(nans)}"
+        + (f"  {sorted(set(a for a,_ in nans))}" if nans else ""),
+    )
 
     # ACDD
     g = re.search(r"NC_GLOBAL \{(.*?)\n    \}", das, re.S)
