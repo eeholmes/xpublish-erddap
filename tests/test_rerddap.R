@@ -30,4 +30,18 @@ j <- info("mixed_level", url = url)
 stopifnot("air_levels" %in% j$variables$variable_name)
 ok("the split dataset is usable from R")
 
+# One Arraylake store as Flux would serve it: an ERDDAP root below a store path
+store <- paste0(
+  "http://127.0.0.1:9000/v1/services/dap2/NOAA-PMEL/",
+  "cefi-nep-hindcast-daily/main/regrid/main/erddap/"
+)
+k <- info("cefi_nep_hindcast_daily_regrid", url = store)
+stopifnot("tos" %in% k$variables$variable_name)
+res <- griddap(
+  k, time = c("2020-01-02", "2020-01-03"),
+  lat = c(22, 23), lon = c(231, 232), fields = "tos"
+)
+stopifnot(nrow(res$data) == 2 * 3 * 3)
+ok("info() and griddap() work against a store-level ERDDAP root")
+
 cat("\nAll rerddap checks passed\n")

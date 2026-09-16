@@ -1,0 +1,11 @@
+{
+  "table": {
+    "columnNames": ["time", "latitude", "longitude", "analysed_sst"],
+    "columnTypes": ["String", "float", "float", "double"],
+    "columnUnits": ["UTC", "degrees_north", "degrees_east", "degree_C"],
+    "rows": [
+      ["2020-07-01T12:00:00Z", -84.975, 10.025, null],
+      ["2020-08-01T12:00:00Z", -84.975, 10.025, null]
+    ]
+  }
+}

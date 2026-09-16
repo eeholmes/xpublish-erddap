@@ -1,3 +1,6 @@
+# Golden files are byte-for-byte captures of real ERDDAP responses.
+exclude: ^tests/parity/golden/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://oceanwatch.pifsc.noaa.gov/griddap/CRW_sst_v3_1_monthly">
+  <attribute name="_NCProperties" value="version=2,netcdf=4.8.1,hdf5=1.12.1" />
+  <attribute name="acknowledgement" value="NOAA Coral Reef Watch program" />
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="comment" value="This is a product of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1." />
+  <attribute name="contributor_name" value="NOAA Coral Reef Watch Program" />
+  <attribute name="contributor_role" value="Collecting source data and deriving products; performing quality control of products; disseminating, storing, and submitting data to archive" />
+  <attribute name="Conventions" value="CF-1.6, ACDD-1.3, COARDS" />
+  <attribute name="creator_email" value="coralreefwatch@noaa.gov" />
+  <attribute name="creator_institution" value="NOAA/NESDIS/STAR Coral Reef Watch Program" />
+  <attribute name="creator_name" value="NOAA Coral Reef Watch Program" />
+  <attribute name="creator_type" value="group" />
+  <attribute name="creator_url" value="https://coralreefwatch.noaa.gov/" />
+  <attribute name="date_created" value="2018-03-01T12:00:00Z" />
+  <attribute name="date_issued" value="2021-03-01T15:05:30Z" />
+  <attribute name="date_metadata_modified" value="2020-11-18T12:00:00Z" />
+  <attribute name="date_modified" value="2018-03-01T12:00:00Z" />
+  <attribute name="Easternmost_Easting" type="double" value="359.975" />
+  <attribute name="geospatial_bounds" value="&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot;" />
+  <attribute name="geospatial_bounds_crs" value="EPSG:4326" />
+  <attribute name="geospatial_lat_max" type="double" value="89.975" />
+  <attribute name="geospatial_lat_min" type="double" value="-89.975" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.049999999999999996" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="359.975" />
+  <attribute name="geospatial_lon_min" type="double" value="0.025" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.05000000000000001" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="grid_mapping_epsg_code" value="EPSG:4326" />
+  <attribute name="grid_mapping_inverse_flattening" type="float" value="298.2572" />
+  <attribute name="grid_mapping_name" value="latitude_longitude" />
+  <attribute name="grid_mapping_semi_major_axis" type="float" value="6378137.0" />
+  <attribute name="history" value="Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_bounds,global,o,c,&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot; ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:19 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:19 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:17 2026: ncap2 -O -s where(lon&lt;0) lon=lon+360 ct5km_sst-mean_v3.1_202608-0-360.nc ct5km_sst-mean_v3.1_202608-0-360.nc
+Tue Sep  1 07:31:15 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202608.nc ct5km_sst-mean_v3.1_202608-0-360.nc
+This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0)." />
+  <attribute name="id" value="Satellite_Global_5km_SST_Monthly_Mean_Composite" />
+  <attribute name="infoUrl" value="https://coralreefwatch.noaa.gov/product/5km/index.php" />
+  <attribute name="institution" value="NOAA/NESDIS/STAR Coral Reef Watch Program" />
+  <attribute name="instrument" value="ATSR-1, ATSR-2, AATSR, AVHRR, AVHRR-2, AVHRR-3, VIIRS, GOES Imager, MTSAT Imager, MTSAT 2 Imager, AHI, ABI, SEVIRI, buoy - moored buoy, buoy - drifting buoy, buoy - TAO buoy, surface seawater intake" />
+  <attribute name="instrument_vocabulary" value="NOAA NODC Ocean Archive System Instruments" />
+  <attribute name="keywords" value="5km, analysed, composite, coral, coraltemp, crw, data, earth, Earth Science &gt; Oceans &gt; Ocean Temperature &gt; Sea Surface Temperature, Earth Science &gt; Oceans &gt; Ocean Temperature &gt; Water Temperature, Earth Science &gt; Spectral/Engineering &gt; Infrared Wavelengths &gt; Thermal Infrared, engineering, environmental, global, information, infrared, mean, month, monthly, national, nesdis, noaa, ocean, oceans, program, reef, satellite, science, sea, sea_surface_temperature, seawater, service, spectral, spectral/engineering, sst, star, surface, temperature, thermal, time, version, watch, water, wavelengths" />
+  <attribute name="keywords_vocabulary" value="GCMD Science Keywords" />
+  <attribute name="license" value="The data produced by Coral Reef Watch are available for use without restriction, but Coral Reef Watch relies on the ethics and integrity of the user to ensure that the source of the data and products is appropriately cited and credited. When using these data and products, credit and courtesy should be given to NOAA Coral Reef Watch. Please include the appropriate DOI associated with this dataset in the citation. For more information, visit the NOAA Coral Reef Watch website: https://coralreefwatch.noaa.gov. Recommendations for citing and providing credit are provided at https://coralreefwatch.noaa.gov/satellite/docs/recommendations_crw_citation.php. Users are referred to the footer section of the Coral Reef Watch website (https://coralreefwatch.noaa.gov/index.php) for disclaimers, policies, notices pertaining to the use of the data." />
+  <attribute name="metadata_link" value="https://coralreefwatch.noaa.gov/product/5km/index.php" />
+  <attribute name="naming_authority" value="gov.noaa.coralreefwatch" />
+  <attribute name="NCO" value="netCDF Operators version 4.7.5 (Homepage = http://nco.sf.net, Code = https://github.com/nco/nco)" />
+  <attribute name="Northernmost_Northing" type="double" value="89.975" />
+  <attribute name="platform" value="Ships, drifting buoys, moored buoys, TOGA-TAO buoy arrays, GOES-8 satellite, GOES-9 satellite, GOES-10 satellite, GOES-11 satellite, GOES-12 satellite, GOES-13 satellite, GOES-14 satellite, GOES-15 satellite, GOES-16 satellite, MTSAT-1R satellite, MTSAT-2 satellite, Himawari-8 satellite, Meteosat-8 satellite, Meteosat-9 satellite, Meteoset-10 satellite, Meteosat-11 satellite, Suomi NPP, MetOp-A satellite, MetOp-B satellite, NOAA-9 satellite, NOAA-11 satellite, NOAA-12 satellite, NOAA-14 satellite, NOAA-15 satellite, NOAA-16 satellite, NOAA-17 satellite, NOAA-18 satellite, NOAA-19 satellite." />
+  <attribute name="platform_vocabulary" value="NOAA NODC Ocean Archive System Platforms" />
+  <attribute name="processing_level" value="Derived from L4 satellite sea surface temperaure analysis" />
+  <attribute name="product_version" value="3.1" />
+  <attribute name="program" value="NOAA Coral Reef Watch Program" />
+  <attribute name="project" value="NOAA Coral Reef Watch Program" />
+  <attribute name="publisher_email" value="coralreefwatch@noaa.gov" />
+  <attribute name="publisher_institution" value="NOAA/NESDIS/STAR Coral Reef Watch Program" />
+  <attribute name="publisher_name" value="NOAA Coral Reef Watch Program" />
+  <attribute name="publisher_type" value="group" />
+  <attribute name="publisher_url" value="https://coralreefwatch.noaa.gov" />
+  <attribute name="references" value="https://coralreefwatch.noaa.gov/product/5km/index.php" />
+  <attribute name="source" value="Coral Reef Watch Daily Global 5km Satellite Sea Surface Temperature v3.1 (CoralTemp v3.1)" />
+  <attribute name="sourceUrl" value="(local files)" />
+  <attribute name="Southernmost_Northing" type="double" value="-89.975" />
+  <attribute name="spatial_resolution" value="0.05 degrees" />
+  <attribute name="standard_name_vocabulary" value="CF Standard Name Table v27" />
+  <attribute name="summary" value="NOAA Coral Reef Watch Global 5km Satellite Sea Surface Temperature (CoralTemp Version 1.0) Monthly Mean Composite for February 2021. This is a product of NOAA Coral Reef Watch Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0." />
+  <attribute name="time_coverage_duration" value="P1M" />
+  <attribute name="time_coverage_end" value="2026-08-31T12:00:00Z" />
+  <attribute name="time_coverage_resolution" value="P1M" />
+  <attribute name="time_coverage_start" value="1985-01-31T12:00:00Z" />
+  <attribute name="title" value="Sea Surface Temperature, Coral Reef Watch, CoralTemp, v3.1 - Monthly, 1985-present" />
+  <attribute name="Westernmost_Easting" type="double" value="0.025" />
+  <dimension name="time" length="500" />
+  <dimension name="latitude" length="3600" />
+  <dimension name="longitude" length="7200" />
+  <variable name="time" shape="time" type="double">
+    <attribute name="_CoordinateAxisType" value="Time" />
+    <attribute name="actual_range" type="double" value="4.760208E8 1.7881776E9" />
+    <attribute name="axis" value="T" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Time" />
+    <attribute name="long_name" value="reference time of the last day of the month" />
+    <attribute name="standard_name" value="time" />
+    <attribute name="time_origin" value="01-JAN-1970 00:00:00" />
+    <attribute name="units" value="seconds since 1970-01-01T00:00:00Z" />
+  </variable>
+  <variable name="latitude" shape="latitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="float" value="-89.975 89.975" />
+    <attribute name="axis" value="Y" />
+    <attribute name="comment" value="equirectangular projection and grid centers" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+    <attribute name="valid_max" type="float" value="89.975" />
+    <attribute name="valid_min" type="float" value="-89.975" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="float" value="0.025 359.975" />
+    <attribute name="axis" value="X" />
+    <attribute name="comment" value="equirectangular projection and grid centers" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+    <attribute name="valid_max" type="float" value="359.975" />
+    <attribute name="valid_min" type="float" value="0.025" />
+  </variable>
+  <variable name="sea_surface_temperature" shape="time latitude longitude" type="float">
+    <attribute name="_FillValue" type="float" value="NaN" />
+    <attribute name="colorBarMaximum" type="double" value="32.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="coverage_content_type" value="physicalMeasurement" />
+    <attribute name="ioos_category" value="Temperature" />
+    <attribute name="long_name" value="analysed sea surface temperature" />
+    <attribute name="standard_name" value="sea_surface_temperature" />
+    <attribute name="units" value="degree_C" />
+    <attribute name="valid_max" type="float" value="50.0" />
+    <attribute name="valid_min" type="float" value="-2.0" />
+  </variable>
+</netcdf>

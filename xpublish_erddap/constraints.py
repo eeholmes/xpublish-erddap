@@ -127,14 +127,20 @@ def _to_comparable(value: str, values: np.ndarray):
 
 
 def _nearest_index(values: np.ndarray, target) -> int:
-    """Index of the axis element nearest ``target``."""
+    """Index of the axis element nearest ``target``.
+
+    On an exact tie ERDDAP picks the *larger* coordinate value, whichever way
+    the axis runs (checked against real servers; see issue #11).
+    """
     arr = np.asarray(values)
     if _axis_is_time(arr):
-        as_int = arr.astype("datetime64[ns]").astype("int64")
-        diffs = np.abs(as_int - np.datetime64(target, "ns").astype("int64"))
+        numeric = arr.astype("datetime64[ns]").astype("int64")
+        diffs = np.abs(numeric - np.datetime64(target, "ns").astype("int64"))
     else:
-        diffs = np.abs(arr.astype("float64") - float(target))
-    return int(np.argmin(diffs))
+        numeric = arr.astype("float64")
+        diffs = np.abs(numeric - float(target))
+    tied = np.flatnonzero(diffs == diffs.min())
+    return int(tied[np.argmax(numeric[tied])])
 
 
 _LAST_RE = re.compile(r"^last\s*(?:-\s*(\d+(?:\.\d+)?))?$")
@@ -188,8 +194,17 @@ def _resolve_token(token: str, values: np.ndarray, *, default: int) -> int:
     return idx
 
 
-def parse_selector(selector: str, values: np.ndarray) -> DimSelection:
-    """Parse one ``[...]`` selector against an axis's values."""
+def parse_selector(
+    selector: str,
+    values: np.ndarray,
+    *,
+    allow_reversed: bool = True,
+) -> DimSelection:
+    """Parse one ``[...]`` selector against an axis's values.
+
+    ``allow_reversed``: ERDDAP swaps a range given against the axis order for
+    data-variable requests, but refuses it for axis-only requests.
+    """
     n = len(values)
     parts = [p.strip() for p in _split_top_level(selector, ":")]
     if selector.strip() == "":
@@ -218,9 +233,27 @@ def parse_selector(selector: str, values: np.ndarray) -> DimSelection:
         msg = f"stride must be >= 1, got {stride}"
         raise ConstraintError(msg)
     if start > stop:
-        # ERDDAP tolerates reversed coordinate ranges on descending axes
+        if not allow_reversed:
+            msg = f"start > stop in [{selector}]: give the range in axis order"
+            raise ConstraintError(msg)
         start, stop = stop, start
     return DimSelection(start, stop, stride)
+
+
+def _parse_axis_request(
+    name: str,
+    selectors: list[str],
+    axes: dict[str, np.ndarray],
+) -> DimSelection:
+    """Selection for an axis-only request such as ``?time[(last)]``.
+
+    Plain ``?time`` (erddapy's ``.csvp`` probe) has no selector and never
+    gets here.
+    """
+    if len(selectors) > 1:
+        msg = f"axis {name} takes one selector, got {len(selectors)}"
+        raise ConstraintError(msg)
+    return parse_selector(selectors[0], axes[name], allow_reversed=False)
 
 
 def parse_griddap_query(
@@ -247,15 +280,17 @@ def parse_griddap_query(
 
     variables: list[str] = []
     selections: dict[str, DimSelection] | None = None
+    axis_selections: dict[str, DimSelection] = {}
 
     for raw_token in _split_top_level(query, ","):
         token = raw_token.strip()
         if not token:
             continue
         name, selectors = split_selectors(token)
-        if name in axes and not selectors:
-            # a bare axis request, e.g. "?time" (erddapy's .csvp probe)
+        if name in axes:
             variables.append(name)
+            if selectors:
+                axis_selections[name] = _parse_axis_request(name, selectors, axes)
             continue
         if name not in known_variables:
             msg = f"unknown variable {name!r}"
@@ -279,4 +314,10 @@ def parse_griddap_query(
             msg = "all variables in one griddap request must share the same subset"
             raise ConstraintError(msg)
 
-    return ParsedQuery(variables, selections or full)
+    out = dict(selections or full)
+    for dim, sel in axis_selections.items():
+        if selections is not None and selections[dim] != sel:
+            msg = "all variables in one griddap request must share the same subset"
+            raise ConstraintError(msg)
+        out[dim] = sel
+    return ParsedQuery(variables, out)

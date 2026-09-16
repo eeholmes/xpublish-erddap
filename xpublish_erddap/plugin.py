@@ -32,14 +32,42 @@ logger = logging.getLogger("uvicorn")
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
 
-TABULAR = {"csv", "csvp", "csv0", "json", "htmlTable"}
-ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds", "dods"}
+TABULAR = {"csv", "csvp", "csv0", "json"}
+
+#: File types of the catalog, info and search tables.
+TABLE_EXTENSIONS = {"csv", "json"}
+ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds"}
+
+#: Recognised but not served yet. Kept out of ALL_EXTENSIONS so no error
+#: message advertises them, but answered with 501 and a pointer instead of
+#: the generic "unsupported" 400. ``.dods`` will reuse xpublish-opendap's
+#: encoder (issue #2); until then, OPeNDAP clients should use the store's
+#: OPeNDAP endpoint.
+PLANNED_EXTENSIONS = {
+    "dods": (
+        "OPeNDAP binary (.dods) is planned but not implemented yet "
+        "(https://github.com/eeholmes/xpublish-erddap/issues/2). "
+        "For OPeNDAP access, use the dataset's OPeNDAP endpoint instead."
+    ),
+}
 
 
 def _resolve(request: Request, dep, *args):
     """Call an xpublish dependency through the app's overrides."""
     fn = request.app.dependency_overrides.get(dep, dep)
     return fn(*args)
+
+
+def erddap_root(request: Request, prefix: str) -> str:
+    """The public URL of this ERDDAP root, for URLs we hand to clients.
+
+    The app may sit below a path prefix: mounted inside another app (a
+    per-store service such as ``.../regrid/main/erddap``) or behind a proxy
+    started with ``--root-path``. Starlette puts that prefix in ``root_path``
+    in both cases, but ``request.base_url`` includes it only in the second.
+    """
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    return f"{request.url.scheme}://{request.url.netloc}{root_path}{prefix}"
 
 
 class ErddapPlugin(Plugin):
@@ -107,6 +135,13 @@ class ErddapPlugin(Plugin):
             return parse.unquote_plus(request.url.components[3])
 
         def _table(columns, rows, ext: str, name: str) -> Response:
+            if ext not in TABLE_EXTENSIONS:
+                # ERDDAP answers 404 for an unknown table fileType
+                raise HTTPException(
+                    404,
+                    f"Unsupported fileType=.{ext}; use "
+                    f"{', '.join('.' + e for e in sorted(TABLE_EXTENSIONS))}",
+                )
             if ext == "json":
                 # rerddap asserts this exact content-type string
                 return Response(
@@ -130,8 +165,9 @@ class ErddapPlugin(Plugin):
             return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
         def _csv_cell(value) -> str:
-            text = "" if value is None else str(value)
-            if any(c in text for c in ',"\n'):
+            # ERDDAP writes a newline inside a value as the two characters \n
+            text = "" if value is None else str(value).replace("\n", "\\n")
+            if any(c in text for c in ',"'):
                 return '"' + text.replace('"', '""') + '"'
             return text
 
@@ -154,7 +190,7 @@ class ErddapPlugin(Plugin):
                 "Summary",
                 "Dataset ID",
             ]
-            base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
+            base = erddap_root(request, plugin.app_router_prefix)
             rows = [
                 [
                     f"{base}/griddap/{d.dataset_id}",
@@ -196,7 +232,7 @@ class ErddapPlugin(Plugin):
             """Free-text search across dataset metadata."""
             cat = catalog(request)
             terms = [t for t in searchFor.lower().split() if t]
-            base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
+            base = erddap_root(request, plugin.app_router_prefix)
             rows = []
             for d in cat.values():
                 blob = " ".join(
@@ -240,9 +276,12 @@ class ErddapPlugin(Plugin):
             if "." not in target:
                 raise HTTPException(
                     400,
-                    f"missing fileType: use {target}.nc, .csv, .json, .dds, .das",
+                    f"missing fileType: use {target}.<type>, one of "
+                    f"{', '.join(sorted(ALL_EXTENSIONS))}",
                 )
             dataset_id, _, ext = target.rpartition(".")
+            if ext in PLANNED_EXTENSIONS:
+                raise HTTPException(501, PLANNED_EXTENSIONS[ext])
             if ext not in ALL_EXTENSIONS:
                 raise HTTPException(
                     400,
@@ -255,8 +294,9 @@ class ErddapPlugin(Plugin):
             if ext == "das":
                 return PlainTextResponse(formats.das_response(ed, ed.ds))
             if ext == "ncml":
+                base = erddap_root(request, plugin.app_router_prefix)
                 return Response(
-                    formats.ncml_response(ed),
+                    formats.ncml_response(ed, f"{base}/griddap/{dataset_id}"),
                     media_type="application/xml",
                 )
 
@@ -275,7 +315,12 @@ class ErddapPlugin(Plugin):
 
             if ext == "dds":
                 return PlainTextResponse(
-                    formats.dds_response(ed, sub, parsed.variables),
+                    formats.dds_response(
+                        ed,
+                        sub,
+                        parsed.variables,
+                        all_axes=not query.strip(),
+                    ),
                 )
             if ext == "nc":
                 data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
@@ -298,6 +343,7 @@ class ErddapPlugin(Plugin):
                     formats.to_csv(ed, sub, parsed.variables, style=ext),
                     media_type="text/csv",
                 )
-            raise HTTPException(501, f"fileType {ext!r} is not implemented yet")
+            # every ALL_EXTENSIONS member is handled above
+            raise AssertionError(ext)  # pragma: no cover
 
         return router

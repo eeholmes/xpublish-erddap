@@ -1,0 +1,13 @@
+Dataset {
+  Float64 time[time = 428];
+  Float32 latitude[latitude = 3600];
+  Float32 longitude[longitude = 7200];
+  GRID {
+    ARRAY:
+      Float64 analysed_sst[time = 428][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 428];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } analysed_sst;
+} CRW_sst_v1_0_monthly;

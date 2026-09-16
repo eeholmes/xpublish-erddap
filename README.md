@@ -93,7 +93,7 @@ d <- griddap("my_dataset", url = "http://localhost:9000/erddap/",
 
 | Endpoint | Purpose |
 | --- | --- |
-| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, csv, csvp, csv0, json, das, dds` |
+| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, ncml, csv, csvp, csv0, json, das, dds`; `.dods` is planned ([#2](https://github.com/eeholmes/xpublish-erddap/issues/2)) |
 | `/erddap/griddap/index.{csv,json}` | dataset catalog |
 | `/erddap/tabledap/index.{csv,json}` | empty catalog (rerddap needs it to classify a dataset) |
 | `/erddap/info/{id}/index.{csv,json}` | variable and attribute table |
@@ -113,7 +113,8 @@ scheme. Four cases found the hard way, all covered by tests:
    must be uppercase — DAP2's own spelling (`Grid {`) yields zero variables.
 2. `rerddap` asserts `content-type == "application/json;charset=UTF-8"` exactly.
 3. `rerddap`'s `info()` reads `time_coverage_end`/`_start` *positionally*, which
-   only works because ERDDAP emits `NC_GLOBAL` attributes alphabetically.
+   only works because ERDDAP emits `NC_GLOBAL` attributes alphabetically
+   (ignoring case, as checked against real servers).
 4. `actual_range` must be rendered `"min, max"`, not Python's `"[min, max]"`,
    or `rerddap` silently coerces it to `NA`.
 
@@ -157,8 +158,20 @@ attribution:
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
 pre-commit install
-pytest tests            # includes live-server tests against erddapy
+pytest tests            # includes live-server erddapy and tutorial tests
 Rscript tests/test_rerddap.R   # after starting `python tests/server.py`
+Rscript tests/test_tutorials.R # same server; needs rerddapXtracto, httr, ncdf4
 ```
 
 `nox` runs the suite against the same Python versions as CI.
+
+`tests/test_tutorials.py` and `tests/test_tutorials.R` run the users' own
+tutorial steps (CoastWatch satellite course, erddapy docs) against stand-in
+datasets; `tests/test_store_mount.py` serves the plugin below a per-store
+path, as Earthmover Flux would.
+
+`tests/test_parity.py` compares our responses with captures from real ERDDAP
+servers, committed under `tests/parity/golden/`; known differences are listed
+in the test as expected failures. `python tests/parity/capture.py` refreshes
+the captures (it needs the network), and the `Parity with live ERDDAP`
+workflow does the same weekly without committing.

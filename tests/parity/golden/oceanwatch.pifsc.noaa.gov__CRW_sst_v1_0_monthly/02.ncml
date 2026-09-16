@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://oceanwatch.pifsc.noaa.gov/griddap/CRW_sst_v1_0_monthly">
+  <attribute name="acknowledgement" value="NOAA Coral Reef Watch Program" />
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="comment" value="This product is designed to improve on and replace the use of AVHRR Pathfinder SST for use within the Coral Reef Watch Program." />
+  <attribute name="contributor_name" value="NOAA Coral Reef Watch program" />
+  <attribute name="contributor_role" value="Collecting source data and deriving products; performing quality control of products; disseminating, storing, and submitting data to archive" />
+  <attribute name="Conventions" value="CF-1.6, ACDD-1.3, COARDS" />
+  <attribute name="creator_email" value="coralreefwatch@noaa.gov" />
+  <attribute name="creator_institution" value="NOAA/NESDIS/STAR Coral Reef Watch program" />
+  <attribute name="creator_name" value="NOAA Coral Reef Watch program" />
+  <attribute name="creator_type" value="group" />
+  <attribute name="creator_url" value="https://coralreefwatch.noaa.gov/" />
+  <attribute name="data_source" value="NOAA Daily Global 5km Geo-Polar Blended Night-only Sea Surface Temperature Analysis from the date specified in the global attribute time_coverage_start. Note, if the text of this global attribute begins with &quot;Due to ...&quot;, one of the following situations occurred: (1) the source data file for the CoralTemp of data file for the CoralTemp of the day was missing; (2) the sea_ice_fraction data array in the source data was missing, (3) some alternation was made on the source data to derive the CoralTemp data of the day." />
+  <attribute name="date_created" value="2018-01-01T00:00:00Z" />
+  <attribute name="date_issued" value="2018-12-02T15:20:07Z" />
+  <attribute name="date_metadata_modified" value="2018-09-01T00:00:00Z" />
+  <attribute name="date_modified" value="2018-01-01T00:00:00Z" />
+  <attribute name="Easternmost_Easting" type="double" value="359.975" />
+  <attribute name="geospatial_bounds" value="&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot;" />
+  <attribute name="geospatial_bounds_crs" value="EPSG:32663" />
+  <attribute name="geospatial_lat_max" type="double" value="89.975" />
+  <attribute name="geospatial_lat_min" type="double" value="-89.975" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.049999999999999996" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="359.975" />
+  <attribute name="geospatial_lon_min" type="double" value="0.025" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.05000000000000001" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="history" value="Mon Aug  3 06:00:38 2020: ncatted -O -a geospatial_bounds,global,o,c,&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot; coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:38 2020: ncatted -O -a geospatial_lon_max,global,o,f,359.975 coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:38 2020: ncatted -O -a geospatial_lon_min,global,o,f,0.025 coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:38 2020: ncatted -O -a valid_max,lon,o,f,359.975 coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:38 2020: ncatted -O -a valid_min,lon,o,f,0.025 coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:36 2020: ncap2 -O -s where(lon&lt;0) lon=lon+360 coraltemp_v1.0_20200801-0-360.nc coraltemp_v1.0_20200801-0-360.nc
+Mon Aug  3 06:00:34 2020: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 coraltemp_v1.0_20200801.nc coraltemp_v1.0_20200801-0-360.nc
+This is the first version of CoralTemp" />
+  <attribute name="id" value="CoralTemp-v1.0" />
+  <attribute name="infoUrl" value="https://coralreefwatch.noaa.gov/satellite/bleaching5km" />
+  <attribute name="institution" value="NOAA/NESDIS/STAR Coral Reef Watch program" />
+  <attribute name="instrument" value="ATSR-1, ATSR-2, AATSR, AVHRR, AVHRR-2, AVHRR-3, VIIRS, GOES Imager, MTSAT Imager, MTSAT 2 Imager, AHI, ABI, SEVIRI, buoy - moored buoy, buoy - drifting buoy, buoy - TAO buoy, surface seawater intake" />
+  <attribute name="instrument_vocabulary" value="NOAA NODC Ocean Archive System Instruments" />
+  <attribute name="keywords" value="5km, analysed, analysed_sst, analysis, blended, coral, coraltemp, data, earth, Earth Science &gt; Oceans &gt; Ocean Temperature &gt; Sea Surface Temperature, Earth Science &gt; Oceans &gt; Ocean Temperature &gt; Water Temperature, Earth Science &gt; Spectral/Engineering &gt; Infrared Wavelengths &gt; Thermal Infrared, engineering, environmental, free, gap, gap-free, global, ice, information, infrared, national, near, nesdis, noaa, nrt, ocean, oceans, operational, ostia, over, program, real, reef, satellite, science, sea, sea_surface_temperature, seawater, service, spectral, spectral/engineering, sst, star, surface, temperature, thermal, time, watch, water, wavelengths" />
+  <attribute name="keywords_vocabulary" value="GCMD Science Keywords" />
+  <attribute name="license" value="OSTIA Usage Statement (1985-2002): IMPORTANT usage statement. Unless otherwise agreed in writing, these data may be used for pure academic research only, with no commercial or other application and all usage must meet the Met Office Standard Terms and Conditions, which may be found here: https://www.metoffice.gov.uk/corporate/legal/tandc.html. The data may be used for a maximum period of 5 years. Reproduction of the data is permitted provided the following copyright statement is included: (C) Crown Copyright 2010, published by the Met Office. You must submit a completed reproduction license application form (here https://www.metoffice.gov.uk/corporate/legal/repro_licence.html) before using the data. This only needs to be completed once for each user. WARNING Some applications are unable to properly handle signed byte values. If values are encountered &gt; 127, please subtract 256 from this reported value. GHRSST statement (2002-present): GHRSST protocol describes data use as free and open. Coral Reef Watch program statement: The data produced by Coral Reef Watch are available for use without restriction, but Coral Reef Watch relies on the ethics and integrity of the user to ensure that the source of the data and products is appropriately cited and credited. When using these data and products, credit and courtesy should be given to NOAA Coral Reef Watch. Please include the appropriate DOI associated with this dataset in the citation. For more information, visit the NOAA Coral Reef Watch website: https://coralreefwatch.noaa.gov. Recommendations for citing and providing credit are provided at https://coralreefwatch.noaa.gov/satellite/docs/recommendations_crw_citation.php. Users are referred to the footer section of Coral Reef Watch&#39;s website (https://coralreefwatch.noaa.gov/index.php) for disclaimers, policies, notices pertaining to the use of the data." />
+  <attribute name="metadata_link" value="https://coralreefwatch.noaa.gov/satellite/bleaching5km" />
+  <attribute name="naming_authority" value="gov.noaa.coralreefwatch" />
+  <attribute name="NCO" value="4.3.7" />
+  <attribute name="nco_openmp_thread_number" type="int" value="1" />
+  <attribute name="Northernmost_Northing" type="double" value="89.975" />
+  <attribute name="platform" value="Ships, drifting buoys, moored buoys, TOGA-TAO buoy arrays, GOES-8 satellite, GOES-9 satellite, GOES-10 satellite, GOES-11 satellite, GOES-12 satellite, GOES-13 satellite, GOES-14 satellite, GOES-15 satellite, GOES-16 satellite, MTSAT-1R satellite, MTSAT-2 satellite, Himawari-8 satellite, Meteosat-8 satellite, Meteosat-9 satellite, Meteoset-10 satellite, Meteosat-11 satellite, Suomi NPP, MetOp-A satellite, MetOp-B satellite, NOAA-9 satellite, NOAA-11 satellite, NOAA-12 satellite, NOAA-14 satellite, NOAA-15 satellite, NOAA-16 satellite, NOAA-17 satellite, NOAA-18 satellite, NOAA-19 satellite." />
+  <attribute name="platform_vocabulary" value="NOAA NODC Ocean Archive System Platforms" />
+  <attribute name="processing_level" value="L4" />
+  <attribute name="product_version" value="1.0" />
+  <attribute name="program" value="NOAA Coral Reef Watch program" />
+  <attribute name="project" value="NOAA Coral Reef Watch program" />
+  <attribute name="publisher_email" value="coralreefwatch@noaa.gov" />
+  <attribute name="publisher_institution" value="NOAA/NESDIS/STAR Coral Reef Watch program" />
+  <attribute name="publisher_name" value="NOAA Coral Reef Watch program" />
+  <attribute name="publisher_type" value="group" />
+  <attribute name="publisher_url" value="https://coralreefwatch.noaa.gov/" />
+  <attribute name="references" value="Donlon, et al., 2011. The Operational Sea Surface Temperature and Sea Ice analysis (OSTIA). Maturi, et al., 2017. A new high-resolution sea surface temperature analysis. https://coralreefwatch.noaa.gov/satellite/coraltemp.php" />
+  <attribute name="source" value="OSTIA Sea Surface Temperature Reanalysis (night-only), NOAA Geo-Polar Blended Night-only Sea Surface Temperature Reanalysis, NOAA Geo-Polar Blended Night-only Sea Surface Temperature (near real-time)" />
+  <attribute name="sourceUrl" value="(local files)" />
+  <attribute name="Southernmost_Northing" type="double" value="-89.975" />
+  <attribute name="standard_name_vocabulary" value="CF Standard Name Table v27" />
+  <attribute name="summary" value="CoralTemp 5km gap-free analysed blended sea surface temperature over the global ocean. CoralTemp is derived from three different but related 5km daily gap-free SST data sets and provides an internally consistent SST product that stretches from 1985 to present: Operational Sea Surface Temperature and Sea Ice Analysis (OSTIA) Sea Surface Temperature Reanalysis (1985-2002), Geo-Polar Blended Night-only Sea Surface Temperature Reanalysis (2002-2016), Geo-Polar Blended Night-only Sea Surface Temperature Near Real-Time (2017 to present). Monthly composites were generated from daily files by OceanWatch Central Pacific" />
+  <attribute name="time_coverage_duration" value="P1D" />
+  <attribute name="time_coverage_end" value="2020-08-01T12:00:00Z" />
+  <attribute name="time_coverage_resolution" value="P1D" />
+  <attribute name="time_coverage_start" value="1985-01-01T12:00:00Z" />
+  <attribute name="title" value="ZZZ - DEPRECATED - Sea Surface Temperature, Coral Reef Watch, CoralTemp - Monthly, 1985-present" />
+  <attribute name="Westernmost_Easting" type="double" value="0.025" />
+  <dimension name="time" length="428" />
+  <dimension name="latitude" length="3600" />
+  <dimension name="longitude" length="7200" />
+  <variable name="time" shape="time" type="double">
+    <attribute name="_CoordinateAxisType" value="Time" />
+    <attribute name="actual_range" type="double" value="4.734288E8 1.5962832E9" />
+    <attribute name="axis" value="T" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Time" />
+    <attribute name="long_name" value="reference time of the sst field" />
+    <attribute name="standard_name" value="time" />
+    <attribute name="time_origin" value="01-JAN-1970 00:00:00" />
+    <attribute name="units" value="seconds since 1970-01-01T00:00:00Z" />
+  </variable>
+  <variable name="latitude" shape="latitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="float" value="-89.975 89.975" />
+    <attribute name="axis" value="Y" />
+    <attribute name="comment" value="equirectangular projection and grid centers" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+    <attribute name="valid_max" type="float" value="89.975" />
+    <attribute name="valid_min" type="float" value="-89.975" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="float" value="0.025 359.975" />
+    <attribute name="axis" value="X" />
+    <attribute name="comment" value="equirectangular projection and grid centers" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+    <attribute name="valid_max" type="float" value="359.975" />
+    <attribute name="valid_min" type="float" value="0.025" />
+  </variable>
+  <variable name="analysed_sst" shape="time latitude longitude" type="double">
+    <attribute name="_FillValue" type="double" value="NaN" />
+    <attribute name="colorBarMaximum" type="double" value="32.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="coverage_content_type" value="physicalMeasurement" />
+    <attribute name="grid_mapping" value="crs" />
+    <attribute name="ioos_category" value="Temperature" />
+    <attribute name="long_name" value="analysed sea surface temperature" />
+    <attribute name="standard_name" value="sea_surface_temperature" />
+    <attribute name="units" value="degree_C" />
+    <attribute name="valid_max" type="double" value="5000.0" />
+    <attribute name="valid_min" type="double" value="-200.0" />
+  </variable>
+</netcdf>

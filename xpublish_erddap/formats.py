@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from xpublish_erddap.catalog import coverage_globals, nice_doubles
+
 __all__ = [
     "CONTENT_TYPES",
     "NCML_NS",
@@ -87,22 +89,29 @@ def dap_type(obj) -> str:
     return _DAP_TYPES.get(_dtype_of(obj), "String")
 
 
+_ERDDAP_TYPES = {
+    "float32": "float",
+    "float64": "double",
+    "int8": "byte",
+    "uint8": "ubyte",
+    "int16": "short",
+    "uint16": "ushort",
+    "int32": "int",
+    "uint32": "uint",
+    "int64": "long",
+    "uint64": "ulong",
+}
+
+
 def erddap_type(obj) -> str:
-    """ERDDAP ``.json``/``info`` type name."""
+    """ERDDAP ``.json``/``info`` type name of a variable."""
     if _is_time(obj):
         return "double"
-    return {
-        "float32": "float",
-        "float64": "double",
-        "int8": "byte",
-        "int16": "short",
-        "int32": "int",
-        "int64": "long",
-    }.get(_dtype_of(obj).name, "String")
+    return _ERDDAP_TYPES.get(_dtype_of(obj).name, "String")
 
 
 def format_value(value, *, is_time: bool):
-    """Render one cell the way ERDDAP does."""
+    """One cell as ERDDAP writes it; ``None`` for a missing number."""
     if is_time:
         ts = pd.Timestamp(value)
         if ts is pd.NaT:
@@ -110,24 +119,87 @@ def format_value(value, *, is_time: bool):
         return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
     if isinstance(value, np.floating | float):
         if np.isnan(value):
-            return ""
-        return float(value)
+            return None
+        return _shortest_float(value)
     if isinstance(value, np.integer | int):
         return int(value)
     return value
 
 
-def attr_text(value) -> str:
+def _shortest_float(value) -> float:
+    """The float ERDDAP prints: the shortest repr *at the value's precision*.
+
+    ``float(np.float32(19.225))`` is ``19.225000381469727``; ERDDAP writes
+    ``19.225``, as Java's ``Float.toString`` does.
+    """
+    if isinstance(value, np.float32 | np.float16):
+        return float(str(value))
+    return float(value)
+
+
+def java_number(value, *, das: bool = False) -> str:
+    """A number as ERDDAP writes it, i.e. as Java's ``toString`` does.
+
+    Shortest digits at the value's own precision; scientific notation below
+    1e-3 and from 1e7 up (``4.734288E8``, ``-1.0E34``). The DAS spells the
+    exponent the C way (``4.734288e+8``).
+    """
+    if isinstance(value, bool | np.bool_):
+        return str(value).lower()
+    if isinstance(value, int | np.integer):
+        return str(int(value))
+    x = value if isinstance(value, np.floating) else np.float64(value)
+    if np.isnan(x):
+        return "NaN"
+    if np.isinf(x):
+        return "Infinity" if x > 0 else "-Infinity"
+    if x == 0 or 1e-3 <= abs(x) < 1e7:  # noqa: PLR2004
+        return np.format_float_positional(x, unique=True, trim="0")
+    text = np.format_float_scientific(x, unique=True, trim="0", exp_digits=1)
+    return text if das else text.replace("e+", "E").replace("e-", "E-")
+
+
+def attr_array(value) -> np.ndarray | None:
+    """A numeric attribute as an array in its ERDDAP type; None for text.
+
+    Plain Python ints are ERDDAP ``int``s, not ``long``s.
+    """
+    if isinstance(value, str | bytes | bool | np.bool_):
+        return None
+    arr = np.asarray(value)
+    if arr.dtype.kind not in "fiu":
+        return None
+    if not isinstance(value, np.ndarray | np.generic) and arr.dtype.kind == "i":
+        arr = arr.astype("int32")
+    return arr.ravel()
+
+
+def attr_type(value) -> str:
+    """ERDDAP type name of an attribute value (``String`` for text)."""
+    arr = attr_array(value)
+    return "String" if arr is None else _ERDDAP_TYPES.get(arr.dtype.name, "double")
+
+
+def sort_globals(names) -> list[str]:
+    """ERDDAP's order for attributes: alphabetical, ignoring case.
+
+    rerddap's ``info()`` reads ``time_coverage_end``/``_start`` positionally,
+    so this order is load-bearing.
+    """
+    return sorted(names, key=lambda k: (k.lower(), k))
+
+
+def attr_text(value, *, sep: str = ", ", das: bool = False) -> str:
     """Render an attribute value the way ERDDAP writes it in text responses.
 
     Sequences become ``"a, b"`` -- not Python's ``"[a, b]"``. rerddap parses
     ``actual_range`` numerically and silently yields NAs on the bracketed form.
+    NcML separates with spaces instead.
     """
-    if isinstance(value, list | tuple | np.ndarray):
-        return ", ".join(str(v) for v in np.asarray(value).ravel().tolist())
-    if isinstance(value, np.floating | np.integer):
-        return str(value.item())
-    return str(value)
+    arr = attr_array(value)
+    if arr is None:
+        return str(value)
+    return sep.join(java_number(v, das=das) for v in arr)
 
 
 def units_of(ed, name: str) -> str:
@@ -142,10 +214,22 @@ def units_of(ed, name: str) -> str:
 # --------------------------------------------------------------------------
 
 
-def dds_response(ed, sub: xr.Dataset, variables: list[str]) -> str:
-    """ERDDAP-flavoured DDS for a (possibly subset) dataset."""
+def dds_response(
+    ed,
+    sub: xr.Dataset,
+    variables: list[str],
+    *,
+    all_axes: bool = False,
+) -> str:
+    """ERDDAP-flavoured DDS for a (possibly subset) dataset.
+
+    Like ERDDAP, the axes are listed on their own only for the whole dataset
+    (``all_axes``) or when requested by name; a data request lists its GRIDs.
+    """
     lines = ["Dataset {"]
     for dim in ed.dims:
+        if not all_axes and dim not in variables:
+            continue
         n = sub.sizes[dim]
         lines.append(f"  {dap_type(sub[dim])} {dim}[{dim} = {n}];")
 
@@ -170,18 +254,13 @@ def dds_response(ed, sub: xr.Dataset, variables: list[str]) -> str:
 def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
     out = []
     for key, value in attrs.items():
-        if isinstance(value, list | tuple | np.ndarray):
-            joined = ", ".join(str(v) for v in np.asarray(value).ravel())
-            out.append(f"{indent}Float64 {key} {joined};")
-        elif isinstance(value, bool | np.bool_):
-            out.append(f'{indent}String {key} "{value}";')
-        elif isinstance(value, np.floating | float):
-            out.append(f"{indent}Float64 {key} {float(value)};")
-        elif isinstance(value, np.integer | int):
-            out.append(f"{indent}Int32 {key} {int(value)};")
-        else:
+        arr = attr_array(value)
+        if arr is None:
             escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
             out.append(f'{indent}String {key} "{escaped}";')
+            continue
+        dap = _DAP_TYPES.get(arr.dtype, "Float64")
+        out.append(f"{indent}{dap} {key} {attr_text(arr, das=True)};")
     return out
 
 
@@ -200,7 +279,7 @@ def das_response(ed, sub: xr.Dataset) -> str:
         lines.append("  }")
     lines.append("  NC_GLOBAL {")
     lines.extend(
-        _das_attr_lines({k: ed.globals_[k] for k in sorted(ed.globals_)}, "    "),
+        _das_attr_lines({k: ed.globals_[k] for k in sort_globals(ed.globals_)}, "    "),
     )
     lines.append("  }")
     lines.append("}")
@@ -226,9 +305,11 @@ def _long_form(ed, sub: xr.Dataset, variables: list[str]):
         arrays = [np.asarray(sub[c].values) for c in cols]
 
         def rows():
-            for tup in zip(*arrays, strict=True):
+            # ERDDAP lists each axis in its own column, side by side, padding
+            # the shorter ones with blanks -- not their cartesian product
+            for tup in itertools.zip_longest(*arrays, fillvalue=None):
                 yield [
-                    format_value(v, is_time=is_t)
+                    "" if v is None else format_value(v, is_time=is_t)
                     for v, is_t in zip(tup, times, strict=True)
                 ]
 
@@ -269,13 +350,23 @@ def to_csv(ed, sub: xr.Dataset, variables: list[str], style: str = "csv") -> str
         buf.write(",".join(cols) + "\n")
         buf.write(",".join(units) + "\n")
     for row in rows:
-        buf.write(",".join("" if v == "" else str(v) for v in row) + "\n")
+        buf.write(",".join(_csv_value(v) for v in row) + "\n")
     return buf.getvalue()
+
+
+def _csv_value(value) -> str:
+    if value is None:
+        return "NaN"
+    if isinstance(value, float):
+        return java_number(value)
+    return str(value)
 
 
 def to_erddap_json(ed, sub: xr.Dataset, variables: list[str]) -> str:
     """ERDDAP's ``.json`` table structure."""
     cols, units, types, rows = _long_form(ed, sub, variables)
+    # ERDDAP's JSON gives times as ISO strings and types the column to match
+    types = ["String" if u == "UTC" else t for t, u in zip(types, units, strict=True)]
     payload = {
         "table": {
             "columnNames": cols,
@@ -288,24 +379,63 @@ def to_erddap_json(ed, sub: xr.Dataset, variables: list[str]) -> str:
 
 
 def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
-    """Serialize to netCDF, with ERDDAP-style time encoding."""
+    """Serialize a subset to netCDF-3, with ERDDAP's subset metadata.
+
+    Like ERDDAP, the coverage globals and each axis's ``actual_range``
+    describe the subset, in the axis's dtype; axes carry no ``_FillValue``;
+    time is float64 epoch seconds with ``units`` spelled with a ``Z``.
+    """
     keep = [v for v in variables if v not in ed.dims]
-    out = sub[keep] if keep else sub
+    globals_ = dict(ed.globals_)
+    if keep:
+        out = sub[keep]
+        dims = ed.dims
+    else:
+        # an axis-only request: the file holds just those axes, never the
+        # data, and (as in ERDDAP) bounding-box globals only for them
+        dims = tuple(v for v in variables if v in ed.dims)
+        out = xr.Dataset(coords={d: sub[d] for d in dims})
+        globals_ = {k: v for k, v in globals_.items() if not _is_bbox_global(k)}
     out = out.copy()
-    out.attrs = dict(ed.globals_)
-    for name in out.variables:
-        out[name].attrs = {
-            k: v for k, v in ed.variable_attrs(name).items() if k != "_FillValue"
-        }
+    out.attrs = {**globals_, **coverage_globals(out, dims, subset=True)}
+    # the netCDF-4 library's stamp; ERDDAP lists it but does not write it
+    out.attrs.pop("_NCProperties", None)
     encoding = {}
-    for name in out.coords:
+    for name in list(out.variables):
+        # fill values travel in .encoding; xarray refuses them in both places
+        attrs = {
+            k: v
+            for k, v in ed.variable_attrs(name).items()
+            if k not in ("_FillValue", "missing_value")
+        }
+        if name not in ed.dims:
+            out[name].attrs = attrs
+            continue
+        encoding[name] = {"_FillValue": None}
+        values = np.asarray(out[name].values)
         if _is_time(out[name]):
-            encoding[name] = {"units": TIME_UNITS, "dtype": "float64"}
-            out[name].attrs.pop("units", None)
+            values = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
+            attrs.pop("calendar", None)
+            attrs["units"] = TIME_UNITS
+        if values.size:
+            attrs["actual_range"] = np.array(
+                [np.nanmin(values), np.nanmax(values)],
+                dtype=values.dtype,
+            )
+        out = out.assign_coords({name: (name, values, attrs)})
     # Pin the engine: xarray's default for an in-memory write depends on which
     # backends happen to be installed, which is not reproducible. scipy writes
     # netCDF-3 classic, which is also what ERDDAP returns for ".nc".
     return out.to_netcdf(encoding=encoding, engine="scipy")
+
+
+def _is_bbox_global(key: str) -> bool:
+    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in {
+        "Northernmost_Northing",
+        "Southernmost_Northing",
+        "Easternmost_Easting",
+        "Westernmost_Easting",
+    }
 
 
 def _xml_escape(text: str) -> str:
@@ -315,38 +445,52 @@ def _xml_escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")
+        .replace("'", "&#39;")
     )
 
 
-def _actual_range_pair(ed, name: str) -> str:
-    """``"min max"`` -- space separated, as NcML wants it."""
-    values = np.asarray(ed.ds[name].values)
-    if values.size == 0:
-        return ""
+def _ncml_attr_lines(attrs: dict, indent: str) -> list[str]:
+    out = []
+    for key in sort_globals(attrs):
+        value = attrs[key]
+        kind = attr_type(value)
+        typed = "" if kind == "String" else f' type="{kind}"'
+        text = _xml_escape(attr_text(value, sep=" "))
+        out.append(
+            f'{indent}<attribute name="{_xml_escape(key)}"{typed} value="{text}" />',
+        )
+    return out
+
+
+def _axis_attrs(ed, name: str) -> dict:
+    """An axis's attributes as ERDDAP lists them (time in epoch seconds)."""
+    attrs = dict(ed.variable_attrs(name))
     if _is_time(ed.ds[name]):
-        secs = values.astype("datetime64[s]").astype("int64")
-        return f"{float(secs.min())} {float(secs.max())}"
-    return f"{float(np.nanmin(values))} {float(np.nanmax(values))}"
+        attrs["units"] = TIME_UNITS
+        attrs.pop("calendar", None)
+    return attrs
 
 
-def ncml_response(ed) -> str:
+def ncml_response(ed, location: str) -> str:
     """ERDDAP's ``.ncml`` metadata response.
 
-    ``erddapy`` >= 3.2 replaced its DDS-plus-csvp discovery with a single
-    ``.ncml`` request, and requires, for every dimension, a matching
-    ``<variable>`` carrying a space-separated ``actual_range`` attribute --
-    it raises if one is missing.
+    Global attributes sit directly under ``<netcdf>``, then the dimensions,
+    then the variables; non-String attributes carry ``type=``. ``erddapy`` >=
+    3.2 needs, for every dimension, a matching ``<variable>`` with a
+    space-separated ``actual_range`` -- it raises if one is missing.
+
+    ``location`` is the dataset's griddap URL. (ERDDAP itself drops the
+    ``/erddap`` path segment there; we give the working URL.)
     """
     out = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        f'<netcdf xmlns="{NCML_NS}" location="{_xml_escape(ed.dataset_id)}">',
+        f'<netcdf xmlns="{NCML_NS}" location="{_xml_escape(location)}">',
     ]
+    out.extend(_ncml_attr_lines(ed.globals_, "  "))
     for dim in ed.dims:
         out.append(
-            f'  <dimension name="{_xml_escape(dim)}" '
-            f'length="{ed.ds.sizes[dim]}" />',
+            f'  <dimension name="{_xml_escape(dim)}" length="{ed.ds.sizes[dim]}" />',
         )
-
     for name in list(ed.dims) + list(ed.data_vars):
         shape = " ".join(str(d) for d in ed.ds[name].dims)
         out.append(
@@ -354,28 +498,50 @@ def ncml_response(ed) -> str:
             f'shape="{_xml_escape(shape)}" '
             f'type="{erddap_type(ed.ds[name])}">',
         )
-        attrs = dict(ed.variable_attrs(name))
-        if _is_time(ed.ds[name]):
-            attrs["units"] = TIME_UNITS
-        if name in ed.dims:
-            # erddapy raises if a dimension has no actual_range
-            attrs["actual_range"] = _actual_range_pair(ed, name)
-        for key, value in attrs.items():
-            out.append(
-                f'    <attribute name="{_xml_escape(key)}" '
-                f'value="{_xml_escape(attr_text(value))}" />',
-            )
+        attrs = _axis_attrs(ed, name) if name in ed.dims else ed.variable_attrs(name)
+        out.extend(_ncml_attr_lines(attrs, "    "))
         out.append("  </variable>")
-
-    out.append('  <group name="NC_GLOBAL">')
-    for key in sorted(ed.globals_):
-        out.append(
-            f'    <attribute name="{_xml_escape(key)}" '
-            f'value="{_xml_escape(attr_text(ed.globals_[key]))}" />',
-        )
-    out.append("  </group>")
     out.append("</netcdf>")
     return "\n".join(out) + "\n"
+
+
+def _spacing(values: np.ndarray) -> str:
+    """ERDDAP's ``evenlySpaced=..., averageSpacing=...`` for an axis.
+
+    The average is (last - first) / (n - 1), so it is negative for a
+    descending axis. Float32 values are first rounded to 7 significant
+    digits, as ERDDAP does (checked against real servers). Times are given
+    as a duration, ``30 days 10h 27m 16s``.
+    """
+    if values.size < 2:  # noqa: PLR2004
+        return ""
+    if np.issubdtype(values.dtype, np.datetime64):
+        numeric = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
+        tolerance = 1e-9
+    else:
+        numeric = nice_doubles(values)
+        tolerance = 1e-5 if values.dtype == np.float32 else 1e-9
+    average = (numeric[-1] - numeric[0]) / (numeric.size - 1)
+    even = bool(np.all(np.abs(np.diff(numeric) - average) <= tolerance * abs(average)))
+    if np.issubdtype(values.dtype, np.datetime64):
+        spacing = _duration(average)
+    else:
+        spacing = java_number(average)
+    return f", evenlySpaced={str(even).lower()}, averageSpacing={spacing}"
+
+
+def _duration(seconds: float) -> str:
+    """A time step the way ERDDAP writes it: ``1 day 0h 6m 4s``."""
+    sign = "-" if seconds < 0 else ""
+    total = round(abs(seconds))
+    days, rest = divmod(total, 86400)
+    hours, rest = divmod(rest, 3600)
+    minutes, secs = divmod(rest, 60)
+    hms = f"{hours}h {minutes}m {secs}s"
+    if days:
+        unit = "day" if days == 1 else "days"
+        return f"{sign}{days} {unit} {hms}"
+    return sign + hms
 
 
 def info_table(ed) -> tuple[list[str], list[list]]:
@@ -385,23 +551,27 @@ def info_table(ed) -> tuple[list[str], list[list]]:
     """
     columns = ["Row Type", "Variable Name", "Attribute Name", "Data Type", "Value"]
     rows: list[list] = []
-    # ERDDAP emits NC_GLOBAL attributes in alphabetical order, and rerddap
-    # depends on it: print.info() takes time_coverage_end/_start positionally.
-    for key in sorted(ed.globals_):
-        rows.append(
-            ["attribute", "NC_GLOBAL", key, "String", attr_text(ed.globals_[key])],
-        )
+
+    def attribute_rows(owner: str, attrs: dict) -> None:
+        for key in sort_globals(attrs):
+            value = attrs[key]
+            rows.append(["attribute", owner, key, attr_type(value), attr_text(value)])
+
+    attribute_rows("NC_GLOBAL", ed.globals_)
     for dim in ed.dims:
-        values = ed.ds[dim].values
-        n = len(values)
-        rows.append(["dimension", dim, "", erddap_type(ed.ds[dim]), f"nValues={n}"])
-        attrs = dict(ed.variable_attrs(dim))
-        if _is_time(values):
-            attrs["units"] = TIME_UNITS
-        for key, value in attrs.items():
-            rows.append(["attribute", dim, key, "String", attr_text(value)])
+        values = np.asarray(ed.ds[dim].values)
+        rows.append(
+            [
+                "dimension",
+                dim,
+                "",
+                erddap_type(ed.ds[dim]),
+                f"nValues={values.size}{_spacing(values)}",
+            ],
+        )
+        attribute_rows(dim, _axis_attrs(ed, dim))
     for name in ed.data_vars:
-        rows.append(["variable", name, "", erddap_type(ed.ds[name]), ""])
-        for key, value in ed.variable_attrs(name).items():
-            rows.append(["attribute", name, key, "String", attr_text(value)])
+        dims = ", ".join(str(d) for d in ed.ds[name].dims)
+        rows.append(["variable", name, "", erddap_type(ed.ds[name]), dims])
+        attribute_rows(name, ed.variable_attrs(name))
     return columns, rows

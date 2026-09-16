@@ -106,3 +106,46 @@ def test_mismatched_subsets_rejected(axes):
             ["time", "lat", "lon"],
             ["tos", "sos"],
         )
+
+
+@pytest.mark.parametrize(
+    ("values", "target", "expected"),
+    [
+        (np.array([-0.5, 0.5]), "(0.0)", 1),  # ascending: the larger value
+        (np.array([0.5, -0.5]), "(0.0)", 0),  # descending: still the larger
+        (np.array([-0.025, 0.025], dtype="float32"), "(0.0)", 1),
+    ],
+)
+def test_nearest_match_ties_pick_the_larger_value(values, target, expected):
+    """Issue #11: ERDDAP breaks exact ties toward the larger coordinate."""
+    assert parse_selector(target, values).start == expected
+
+
+def test_time_ties_pick_the_later_time():
+    times = np.array(["1985-01-01T12:00", "1985-02-01T12:00"], dtype="datetime64[ns]")
+    assert parse_selector("(1985-01-17T00:00:00Z)", times).start == 1
+
+
+def test_axis_only_request_takes_a_selector(axes):
+    parsed = parse_griddap_query(
+        "time[(last)],lat[0:1:2]",
+        axes,
+        ["time", "lat", "lon"],
+        ["tos"],
+    )
+    assert parsed.variables == ["time", "lat"]
+    assert parsed.selections["time"].start == 99
+    assert parsed.selections["lat"].stop == 2
+
+
+def test_axis_only_request_refuses_a_reversed_range(axes):
+    """ERDDAP swaps a reversed range for data variables, not for axes."""
+    with pytest.raises(ConstraintError, match="axis order"):
+        parse_griddap_query("lat[(40):1:(30)]", axes, ["time", "lat", "lon"], ["tos"])
+    parsed = parse_griddap_query(
+        "tos[0][(40):1:(30)][0]",
+        axes,
+        ["time", "lat", "lon"],
+        ["tos"],
+    )
+    assert (parsed.selections["lat"].start, parsed.selections["lat"].stop) == (20, 30)

@@ -18,6 +18,8 @@ import xarray as xr
 
 __all__ = [
     "AxisProblem",
+    "coverage_globals",
+    "nice_doubles",
     "ErddapDataset",
     "REQUIRED_GLOBALS",
     "build_catalog",
@@ -113,7 +115,10 @@ class ErddapDataset:
         return {d: self.ds[d].values for d in self.dims}
 
     def variable_attrs(self, name: str) -> dict:
-        """Attributes for ``name``, with ERDDAP's required extras filled in."""
+        """Attributes for ``name``, with ERDDAP's required extras filled in.
+
+        Sorted as ERDDAP sorts them: alphabetically, ignoring case.
+        """
         attrs = dict(self.ds[name].attrs)
         attrs.setdefault("ioos_category", infer_ioos_category(name, attrs))
         if name in self.dims:
@@ -121,19 +126,28 @@ class ErddapDataset:
                 attrs["units"] = _axis_units(name, self.ds[name])
             # rerddap's info() reads actual_range off every variable
             attrs.setdefault("actual_range", self._actual_range(name))
-        return attrs
+        else:
+            attrs.update(
+                {k: v for k, v in _fill_attrs(self.ds[name]).items() if k not in attrs},
+            )
+        return {k: attrs[k] for k in sorted(attrs, key=lambda k: (k.lower(), k))}
 
-    def _actual_range(self, name: str) -> str:
-        """ERDDAP-style ``actual_range`` (epoch seconds for time axes)."""
+    def _actual_range(self, name: str) -> np.ndarray | str:
+        """ERDDAP-style ``actual_range``: ``[min, max]`` in the axis's dtype.
+
+        Time axes give float64 epoch seconds. Kept numeric so each response
+        can type and format it (``Float32 actual_range -89.975, 89.975``).
+        """
         if name not in self.dims:  # never materialize a data variable
             return ""
         values = np.asarray(self.ds[name].values)
         if values.size == 0:
             return ""
         if np.issubdtype(values.dtype, np.datetime64):
-            secs = values.astype("datetime64[s]").astype("int64")
-            return f"{float(secs.min())}, {float(secs.max())}"
-        return f"{float(np.nanmin(values))}, {float(np.nanmax(values))}"
+            secs = values.astype("datetime64[s]").astype("float64")
+            return np.array([secs.min(), secs.max()])
+        nice = nice_doubles(values)
+        return np.array([np.nanmin(nice), np.nanmax(nice)]).astype(values.dtype)
 
     def missing_required_globals(self) -> list[str]:
         """Required ERDDAP globals that the *source* did not supply.
@@ -142,6 +156,30 @@ class ErddapDataset:
         real deployment should provide them (ERDDAP's ``addAttributes``).
         """
         return [k for k in REQUIRED_GLOBALS if k not in self.supplied_globals]
+
+
+def _fill_attrs(da: xr.DataArray) -> dict:
+    """``_FillValue`` / ``missing_value``, which xarray keeps in ``.encoding``.
+
+    Opening a netCDF or Zarr store moves both out of ``.attrs``, but clients
+    read them from ERDDAP's metadata. They are given in the type of the
+    values we serve. For packed data (``scale_factor``/``add_offset``) the
+    served values are unpacked floats with NaN for missing, so the fill
+    becomes NaN.
+    """
+    enc = da.encoding
+    out = {}
+    floating = da.dtype.kind == "f"
+    packed = floating and ("scale_factor" in enc or "add_offset" in enc)
+    for key in ("_FillValue", "missing_value"):
+        value = enc.get(key)
+        if value is None:
+            continue
+        value = np.asarray(np.nan if packed else value).reshape(-1)[0]
+        if not floating and np.isnan(value):
+            continue  # an integer variable cannot hold a NaN fill
+        out[key] = value.astype(da.dtype)
+    return out
 
 
 _AXIS_ALIASES = {
@@ -215,11 +253,42 @@ def _axis_units(name: str, da: xr.DataArray) -> str:
     return "1"
 
 
-def _derived_globals(ds: xr.Dataset, dims: tuple[str, ...]) -> dict:
-    """ACDD coverage globals that ERDDAP derives from the data itself.
+def nice_doubles(values: np.ndarray) -> np.ndarray:
+    """Axis values as the doubles ERDDAP derives metadata from.
+
+    ERDDAP rounds float32 values to 7 significant digits before computing
+    ``actual_range``, the ``geospatial_*`` bounds and the average spacing
+    (checked against real servers: erdMH1chla8day's latitude 89.979164
+    becomes 89.97916). Other types are used as they are.
+    """
+    values = np.asarray(values)
+    if values.dtype == np.float32:
+        return np.array([float(f"{v:.7g}") for v in values.tolist()])
+    return values.astype("float64")
+
+
+#: ERDDAP's bounding-box globals: axis -> (name of the min, name of the max).
+_MOST = {
+    "lat": ("Southernmost_Northing", "Northernmost_Northing"),
+    "lon": ("Westernmost_Easting", "Easternmost_Easting"),
+}
+
+
+def coverage_globals(
+    ds: xr.Dataset,
+    dims: tuple[str, ...],
+    *,
+    subset: bool = False,
+) -> dict:
+    """ACDD coverage globals that ERDDAP derives from the axes.
 
     ``rerddap``'s ``info()`` reads ``time_coverage_start``/``_end`` from the
     globals rather than from the time axis, so these are not optional.
+
+    For the full dataset, bounds are doubles (see ``nice_doubles``) and the
+    resolution is ``|last - first| / (n - 1)``. For a ``subset`` (a ``.nc``
+    download) ERDDAP gives the subset's bounds in the axis's own dtype and
+    keeps the full dataset's resolution, so no resolution is returned.
     """
     out: dict[str, object] = {}
     for dim in dims:
@@ -235,16 +304,23 @@ def _derived_globals(ds: xr.Dataset, dims: tuple[str, ...]) -> dict:
             continue
         low = str(dim).lower()
         for axis, names in _AXIS_ALIASES.items():
-            if low in names:
-                out[f"geospatial_{axis}_min"] = float(np.nanmin(values))
-                out[f"geospatial_{axis}_max"] = float(np.nanmax(values))
-                if values.size > 1:
-                    out[f"geospatial_{axis}_resolution"] = float(
-                        abs(np.diff(values.astype("float64"))).mean(),
-                    )
-                out[f"geospatial_{axis}_units"] = (
-                    "degrees_north" if axis == "lat" else "degrees_east"
+            if low not in names:
+                continue
+            nice = nice_doubles(values)
+            lo, hi = float(np.nanmin(nice)), float(np.nanmax(nice))
+            if subset:
+                lo, hi = values.dtype.type(lo), values.dtype.type(hi)
+            elif values.size > 1:
+                out[f"geospatial_{axis}_resolution"] = abs(nice[-1] - nice[0]) / (
+                    values.size - 1
                 )
+            out[f"geospatial_{axis}_min"] = lo
+            out[f"geospatial_{axis}_max"] = hi
+            out[f"geospatial_{axis}_units"] = (
+                "degrees_north" if axis == "lat" else "degrees_east"
+            )
+            out[_MOST[axis][0]] = lo
+            out[_MOST[axis][1]] = hi
     return out
 
 
@@ -310,9 +386,11 @@ def build_catalog(
         sub = sub.drop_vars([c for c in sub.coords if c not in sig], errors="ignore")
 
         attrs = dict(ds.attrs)
+        # xpublish tags every dataset with its id; not a real attribute
+        attrs.pop("_xpublish_id", None)
         attrs.update(metadata or {})
         supplied = tuple(k for k in REQUIRED_GLOBALS if k in attrs)
-        attrs.update(_derived_globals(sub, sig))
+        attrs.update(coverage_globals(sub, sig))
         attrs.setdefault("title", attrs.get("title", dataset_id))
         for key, value in _FALLBACK_GLOBALS.items():
             attrs.setdefault(key, value)

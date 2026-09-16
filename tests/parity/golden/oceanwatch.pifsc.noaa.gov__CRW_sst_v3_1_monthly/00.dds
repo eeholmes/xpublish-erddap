@@ -1,0 +1,13 @@
+Dataset {
+  Float64 time[time = 500];
+  Float32 latitude[latitude = 3600];
+  Float32 longitude[longitude = 7200];
+  GRID {
+    ARRAY:
+      Float32 sea_surface_temperature[time = 500][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 500];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } sea_surface_temperature;
+} CRW_sst_v3_1_monthly;
