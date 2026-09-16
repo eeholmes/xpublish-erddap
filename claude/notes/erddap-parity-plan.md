@@ -94,6 +94,20 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Subset .nc metadata (2026-09-16)
+
+All 9 `.nc` comparisons now match. In ERDDAP's `.nc` the coverage globals
+(`geospatial_*_min/max`, the four `*most_*`, `time_coverage_*`) and each
+axis's `actual_range` describe the subset **in the axis dtype** (float32 for
+CRW); `geospatial_*_resolution` stays the full dataset's value; axes carry no
+`_FillValue`; time is float64 epoch seconds, units spelled `...00Z`, no
+`calendar`. `catalog.coverage_globals(subset=...)` does both cases.
+
+`*most_*` are now derived for the full dataset too. Inferred, not proven:
+etopo5 on erddap.ioos.us is a copy of IRI's worldbath.nc, which is unlikely
+to carry them, yet its DAS lists them. `_NCProperties` (netCDF-4 library
+stamp) is now dropped from globals like `_xpublish_id`.
+
 ## Fill values (2026-09-16)
 
 `_FillValue`/`missing_value` now come from `.encoding` when not in `.attrs`

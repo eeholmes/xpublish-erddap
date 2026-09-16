@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from xpublish_erddap.catalog import coverage_globals
+
 __all__ = [
     "CONTENT_TYPES",
     "NCML_NS",
@@ -311,23 +313,39 @@ def to_erddap_json(ed, sub: xr.Dataset, variables: list[str]) -> str:
 
 
 def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
-    """Serialize to netCDF, with ERDDAP-style time encoding."""
+    """Serialize a subset to netCDF-3, with ERDDAP's subset metadata.
+
+    Like ERDDAP, the coverage globals and each axis's ``actual_range``
+    describe the subset, in the axis's dtype; axes carry no ``_FillValue``;
+    time is float64 epoch seconds with ``units`` spelled with a ``Z``.
+    """
     keep = [v for v in variables if v not in ed.dims]
     out = sub[keep] if keep else sub
     out = out.copy()
-    out.attrs = dict(ed.globals_)
-    for name in out.variables:
+    out.attrs = {**ed.globals_, **coverage_globals(out, ed.dims, subset=True)}
+    encoding = {}
+    for name in list(out.variables):
         # fill values travel in .encoding; xarray refuses them in both places
-        out[name].attrs = {
+        attrs = {
             k: v
             for k, v in ed.variable_attrs(name).items()
             if k not in ("_FillValue", "missing_value")
         }
-    encoding = {}
-    for name in out.coords:
+        if name not in ed.dims:
+            out[name].attrs = attrs
+            continue
+        encoding[name] = {"_FillValue": None}
+        values = np.asarray(out[name].values)
         if _is_time(out[name]):
-            encoding[name] = {"units": TIME_UNITS, "dtype": "float64"}
-            out[name].attrs.pop("units", None)
+            values = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
+            attrs.pop("calendar", None)
+            attrs["units"] = TIME_UNITS
+        if values.size:
+            attrs["actual_range"] = np.array(
+                [np.nanmin(values), np.nanmax(values)],
+                dtype=values.dtype,
+            )
+        out = out.assign_coords({name: (name, values, attrs)})
     # Pin the engine: xarray's default for an in-memory write depends on which
     # backends happen to be installed, which is not reproducible. scipy writes
     # netCDF-3 classic, which is also what ERDDAP returns for ".nc".

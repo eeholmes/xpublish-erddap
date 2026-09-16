@@ -18,6 +18,7 @@ import xarray as xr
 
 __all__ = [
     "AxisProblem",
+    "coverage_globals",
     "ErddapDataset",
     "REQUIRED_GLOBALS",
     "build_catalog",
@@ -248,11 +249,29 @@ def _axis_units(name: str, da: xr.DataArray) -> str:
     return "1"
 
 
-def _derived_globals(ds: xr.Dataset, dims: tuple[str, ...]) -> dict:
-    """ACDD coverage globals that ERDDAP derives from the data itself.
+#: ERDDAP's bounding-box globals: axis -> (name of the min, name of the max).
+_MOST = {
+    "lat": ("Southernmost_Northing", "Northernmost_Northing"),
+    "lon": ("Westernmost_Easting", "Easternmost_Easting"),
+}
+
+
+def coverage_globals(
+    ds: xr.Dataset,
+    dims: tuple[str, ...],
+    *,
+    subset: bool = False,
+) -> dict:
+    """ACDD coverage globals that ERDDAP derives from the axes.
 
     ``rerddap``'s ``info()`` reads ``time_coverage_start``/``_end`` from the
     globals rather than from the time axis, so these are not optional.
+
+    For the full dataset, bounds are doubles as written (a float32 89.975
+    stays 89.975, not 89.9749984741211) and the resolution is
+    ``(max - min) / (n - 1)``. For a ``subset`` (a ``.nc`` download) ERDDAP
+    gives the subset's bounds in the axis's own dtype and keeps the full
+    dataset's resolution, so no resolution is returned.
     """
     out: dict[str, object] = {}
     for dim in dims:
@@ -268,18 +287,22 @@ def _derived_globals(ds: xr.Dataset, dims: tuple[str, ...]) -> dict:
             continue
         low = str(dim).lower()
         for axis, names in _AXIS_ALIASES.items():
-            if low in names:
-                # float32 axes: use the value as written (89.975), not its
-                # float64 expansion (89.9749984741211), as ERDDAP does
+            if low not in names:
+                continue
+            if subset:
+                lo, hi = np.nanmin(values), np.nanmax(values)
+            else:
                 lo = float(str(np.nanmin(values)))
                 hi = float(str(np.nanmax(values)))
-                out[f"geospatial_{axis}_min"] = lo
-                out[f"geospatial_{axis}_max"] = hi
                 if values.size > 1:
                     out[f"geospatial_{axis}_resolution"] = (hi - lo) / (values.size - 1)
-                out[f"geospatial_{axis}_units"] = (
-                    "degrees_north" if axis == "lat" else "degrees_east"
-                )
+            out[f"geospatial_{axis}_min"] = lo
+            out[f"geospatial_{axis}_max"] = hi
+            out[f"geospatial_{axis}_units"] = (
+                "degrees_north" if axis == "lat" else "degrees_east"
+            )
+            out[_MOST[axis][0]] = lo
+            out[_MOST[axis][1]] = hi
     return out
 
 
@@ -345,11 +368,12 @@ def build_catalog(
         sub = sub.drop_vars([c for c in sub.coords if c not in sig], errors="ignore")
 
         attrs = dict(ds.attrs)
-        # xpublish tags every dataset with its id; not a real attribute
-        attrs.pop("_xpublish_id", None)
+        # xpublish's id tag and netCDF-4's library stamp are not metadata
+        for internal in ("_xpublish_id", "_NCProperties"):
+            attrs.pop(internal, None)
         attrs.update(metadata or {})
         supplied = tuple(k for k in REQUIRED_GLOBALS if k in attrs)
-        attrs.update(_derived_globals(sub, sig))
+        attrs.update(coverage_globals(sub, sig))
         attrs.setdefault("title", attrs.get("title", dataset_id))
         for key, value in _FALLBACK_GLOBALS.items():
             attrs.setdefault(key, value)

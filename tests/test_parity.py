@@ -49,12 +49,9 @@ KNOWN: list[tuple[str, str]] = [
         "NC_GLOBAL group; location should be the dataset URL",
     ),
     (r"^CRW\S* \S*\.json\?", "time column's columnType should be String"),
-    (r"\[last-1:last\]\[100\]\[200\]$", "missing values: CSV should say NaN"),
     (
-        r"\.nc\?",
-        "subset .nc: ERDDAP rewrites actual_range, geospatial_*, *most_* and "
-        "time_coverage_* for the subset; our axes get a _FillValue; time "
-        "units spelled +00:00",
+        r"\.csv0?p?\?analysed_sst\[last-1:last\]\[100\]\[200\]$",
+        "missing values: CSV should say NaN",
     ),
     (r"\.dds\?", "a data request's DDS should list only the GRIDs, not the axes"),
 ]

@@ -272,3 +272,26 @@ def test_fill_values_from_encoding_are_listed(tmp_path):
     )
     assert nc.v.attrs["_FillValue"] == -999.0
     assert nc.v.attrs["missing_value"] == -999.0
+
+
+def test_subset_netcdf_describes_the_subset(client):
+    """Like ERDDAP, a .nc download's coverage metadata is the subset's."""
+    resp = client.get("/erddap/griddap/testgrid.nc?tos[1:1:2][1:1:2][0:1:1]")
+    ds = xr.open_dataset(io.BytesIO(resp.content), decode_cf=False)
+    assert ds.attrs["time_coverage_start"] == "2020-01-02T00:00:00Z"
+    assert ds.attrs["time_coverage_end"] == "2020-01-03T00:00:00Z"
+    assert ds.attrs["geospatial_lat_min"] == 42.5
+    assert ds.attrs["Northernmost_Northing"] == 45.0
+    assert ds.attrs["Westernmost_Easting"] == 230.0
+    assert list(ds.lat.attrs["actual_range"]) == [42.5, 45.0]
+    assert "_FillValue" not in ds.lat.attrs
+    assert ds.time.attrs["units"] == "seconds since 1970-01-01T00:00:00Z"
+    assert "calendar" not in ds.time.attrs
+    assert list(ds.time.attrs["actual_range"]) == [1577923200.0, 1578009600.0]
+
+
+def test_full_dataset_gets_bounding_box_globals(client):
+    """ERDDAP adds *most_* globals even when the source has none."""
+    das = client.get("/erddap/griddap/testgrid.das").text
+    assert "Float64 Northernmost_Northing 50.0;" in das
+    assert "Float64 Easternmost_Easting 240.0;" in das
