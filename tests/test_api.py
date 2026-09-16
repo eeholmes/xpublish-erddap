@@ -172,3 +172,31 @@ def test_check_axes_reports_the_break():
     assert problems[0].axis == "time"
     assert "not strictly monotonic" in problems[0].reason
     assert "index 1" in problems[0].reason
+
+
+def test_ncml_matches_what_erddapy_parses(client):
+    """erddapy >=3.2 discovers a griddap dataset from .ncml alone."""
+    import xml.etree.ElementTree as ET
+
+    from xpublish_erddap.formats import NCML_NS
+
+    resp = client.get("/erddap/griddap/testgrid.ncml")
+    assert resp.status_code == 200
+    root = ET.fromstring(resp.text)
+
+    dims = [d.attrib["name"] for d in root.findall(f"{{{NCML_NS}}}dimension")]
+    variables = [v.attrib["name"] for v in root.findall(f"{{{NCML_NS}}}variable")]
+    assert dims == ["time", "lat", "lon"]
+    # erddapy derives data variables by subtracting dimension names
+    assert set(variables) - set(dims) == {"tos", "sos"}
+
+    # it raises if any dimension lacks a space-separated actual_range
+    ns = {"nc": NCML_NS}
+    for dim in dims:
+        el = root.find(
+            f'nc:variable[@name="{dim}"]/nc:attribute[@name="actual_range"]',
+            namespaces=ns,
+        )
+        assert el is not None, f"{dim} has no actual_range"
+        low, high = el.attrib["value"].split()
+        assert float(low) <= float(high)

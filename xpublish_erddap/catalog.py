@@ -78,6 +78,13 @@ def infer_ioos_category(name: str, attrs: dict) -> str:
     """Best-effort ``ioos_category`` for a variable."""
     if "ioos_category" in attrs:
         return str(attrs["ioos_category"])
+    low = name.lower()
+    if low in ("time", "t"):
+        return "Time"
+    if low in _AXIS_ALIASES["lat"] or low in _AXIS_ALIASES["lon"]:
+        return "Location"
+    if low in ("depth", "z", "lev", "level", "altitude"):
+        return "Location"
     haystack = " ".join(
         str(attrs.get(k, "")) for k in ("standard_name", "long_name")
     ).lower()

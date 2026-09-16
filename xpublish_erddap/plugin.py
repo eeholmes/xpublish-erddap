@@ -33,7 +33,7 @@ logger = logging.getLogger("uvicorn")
 ERDDAP_JSON = "application/json;charset=UTF-8"
 
 TABULAR = {"csv", "csvp", "csv0", "json", "htmlTable"}
-ALL_EXTENSIONS = TABULAR | {"nc", "das", "dds", "dods"}
+ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds", "dods"}
 
 
 def _resolve(request: Request, dep, *args):
@@ -254,6 +254,11 @@ class ErddapPlugin(Plugin):
 
             if ext == "das":
                 return PlainTextResponse(formats.das_response(ed, ed.ds))
+            if ext == "ncml":
+                return Response(
+                    formats.ncml_response(ed),
+                    media_type="application/xml",
+                )
 
             try:
                 parsed = parse_griddap_query(

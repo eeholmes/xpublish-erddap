@@ -21,17 +21,23 @@ import xarray as xr
 
 __all__ = [
     "CONTENT_TYPES",
+    "NCML_NS",
     "TIME_UNITS",
     "das_response",
     "dds_response",
     "format_value",
     "info_table",
+    "ncml_response",
     "to_csv",
     "to_erddap_json",
     "to_netcdf_bytes",
 ]
 
 TIME_UNITS = "seconds since 1970-01-01T00:00:00Z"
+
+#: NcML namespace. erddapy >=3.2 parses the ``.ncml`` response with this exact
+#: URI -- note the ``https`` scheme, which older NcML documents spell ``http``.
+NCML_NS = "https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2"
 
 CONTENT_TYPES = {
     "das": "text/plain",
@@ -42,6 +48,7 @@ CONTENT_TYPES = {
     "tsv": "text/tab-separated-values",
     "json": "application/json",
     "nc": "application/x-netcdf",
+    "ncml": "application/xml",
     "htmlTable": "text/html",
 }
 
@@ -299,6 +306,76 @@ def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
     # backends happen to be installed, which is not reproducible. scipy writes
     # netCDF-3 classic, which is also what ERDDAP returns for ".nc".
     return out.to_netcdf(encoding=encoding, engine="scipy")
+
+
+def _xml_escape(text: str) -> str:
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _actual_range_pair(ed, name: str) -> str:
+    """``"min max"`` -- space separated, as NcML wants it."""
+    values = np.asarray(ed.ds[name].values)
+    if values.size == 0:
+        return ""
+    if _is_time(ed.ds[name]):
+        secs = values.astype("datetime64[s]").astype("int64")
+        return f"{float(secs.min())} {float(secs.max())}"
+    return f"{float(np.nanmin(values))} {float(np.nanmax(values))}"
+
+
+def ncml_response(ed) -> str:
+    """ERDDAP's ``.ncml`` metadata response.
+
+    ``erddapy`` >= 3.2 replaced its DDS-plus-csvp discovery with a single
+    ``.ncml`` request, and requires, for every dimension, a matching
+    ``<variable>`` carrying a space-separated ``actual_range`` attribute --
+    it raises if one is missing.
+    """
+    out = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        f'<netcdf xmlns="{NCML_NS}" location="{_xml_escape(ed.dataset_id)}">',
+    ]
+    for dim in ed.dims:
+        out.append(
+            f'  <dimension name="{_xml_escape(dim)}" '
+            f'length="{ed.ds.sizes[dim]}" />',
+        )
+
+    for name in list(ed.dims) + list(ed.data_vars):
+        shape = " ".join(str(d) for d in ed.ds[name].dims)
+        out.append(
+            f'  <variable name="{_xml_escape(name)}" '
+            f'shape="{_xml_escape(shape)}" '
+            f'type="{erddap_type(ed.ds[name])}">',
+        )
+        attrs = dict(ed.variable_attrs(name))
+        if _is_time(ed.ds[name]):
+            attrs["units"] = TIME_UNITS
+        if name in ed.dims:
+            # erddapy raises if a dimension has no actual_range
+            attrs["actual_range"] = _actual_range_pair(ed, name)
+        for key, value in attrs.items():
+            out.append(
+                f'    <attribute name="{_xml_escape(key)}" '
+                f'value="{_xml_escape(attr_text(value))}" />',
+            )
+        out.append("  </variable>")
+
+    out.append('  <group name="NC_GLOBAL">')
+    for key in sorted(ed.globals_):
+        out.append(
+            f'    <attribute name="{_xml_escape(key)}" '
+            f'value="{_xml_escape(attr_text(ed.globals_[key]))}" />',
+        )
+    out.append("  </group>")
+    out.append("</netcdf>")
+    return "\n".join(out) + "\n"
 
 
 def info_table(ed) -> tuple[list[str], list[list]]:
