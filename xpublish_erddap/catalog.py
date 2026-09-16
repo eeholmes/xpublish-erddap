@@ -113,7 +113,10 @@ class ErddapDataset:
         return {d: self.ds[d].values for d in self.dims}
 
     def variable_attrs(self, name: str) -> dict:
-        """Attributes for ``name``, with ERDDAP's required extras filled in."""
+        """Attributes for ``name``, with ERDDAP's required extras filled in.
+
+        Sorted as ERDDAP sorts them: alphabetically, ignoring case.
+        """
         attrs = dict(self.ds[name].attrs)
         attrs.setdefault("ioos_category", infer_ioos_category(name, attrs))
         if name in self.dims:
@@ -121,7 +124,11 @@ class ErddapDataset:
                 attrs["units"] = _axis_units(name, self.ds[name])
             # rerddap's info() reads actual_range off every variable
             attrs.setdefault("actual_range", self._actual_range(name))
-        return attrs
+        else:
+            attrs.update(
+                {k: v for k, v in _fill_attrs(self.ds[name]).items() if k not in attrs},
+            )
+        return {k: attrs[k] for k in sorted(attrs, key=lambda k: (k.lower(), k))}
 
     def _actual_range(self, name: str) -> np.ndarray | str:
         """ERDDAP-style ``actual_range``: ``[min, max]`` in the axis's dtype.
@@ -146,6 +153,28 @@ class ErddapDataset:
         real deployment should provide them (ERDDAP's ``addAttributes``).
         """
         return [k for k in REQUIRED_GLOBALS if k not in self.supplied_globals]
+
+
+def _fill_attrs(da: xr.DataArray) -> dict:
+    """``_FillValue`` / ``missing_value``, which xarray keeps in ``.encoding``.
+
+    Opening a netCDF or Zarr store moves both out of ``.attrs``, but clients
+    read them from ERDDAP's metadata. They are given in the type of the
+    values we serve. For packed data (``scale_factor``/``add_offset``) the
+    served values are unpacked floats with NaN for missing, so the fill
+    becomes NaN.
+    """
+    enc = da.encoding
+    out = {}
+    packed = "scale_factor" in enc or "add_offset" in enc
+    for key in ("_FillValue", "missing_value"):
+        value = enc.get(key)
+        if value is None:
+            continue
+        if packed:
+            value = np.nan
+        out[key] = np.asarray(value).astype(da.dtype, copy=False).reshape(-1)[0]
+    return out
 
 
 _AXIS_ALIASES = {

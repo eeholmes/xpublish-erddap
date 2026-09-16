@@ -244,3 +244,31 @@ def test_axis_only_columns_sit_side_by_side(client):
     """ERDDAP pads shorter axis columns with blanks, no cartesian product."""
     body = client.get("/erddap/griddap/testgrid.csv0?time[(last)],lat[0:1:2]").text
     assert body == "2020-01-06T00:00:00Z,40.0\n,42.5\n,45.0\n"
+
+
+def test_fill_values_from_encoding_are_listed(tmp_path):
+    """Zarr/netCDF stores keep _FillValue in .encoding; clients need it."""
+    ds = xr.Dataset(
+        {"v": ("x", np.array([1.0, -999.0], dtype="float32"))},
+        coords={"x": [0.0, 1.0]},
+    )
+    ds.v.encoding.update({"_FillValue": -999.0, "missing_value": -999.0})
+    path = tmp_path / "fill.nc"
+    ds.to_netcdf(path)
+    opened = xr.open_dataset(path)
+    assert "_FillValue" not in opened.v.attrs
+
+    c = TestClient(
+        xpublish.Rest({"fill": opened}, plugins={"erddap": ErddapPlugin()}).app,
+    )
+    das = c.get("/erddap/griddap/fill.das").text
+    assert "Float32 _FillValue -999.0;" in das
+    assert "Float32 missing_value -999.0;" in das
+    info = c.get("/erddap/info/fill/index.csv").text
+    assert "attribute,v,_FillValue," in info
+    nc = xr.open_dataset(
+        io.BytesIO(c.get("/erddap/griddap/fill.nc?v[0:1:1]").content),
+        decode_cf=False,
+    )
+    assert nc.v.attrs["_FillValue"] == -999.0
+    assert nc.v.attrs["missing_value"] == -999.0

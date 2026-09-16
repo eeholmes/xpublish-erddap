@@ -84,7 +84,8 @@ def write_snapshot(
 
 
 def _keep_encoding(encoding: dict) -> dict:
-    return {k: v for k, v in encoding.items() if k in ("_FillValue", "dtype")}
+    keep = ("_FillValue", "missing_value", "dtype")
+    return {k: v for k, v in encoding.items() if k in keep}
 
 
 def load_snapshot(path: Path) -> xr.Dataset:

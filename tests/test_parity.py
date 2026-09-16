@@ -36,10 +36,6 @@ OUR_SERVER = "http://testserver/erddap"
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
 KNOWN: list[tuple[str, str]] = [
-    (
-        r"\.das$|\.ncml$|/index\.(csv|json)$",
-        "_FillValue/missing_value dropped (xarray moves them to .encoding)",
-    ),
     (r"\.das$", "numbers not in ERDDAP's format, e.g. 4.734288e+8"),
     (
         r"/index\.(csv|json)$",
@@ -58,7 +54,7 @@ KNOWN: list[tuple[str, str]] = [
         r"\.nc\?",
         "subset .nc: ERDDAP rewrites actual_range, geospatial_*, *most_* and "
         "time_coverage_* for the subset; our axes get a _FillValue; time "
-        "units spelled +00:00; missing_value dropped",
+        "units spelled +00:00",
     ),
     (r"\.dds\?", "a data request's DDS should list only the GRIDs, not the axes"),
 ]

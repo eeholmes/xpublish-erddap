@@ -94,6 +94,14 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Fill values (2026-09-16)
+
+`_FillValue`/`missing_value` now come from `.encoding` when not in `.attrs`
+(`catalog._fill_attrs`), in the served dtype; packed data (scale/offset)
+gets NaN, since we serve unpacked floats. Variable attributes are now
+sorted like globals (ERDDAP sorts every attribute list, ignoring case). The
+parity snapshot had been dropping `missing_value`; etopo5 was recaptured.
+
 ## Step 2: tutorial tests (2026-09-16)
 
 `tests/tutorial_data.py` builds stand-ins with the real ids and **real axes**

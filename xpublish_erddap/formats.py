@@ -146,7 +146,7 @@ def attr_text(value) -> str:
     if isinstance(value, list | tuple | np.ndarray):
         return ", ".join(attr_text(v) for v in np.asarray(value).ravel())
     if isinstance(value, np.floating):
-        return str(_shortest_float(value))
+        return "NaN" if np.isnan(value) else str(_shortest_float(value))
     if isinstance(value, np.integer):
         return str(value.item())
     return str(value)
@@ -317,8 +317,11 @@ def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
     out = out.copy()
     out.attrs = dict(ed.globals_)
     for name in out.variables:
+        # fill values travel in .encoding; xarray refuses them in both places
         out[name].attrs = {
-            k: v for k, v in ed.variable_attrs(name).items() if k != "_FillValue"
+            k: v
+            for k, v in ed.variable_attrs(name).items()
+            if k not in ("_FillValue", "missing_value")
         }
     encoding = {}
     for name in out.coords:
