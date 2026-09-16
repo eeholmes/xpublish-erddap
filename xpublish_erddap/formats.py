@@ -101,11 +101,11 @@ def format_value(value, *, is_time: bool):
         if ts is pd.NaT:
             return ""
         return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
-    if isinstance(value, (np.floating, float)):
+    if isinstance(value, np.floating | float):
         if np.isnan(value):
             return ""
         return float(value)
-    if isinstance(value, (np.integer, int)):
+    if isinstance(value, np.integer | int):
         return int(value)
     return value
 
@@ -116,9 +116,9 @@ def attr_text(value) -> str:
     Sequences become ``"a, b"`` -- not Python's ``"[a, b]"``. rerddap parses
     ``actual_range`` numerically and silently yields NAs on the bracketed form.
     """
-    if isinstance(value, (list, tuple, np.ndarray)):
+    if isinstance(value, list | tuple | np.ndarray):
         return ", ".join(str(v) for v in np.asarray(value).ravel().tolist())
-    if isinstance(value, (np.floating, np.integer)):
+    if isinstance(value, np.floating | np.integer):
         return str(value.item())
     return str(value)
 
@@ -133,6 +133,7 @@ def units_of(ed, name: str) -> str:
 # --------------------------------------------------------------------------
 # DDS / DAS
 # --------------------------------------------------------------------------
+
 
 def dds_response(ed, sub: xr.Dataset, variables: list[str]) -> str:
     """ERDDAP-flavoured DDS for a (possibly subset) dataset."""
@@ -162,14 +163,14 @@ def dds_response(ed, sub: xr.Dataset, variables: list[str]) -> str:
 def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
     out = []
     for key, value in attrs.items():
-        if isinstance(value, (list, tuple, np.ndarray)):
+        if isinstance(value, list | tuple | np.ndarray):
             joined = ", ".join(str(v) for v in np.asarray(value).ravel())
-            out.append(f'{indent}Float64 {key} {joined};')
-        elif isinstance(value, (bool, np.bool_)):
+            out.append(f"{indent}Float64 {key} {joined};")
+        elif isinstance(value, bool | np.bool_):
             out.append(f'{indent}String {key} "{value}";')
-        elif isinstance(value, (np.floating, float)):
+        elif isinstance(value, np.floating | float):
             out.append(f"{indent}Float64 {key} {float(value)};")
-        elif isinstance(value, (np.integer, int)):
+        elif isinstance(value, np.integer | int):
             out.append(f"{indent}Int32 {key} {int(value)};")
         else:
             escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
@@ -203,6 +204,7 @@ def das_response(ed, sub: xr.Dataset) -> str:
 # Tabular responses (ERDDAP flattens grids to long form)
 # --------------------------------------------------------------------------
 
+
 def _long_form(ed, sub: xr.Dataset, variables: list[str]):
     """Yield (column_names, units, types, row_iterator) in ERDDAP's long form."""
     axis_names = [d for d in ed.dims if d in sub.dims]
@@ -231,8 +233,7 @@ def _long_form(ed, sub: xr.Dataset, variables: list[str]):
     times = [_is_time(sub[c]) for c in cols]
     axis_values = [np.asarray(sub[a].values) for a in axis_names]
     stacked = [
-        np.asarray(sub[v].transpose(*axis_names).values).ravel()
-        for v in value_names
+        np.asarray(sub[v].transpose(*axis_names).values).ravel() for v in value_names
     ]
 
     def rows():

@@ -1,7 +1,7 @@
 # xpublish-erddap
 
 [![tests](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml/badge.svg)](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
 **Prototype.** An ERDDAP-compatible `griddap` router for [Xpublish](https://github.com/xpublish-community/xpublish),
 so that existing **[erddapy](https://ioos.github.io/erddapy/)** and
@@ -118,8 +118,25 @@ and `demo/demo_cefi.R` exercise the R client.
 
 ## Reuse and citation
 
-This work is released under [Apache-2.0](LICENSE). You are free to use, copy,
-modify, and redistribute it, including commercially. If you use it in published
-work, in a presentation, or in another repository, please give attribution:
+This work is released under the [BSD 3-Clause License](LICENSE.txt), matching
+the other Xpublish plugins (`xpublish-opendap`, `xpublish-edr`, `xpublish-wms`),
+so that it can be contributed to
+[xpublish-community](https://github.com/xpublish-community). You are free to use,
+copy, modify, and redistribute it, including commercially. If you use it in
+published work, in a presentation, or in another repository, please give
+attribution:
 
 > Holmes, E.E. (2026). *xpublish-erddap: ERDDAP-compatible griddap router for Xpublish*.
+> https://github.com/eeholmes/xpublish-erddap
+
+## Development
+
+```shell
+python -m pip install -r requirements-dev.txt
+python -m pip install -e .
+pre-commit install
+pytest tests            # includes live-server tests against erddapy
+Rscript tests/test_rerddap.R   # after starting `python tests/server.py`
+```
+
+`nox` runs the suite against the same Python versions as CI.

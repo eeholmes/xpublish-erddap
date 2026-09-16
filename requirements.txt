@@ -1,5 +1,5 @@
-xpublish>=0.4.0
-xarray
 numpy
 pandas
 scipy
+xarray
+xpublish>=0.4.0

@@ -1,33 +1,93 @@
-name: tests
+name: Tests
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
-  workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  run:
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.12", "3.13", "3.14"]
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          fetch-depth: 0  # setuptools_scm needs the tags
 
-      - name: Install
+      - name: Setup Micromamba ${{ matrix.python-version }}
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: TEST
+          init-shell: bash
+          create-args: >-
+            python=${{ matrix.python-version }} pip
+            --file requirements.txt
+            --file requirements-dev.txt
+            --channel conda-forge
+
+      - name: Install xpublish-erddap
+        shell: bash -l {0}
+        run: >
+          python -m pip install git+https://github.com/xpublish-community/xpublish.git
+          && python -m pip install -e . --no-deps --force-reinstall
+          && micromamba info
+          && micromamba list
+
+      - name: Tests
+        shell: bash -l {0}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[test]"
-          python -m pip install ruff
+          python -m pytest -rxs --cov=xpublish_erddap --cov-report=xml tests
 
-      - name: Lint
-        run: ruff check xpublish_erddap tests
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v4
 
-      - name: Test
-        run: pytest tests/ -v
+  rerddap:
+    # The R client is a first-class target for this package, so it is tested
+    # too -- but only on Linux, since installing R across the full matrix is
+    # disproportionate to the risk.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: TEST
+          init-shell: bash
+          create-args: >-
+            python=3.12 pip
+            --file requirements.txt
+            --file requirements-dev.txt
+            --channel conda-forge
+
+      - name: Install xpublish-erddap
+        shell: bash -l {0}
+        run: python -m pip install -e . --no-deps --force-reinstall
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: rerddap
+
+      - name: Start the test server
+        shell: bash -l {0}
+        run: |
+          python tests/server.py &
+          for i in $(seq 1 60); do
+            curl -sf http://0.0.0.0:9000/erddap/version && break
+            sleep 2
+          done
+
+      - name: Run rerddap against it
+        run: Rscript tests/test_rerddap.R

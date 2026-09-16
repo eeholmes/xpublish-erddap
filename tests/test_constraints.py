@@ -28,7 +28,8 @@ def test_split_selectors():
 
 def test_iso_times_are_not_split_on_their_colons(axes):
     sel = parse_selector(
-        "(1993-01-05T00:00:00Z):1:(1993-01-09T00:00:00Z)", axes["time"],
+        "(1993-01-05T00:00:00Z):1:(1993-01-09T00:00:00Z)",
+        axes["time"],
     )
     assert (sel.start, sel.stop, sel.stride) == (4, 8, 1)
 
@@ -66,7 +67,10 @@ def test_reversed_range_is_tolerated(axes):
 
 def test_full_query(axes):
     parsed = parse_griddap_query(
-        "tos[0:1:3][0:1:2][0:1:1]", axes, ["time", "lat", "lon"], ["tos"],
+        "tos[0:1:3][0:1:2][0:1:1]",
+        axes,
+        ["time", "lat", "lon"],
+        ["tos"],
     )
     assert parsed.variables == ["tos"]
     assert parsed.selections["time"].size == 4
@@ -98,5 +102,7 @@ def test_mismatched_subsets_rejected(axes):
     with pytest.raises(ConstraintError, match="same subset"):
         parse_griddap_query(
             "tos[0:1:3][0][0],sos[0:1:9][0][0]",
-            axes, ["time", "lat", "lon"], ["tos", "sos"],
+            axes,
+            ["time", "lat", "lon"],
+            ["tos", "sos"],
         )

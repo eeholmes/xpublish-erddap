@@ -1,23 +1,23 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=61", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "xpublish-erddap"
-version = "0.1.0.dev0"
 description = "ERDDAP-compatible griddap router for Xpublish"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["xarray", "xpublish", "erddap", "griddap", "icechunk", "zarr"]
-license = "Apache-2.0"
+license = { file = "LICENSE.txt" }
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: BSD License",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
 ]
-dynamic = ["dependencies"]
+dynamic = ["version", "dependencies"]
 
 [project.optional-dependencies]
 test = ["pytest", "httpx", "pandas"]
@@ -31,6 +31,12 @@ packages = ["xpublish_erddap"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools_scm]
+write_to = "xpublish_erddap/_version.py"
+
+[tool.check-manifest]
+ignore = ["xpublish_erddap/_version.py"]
 
 [tool.ruff.lint]
 select = ["A", "B", "C4", "D", "E", "F", "I", "PL", "UP", "W"]

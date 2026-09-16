@@ -77,7 +77,8 @@ class ErddapPlugin(Plugin):
             for source_id in _resolve(request, _dataset_ids_dep):
                 ds = _resolve(request, _dataset_dep, source_id)
                 entries = build_catalog(
-                    source_id, ds,
+                    source_id,
+                    ds,
                     metadata=plugin.metadata,
                     strict_axes=plugin.strict_axes,
                 )
@@ -110,10 +111,15 @@ class ErddapPlugin(Plugin):
                 # rerddap asserts this exact content-type string
                 return Response(
                     json.dumps(
-                        {"table": {"columnNames": columns,
-                                   "columnTypes": ["String"] * len(columns),
-                                   "rows": rows}},
-                        indent=2, default=str,
+                        {
+                            "table": {
+                                "columnNames": columns,
+                                "columnTypes": ["String"] * len(columns),
+                                "rows": rows,
+                            },
+                        },
+                        indent=2,
+                        default=str,
                     ),
                     media_type=ERDDAP_JSON,
                 )
@@ -140,8 +146,14 @@ class ErddapPlugin(Plugin):
         def dataset_index(request: Request, ext: str) -> Response:
             """List every griddap dataset on the server."""
             cat = catalog(request)
-            columns = ["griddap", "Info", "Institution", "Title",
-                       "Summary", "Dataset ID"]
+            columns = [
+                "griddap",
+                "Info",
+                "Institution",
+                "Title",
+                "Summary",
+                "Dataset ID",
+            ]
             base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
             rows = [
                 [
@@ -166,7 +178,9 @@ class ErddapPlugin(Plugin):
             """
             return _table(
                 ["griddap", "Info", "Institution", "Title", "Summary", "Dataset ID"],
-                [], ext, "tabledap",
+                [],
+                ext,
+                "tabledap",
             )
 
         @router.get("/info/{dataset_id}/index.{ext}")
@@ -186,8 +200,11 @@ class ErddapPlugin(Plugin):
             rows = []
             for d in cat.values():
                 blob = " ".join(
-                    [d.dataset_id, *[f"{k} {v}" for k, v in d.globals_.items()],
-                     *d.data_vars],
+                    [
+                        d.dataset_id,
+                        *[f"{k} {v}" for k, v in d.globals_.items()],
+                        *d.data_vars,
+                    ],
                 ).lower()
                 if terms and not all(t in blob for t in terms):
                     continue
@@ -206,8 +223,14 @@ class ErddapPlugin(Plugin):
                     404,
                     f"Your query produced no matching results: {searchFor!r}",
                 )
-            columns = ["protocol", "griddap", "Info", "Title",
-                       "Summary", "Dataset ID"]
+            columns = [
+                "protocol",
+                "griddap",
+                "Info",
+                "Title",
+                "Summary",
+                "Dataset ID",
+            ]
             return _table(columns, rows, ext, "search")
 
         # -- data --------------------------------------------------------
@@ -234,7 +257,10 @@ class ErddapPlugin(Plugin):
 
             try:
                 parsed = parse_griddap_query(
-                    query, ed.axes, list(ed.dims), list(ed.data_vars),
+                    query,
+                    ed.axes,
+                    list(ed.dims),
+                    list(ed.data_vars),
                 )
             except ConstraintError as exc:
                 raise HTTPException(400, str(exc)) from exc
@@ -252,8 +278,9 @@ class ErddapPlugin(Plugin):
                     data,
                     media_type="application/x-netcdf",
                     headers={
-                        "Content-Disposition":
-                            f'attachment; filename="{dataset_id}.nc"',
+                        "Content-Disposition": (
+                            f'attachment; filename="{dataset_id}.nc"'
+                        ),
                     },
                 )
             if ext == "json":

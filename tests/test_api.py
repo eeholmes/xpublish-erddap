@@ -81,7 +81,10 @@ def test_coordinate_value_subsetting(client):
     df = pd.read_csv(io.StringIO(client.get(url).text))
     assert len(df) == 2 * 3 * 2
     assert list(df.columns) == [
-        "time (UTC)", "lat (degrees_north)", "lon (degrees_east)", "tos (degC)",
+        "time (UTC)",
+        "lat (degrees_north)",
+        "lon (degrees_east)",
+        "tos (degC)",
     ]
 
 
@@ -114,7 +117,10 @@ def test_netcdf_roundtrip(client):
 def test_json_response_shape(client):
     payload = client.get("/erddap/griddap/testgrid.json?tos[0][0][0]").json()
     assert set(payload["table"]) == {
-        "columnNames", "columnTypes", "columnUnits", "rows",
+        "columnNames",
+        "columnTypes",
+        "columnUnits",
+        "rows",
     }
     assert payload["table"]["columnNames"] == ["time", "lat", "lon", "tos"]
 

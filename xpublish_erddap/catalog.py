@@ -278,7 +278,14 @@ def build_catalog(
             continue
         groups.setdefault(sig, []).append(str(name))
 
-    ordered = sorted(groups.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    # The "main" dataset keeps the plain id: most variables first, then the
+    # simplest hypercube, then alphabetical so the result is deterministic.
+    # Without the dimension-count term, a tie on variable count would hand the
+    # plain id to whichever signature happened to sort first.
+    ordered = sorted(
+        groups.items(),
+        key=lambda kv: (-len(kv[1]), len(kv[0]), kv[0]),
+    )
     out: list[ErddapDataset] = []
     base_sig = ordered[0][0] if ordered else ()
     for sig, names in ordered:
@@ -312,12 +319,14 @@ def build_catalog(
                     "ERDDAP: refusing dataset %r -- %s. "
                     "Fix the source data, or pass strict_axes=False to serve "
                     "it anyway (index ranges spanning the break will be wrong).",
-                    dataset_id, detail,
+                    dataset_id,
+                    detail,
                 )
                 continue
             logger.warning(
                 "ERDDAP: serving dataset %r with a bad axis -- %s",
-                dataset_id, detail,
+                dataset_id,
+                detail,
             )
 
         out.append(

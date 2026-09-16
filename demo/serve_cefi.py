@@ -11,11 +11,14 @@ Chain demonstrated here::
 In production the pydap hop would be dropped and Icechunk opened directly;
 it is used here so the demo needs no Arraylake credentials.
 """
-import sys, pathlib, warnings
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+import warnings
+
 warnings.filterwarnings("ignore")
 
-import xarray as xr, xpublish
+import xarray as xr
+import xpublish
+
 from xpublish_erddap import ErddapPlugin
 
 FLUX = (

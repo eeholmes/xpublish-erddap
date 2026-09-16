@@ -1,0 +1,15 @@
+check-manifest
+httpx
+netCDF4
+nox
+pre-commit
+pydap
+pytest
+pytest-cov
+pytest-github-actions-annotate-failures
+pytest-xprocess
+ruff
+setuptools_scm
+twine
+uvicorn
+wheel
