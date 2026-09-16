@@ -19,12 +19,34 @@ Icechunk / Zarr / any xarray Dataset
   -> erddapy / rerddap, unmodified
 ```
 
+This is a proof of concept for a project to be worked on at the [2026 IOOS Code Sprint](https://ioos.github.io/ioos-code-sprint/2026/).
+
+
+## Motivation
+
+A lot of earth data is moving to cloud-native formats such as
+Zarr — and increasingly to [Icechunk](https://icechunk.io) stores on platforms like
+Earthmover's ArrayLake. That migration is good for analysing and accessing data at scale, but it breaks people's existing code that accessed the data before migration.
+
+Many of our users reach our data through the ERDDAP ecosystem: **[erddapy](https://ioos.github.io/erddapy/)**
+in Python, **[rerddap](https://docs.ropensci.org/rerddap/)** in R, etc, and a large body
+of scripts, notebooks, teaching material and operational workflows built on top of
+them. Those tools speak ERDDAP's REST API — `griddap` URLs with ERDDAP's own
+subsetting syntax, plus its `info` and `search` endpoints. They cannot talk to a
+Zarr store or an Icechunk repository.
+
+**The goal of this plugin:** put an ERDDAP-compatible API in front of generic xarray-readable data,
+so that a Zarr or Icechunk dataset can be reached with the ERDDAP tooling people
+already use. With this plugin, migrating a dataset off an ERDDAP server can become
+invisible to the people using it — their existing `erddapy` and `rerddap` (etc, etc) code keeps
+working, unchanged. An example of a similar concept for OPeNDAP access to Icechunks on ArrayLake via [xpublish-opendap](https://github.com/xpublish-community/xpublish-opendap) already works [here](https://app.earthmover.io/NOAA-PMEL/cefi-nep-hindcast-daily/data-access/main/regrid/main?method=dap2). This plugin extends this concept to allow access to Zarr/Icechunk via the ERDDAP API.
+
 ## Status
 
 Working end to end against both clients, on synthetic data and on real NOAA CEFI
 model output served from Icechunk via Earthmover Flux. Not production software:
 no auth, no tabledap, a partial file-type list, and the catalog is built eagerly
-at first request.
+at first request. 
 
 ## Usage
 
