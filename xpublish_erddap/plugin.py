@@ -55,6 +55,18 @@ def _resolve(request: Request, dep, *args):
     return fn(*args)
 
 
+def erddap_root(request: Request, prefix: str) -> str:
+    """The public URL of this ERDDAP root, for URLs we hand to clients.
+
+    The app may sit below a path prefix: mounted inside another app (a
+    per-store service such as ``.../regrid/main/erddap``) or behind a proxy
+    started with ``--root-path``. Starlette puts that prefix in ``root_path``
+    in both cases, but ``request.base_url`` includes it only in the second.
+    """
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    return f"{request.url.scheme}://{request.url.netloc}{root_path}{prefix}"
+
+
 class ErddapPlugin(Plugin):
     """ERDDAP griddap API plugin for Xpublish."""
 
@@ -168,7 +180,7 @@ class ErddapPlugin(Plugin):
                 "Summary",
                 "Dataset ID",
             ]
-            base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
+            base = erddap_root(request, plugin.app_router_prefix)
             rows = [
                 [
                     f"{base}/griddap/{d.dataset_id}",
@@ -210,7 +222,7 @@ class ErddapPlugin(Plugin):
             """Free-text search across dataset metadata."""
             cat = catalog(request)
             terms = [t for t in searchFor.lower().split() if t]
-            base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
+            base = erddap_root(request, plugin.app_router_prefix)
             rows = []
             for d in cat.values():
                 blob = " ".join(
@@ -271,7 +283,7 @@ class ErddapPlugin(Plugin):
             if ext == "das":
                 return PlainTextResponse(formats.das_response(ed, ed.ds))
             if ext == "ncml":
-                base = str(request.base_url).rstrip("/") + plugin.app_router_prefix
+                base = erddap_root(request, plugin.app_router_prefix)
                 return Response(
                     formats.ncml_response(ed, f"{base}/griddap/{dataset_id}"),
                     media_type="application/xml",

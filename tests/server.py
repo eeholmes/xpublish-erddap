@@ -1,8 +1,17 @@
-"""Test ERDDAP server: the air temperature dataset plus tutorial stand-ins."""
+"""Test ERDDAP server: the air temperature dataset plus tutorial stand-ins.
+
+A second app is mounted at ``STORE_PREFIX``, the way one Arraylake store is
+served by Flux, so its ERDDAP root is ``{STORE_PREFIX}/erddap``.
+"""
 
 import xarray as xr
 import xpublish
-from tutorial_data import tutorial_datasets
+from tutorial_data import (
+    STORE_PREFIX,
+    STORE_SOURCE_ID,
+    store_dataset,
+    tutorial_datasets,
+)
 
 from xpublish_erddap import ErddapPlugin
 
@@ -27,5 +36,11 @@ rest = xpublish.Rest(
     {"air": ds, "mixed": ds_mixed, **tutorial_datasets()},
     plugins={"erddap": ErddapPlugin()},
 )
+
+store = xpublish.Rest(
+    {STORE_SOURCE_ID: store_dataset()},
+    plugins={"erddap": ErddapPlugin()},
+)
+rest.app.mount(STORE_PREFIX, store.app)
 
 rest.serve(host="0.0.0.0", port=9000)  # noqa: S104

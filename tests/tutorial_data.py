@@ -167,3 +167,55 @@ def tutorial_datasets() -> dict[str, xr.Dataset]:
         "CRW_sst_v1_0_monthly": crw_sst_v1_0_monthly(),
         "etopo5_EDDGridCopy": etopo5_eddgridcopy(),
     }
+
+
+#: Where a per-store service lives on Earthmover Flux; the ERDDAP root is
+#: this plus ``/erddap``, next to the store's existing ``/opendap``.
+STORE_PREFIX = "/v1/services/dap2/NOAA-PMEL/cefi-nep-hindcast-daily/main/regrid/main"
+
+#: The store's xpublish id. The catalog turns it into the ERDDAP datasetIDs
+#: ``cefi_nep_hindcast_daily_regrid`` (and ``..._z_l`` for the 4-D split).
+STORE_SOURCE_ID = "cefi-nep-hindcast-daily/regrid"
+
+
+def tos(time, lat, lon):
+    """Surface temperature for the store stand-in."""
+    day = time.astype("datetime64[D]").astype("int64") % 365
+    return 10.0 + 0.1 * np.asarray(lat) - 0.01 * np.asarray(lon) + day / 100.0
+
+
+def store_dataset() -> xr.Dataset:
+    """A small CEFI-like store: variables with two dimension signatures."""
+    time = np.arange("2020-01-01", "2020-01-11", dtype="datetime64[D]").astype(
+        "datetime64[ns]",
+    )
+    lat = np.arange(20.0, 30.0, 0.5)
+    lon = np.arange(230.0, 240.0, 0.5)
+    z_l = np.array([2.5, 10.0, 50.0])
+    tt, yy, xx = np.meshgrid(time, lat, lon, indexing="ij")
+    surface = tos(tt, yy, xx)
+    return xr.Dataset(
+        {
+            "tos": (
+                ("time", "lat", "lon"),
+                surface,
+                {"units": "degC", "long_name": "Sea Surface Temperature"},
+            ),
+            "thetao": (
+                ("time", "z_l", "lat", "lon"),
+                surface[:, None] - z_l[None, :, None, None] / 10.0,
+                {"units": "degC", "long_name": "Sea Water Potential Temperature"},
+            ),
+        },
+        coords={
+            "time": time,
+            "z_l": ("z_l", z_l, {"units": "meter", "positive": "down"}),
+            "lat": ("lat", lat, {"units": "degrees_north"}),
+            "lon": ("lon", lon, {"units": "degrees_east"}),
+        },
+        attrs={
+            "title": "CEFI NEP hindcast, daily, regridded (test stand-in)",
+            "summary": "A small stand-in for one Arraylake store served by Flux.",
+            "institution": "xpublish-erddap tests",
+        },
+    )

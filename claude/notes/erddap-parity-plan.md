@@ -94,6 +94,22 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Store-level mount (2026-09-16)
+
+`tests/server.py` mounts a second xpublish app at `STORE_PREFIX`
+(`/v1/services/dap2/NOAA-PMEL/cefi-nep-hindcast-daily/main/regrid/main`), so
+its ERDDAP root is `.../regrid/main/erddap`. Store id
+`cefi-nep-hindcast-daily/regrid` -> datasetIDs
+`cefi_nep_hindcast_daily_regrid` and `..._z_l` (catalog naming rule).
+`tests/test_store_mount.py` (erddapy) and the end of `test_rerddap.R`
+(rerddap) use it.
+
+**Bug it found:** URLs we hand out (catalog, search, NcML location) dropped
+the mount prefix. Starlette's `request.base_url` includes `root_path` behind
+a `--root-path` proxy but *not* under `app.mount()`; `root_path` has the
+prefix in both. `plugin.erddap_root()` now builds from it. How Flux actually
+routes to a store app is Earthmover's; this covers both common ways.
+
 ## Info, NcML, DAS, small details (2026-09-16)
 
 All 130 content comparisons now match; `KNOWN` is empty. Left on purpose:
