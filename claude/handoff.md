@@ -18,7 +18,7 @@ replacement**: no UI, no image output, no tabledap.
 
 ## Repo state (2026-09-16)
 
-- `main` is in sync with `origin`. All commits so far went straight to `main`;
+- All commits so far went straight to `main`;
   this repo has no PR workflow yet.
 - CI is green on all 10 jobs: 3 OSes × Python 3.12–3.14, plus a Linux
   `rerddap` job. 38 tests, including live-server tests that run erddapy.
@@ -46,6 +46,10 @@ gh auth status                                            # was logged out after
 while CI used 3.3.1, so **a local pass with 3.1.0 does not test what CI and
 most users run.** If needed:
 `pip install -U erddapy && pip install -e . && pip install -r requirements-dev.txt`.
+The same restart also removed `pre-commit` and upgraded ruff to 0.15.1. That
+version flags 3 findings and 2 reformats in files that pass the ruff 0.8.6
+pinned in `.pre-commit-config.yaml`. This is version drift, not a code
+problem; use pre-commit's pinned version.
 A separate, pinned environment (conda env or similar) is probably the real fix.
 EH wants to deal with that later; it has not been started.
 
