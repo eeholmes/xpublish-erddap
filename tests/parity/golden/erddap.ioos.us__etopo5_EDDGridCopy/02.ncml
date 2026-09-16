@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://erddap.ioos.us/griddap/etopo5_EDDGridCopy">
+  <attribute name="acknowledgement" value="The Pacific Islands Ocean Observing System (PacIOOS) is funded through the National Oceanic and Atmospheric Administration (NOAA) as a Regional Association within the U.S. Integrated Ocean Observing System (IOOS). PacIOOS is coordinated by the University of Hawaii School of Ocean and Earth Science and Technology (SOEST)." />
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="comment" value="These data are provided by the NOAA National Centers for Environmental Information (NCEI) Marine Geology and Geophysics (MGG) Division." />
+  <attribute name="Conventions" value="CF-1.6, ACDD-1.3" />
+  <attribute name="creator_email" value="mgg.info@noaa.gov" />
+  <attribute name="creator_institution" value="NOAA Marine Geology and Geophysics (MGG)" />
+  <attribute name="creator_name" value="Peter W. Sloss" />
+  <attribute name="creator_type" value="person" />
+  <attribute name="creator_url" value="https://www.ngdc.noaa.gov/mgg/" />
+  <attribute name="date_created" value="1988-01-01" />
+  <attribute name="date_issued" value="1988-01-01" />
+  <attribute name="date_metadata_modified" value="2021-03-25" />
+  <attribute name="date_modified" value="1988-01-01" />
+  <attribute name="drawLandMask" value="under" />
+  <attribute name="Easternmost_Easting" type="double" value="359.91999999999996" />
+  <attribute name="geospatial_bounds" value="POLYGON ((-90.0 -180.0, 90.0 -180.0, 90.0 180.0, -90.0 180.0, -90.0 -180.0))" />
+  <attribute name="geospatial_bounds_crs" value="EPSG:4326" />
+  <attribute name="geospatial_lat_max" type="double" value="90.0" />
+  <attribute name="geospatial_lat_min" type="double" value="-90.0" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.08333333333333333" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="359.91999999999996" />
+  <attribute name="geospatial_lon_min" type="double" value="0.0" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.08333410511692521" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="history" value="2012-02-28T00:00:00Z Downloaded from NOAA/NCEI/MMG by J. Potemra." />
+  <attribute name="id" value="etopo5" />
+  <attribute name="infoUrl" value="https://www.ngdc.noaa.gov/mgg/global/etopo5.HTML" />
+  <attribute name="institution" value="NOAA Marine Geology and Geophysics (MGG)" />
+  <attribute name="instrument" value="Not Applicable &gt; Not Applicable" />
+  <attribute name="instrument_vocabulary" value="GCMD Instrument Keywords" />
+  <attribute name="IRI_LDEO_note" value="updated 27 Feb 1998 from NGDC CD-ROM 29 April 1993" />
+  <attribute name="ISO_Topic_Categories" value="elevation, oceans" />
+  <attribute name="keywords" value="Earth Science &gt; Land Surface &gt; Topography &gt; Terrain Elevation &gt; Digital Elevation/Terrain Model (Dem), Earth Science &gt; Oceans &gt; Bathymetry/Seafloor Topography &gt; Bathymetry" />
+  <attribute name="keywords_vocabulary" value="GCMD Science Keywords" />
+  <attribute name="license" value="The data may be used and redistributed for free but is not intended for legal use, since it may contain inaccuracies. Neither the data Contributor, University of Hawaii, PacIOOS, NOAA, State of Hawaii nor the United States Government, nor any of their employees or contractors, makes any warranty, express or implied, including warranties of merchantability and fitness for a particular purpose, or assumes any legal liability for the accuracy, completeness, or usefulness, of this information." />
+  <attribute name="locations" value="Geographic Region &gt; Global" />
+  <attribute name="locations_vocabulary" value="GCMD Location Keywords" />
+  <attribute name="metadata_link" value="https://www.pacioos.hawaii.edu/metadata/etopo5.html" />
+  <attribute name="naming_authority" value="org.pacioos" />
+  <attribute name="Northernmost_Northing" type="double" value="90.0" />
+  <attribute name="platform" value="Models/Analyses &gt; &gt; DEM &gt; Digital Elevation Model" />
+  <attribute name="platform_vocabulary" value="GCMD Platform Keywords" />
+  <attribute name="program" value="Pacific Islands Ocean Observing System (PacIOOS)" />
+  <attribute name="project" value="Pacific Islands Ocean Observing System (PacIOOS)" />
+  <attribute name="publisher_email" value="info@pacioos.org" />
+  <attribute name="publisher_institution" value="Pacific Islands Ocean Observing System (PacIOOS)" />
+  <attribute name="publisher_name" value="Pacific Islands Ocean Observing System (PacIOOS)" />
+  <attribute name="publisher_type" value="institution" />
+  <attribute name="publisher_url" value="http://www.pacioos.hawaii.edu" />
+  <attribute name="references" value="https://www.ngdc.noaa.gov/mgg/global/etopo5.HTML" />
+  <attribute name="source" value="ETOPO5 Global Surface Relief" />
+  <attribute name="sourceUrl" value="https://pae-paha.pacioos.hawaii.edu/thredds/dodsC/etopo5" />
+  <attribute name="Southernmost_Northing" type="double" value="-90.0" />
+  <attribute name="standard_name_vocabulary" value="CF Standard Name Table v39" />
+  <attribute name="summary" value="ETOPO5 is a 5 arc-minute global relief model of Earth&#39;s surface that integrates land topography and ocean bathymetry. It was built from numerous global and regional data sets. This historical dataset has been deprecated in favor of the newer and higher-resolution ETOPO1 1 arc-minute global relief model." />
+  <attribute name="time_coverage_duration" value="P0D" />
+  <attribute name="time_coverage_resolution" value="P0D" />
+  <attribute name="title" value="ETOPO5 Global Surface Relief" />
+  <attribute name="Westernmost_Easting" type="double" value="0.0" />
+  <dimension name="latitude" length="2161" />
+  <dimension name="longitude" length="4320" />
+  <variable name="latitude" shape="latitude" type="double">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="double" value="-90.0 90.0" />
+    <attribute name="axis" value="Y" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="point_spacing" value="even" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="double">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="double" value="0.0 359.91999999999996" />
+    <attribute name="axis" value="X" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="point_spacing" value="even" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+  </variable>
+  <variable name="ROSE" shape="latitude longitude" type="float">
+    <attribute name="_FillValue" type="float" value="-1.0E34" />
+    <attribute name="colorBarMaximum" type="double" value="5638.0" />
+    <attribute name="colorBarMinimum" type="double" value="-7009.0" />
+    <attribute name="history" value="From worldbath.nc" />
+    <attribute name="ioos_category" value="Bathymetry" />
+    <attribute name="long_name" value="Relief Of the Surface of the Earth" />
+    <attribute name="missing_value" type="float" value="-1.0E34" />
+    <attribute name="positive" value="up" />
+    <attribute name="standard_name" value="height" />
+    <attribute name="units" value="meters" />
+  </variable>
+</netcdf>

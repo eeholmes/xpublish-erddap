@@ -1,0 +1,110 @@
+{
+  "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
+  "dataset_id": "CRW_sst_v3_1_monthly",
+  "erddap_version": "ERDDAP_version=2.22",
+  "captured": "2026-09-16",
+  "requests": [
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/CRW_sst_v3_1_monthly/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/CRW_sst_v3_1_monthly/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csv?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csvp?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csv0?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.json?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.nc?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csv?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "10.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csvp?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "11.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csv0?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "12.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.json?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "13.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.nc?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "14.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csvp?latitude[(19.2):1:(19.3)]",
+      "file": "15.error",
+      "status": 500,
+      "content_type": "text/html; charset=iso-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v3_1_monthly.csvp?latitude[(19.3):1:(19.2)]",
+      "file": "16.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    }
+  ]
+}

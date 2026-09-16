@@ -1,0 +1,6 @@
+time,latitude,longitude,sea_surface_temperature
+UTC,degrees_north,degrees_east,degree_C
+2018-12-31T12:00:00Z,19.275,177.825,27.04
+2018-12-31T12:00:00Z,19.275,177.875,27.04
+2018-12-31T12:00:00Z,19.225,177.825,27.04
+2018-12-31T12:00:00Z,19.225,177.875,27.04

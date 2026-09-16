@@ -162,3 +162,9 @@ Rscript tests/test_rerddap.R   # after starting `python tests/server.py`
 ```
 
 `nox` runs the suite against the same Python versions as CI.
+
+`tests/test_parity.py` compares our responses with captures from real ERDDAP
+servers, committed under `tests/parity/golden/`; known differences are listed
+in the test as expected failures. `python tests/parity/capture.py` refreshes
+the captures (it needs the network), and the `Parity with live ERDDAP`
+workflow does the same weekly without committing.

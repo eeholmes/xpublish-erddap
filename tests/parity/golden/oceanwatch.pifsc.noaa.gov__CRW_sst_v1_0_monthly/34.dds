@@ -1,0 +1,10 @@
+Dataset {
+  GRID {
+    ARRAY:
+      Float64 analysed_sst[time = 2][latitude = 3][longitude = 4];
+    MAPS:
+      Float64 time[time = 2];
+      Float32 latitude[latitude = 3];
+      Float32 longitude[longitude = 4];
+  } analysed_sst;
+} CRW_sst_v1_0_monthly;

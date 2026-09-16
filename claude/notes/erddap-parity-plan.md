@@ -74,6 +74,52 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
 
 ## Observed on the real ERDDAP
 
-- `[(19.3):1:(19.2)]` on an ascending latitude axis still returns data.
-  Check what we do.
+- Servers: oceanwatch.pifsc.noaa.gov runs ERDDAP 2.22, erddap.ioos.us 2.31.
+  Our `/version` says 2.23.
+- Reference datasets: `CRW_sst_v1_0_monthly` (tutorials; deprecated;
+  ascending lat; times on the 1st at 12:00), `CRW_sst_v3_1_monthly` (current;
+  **descending** lat; times on the **last** day of the month at 12:00),
+  `etopo5_EDDGridCopy` on erddap.ioos.us (no time; float64 axes).
+- A value range given against the axis order, e.g. latitude
+  `[(19.3):1:(19.2)]` on an ascending axis, **is accepted for a
+  data-variable request** (same rows as the forward order) but **fails for
+  an axis-only request** (500 through the proxy). Same on the descending
+  v3.1 axis with `[(19.2):1:(19.3)]`.
+- **Nearest-match ties (#11): ERDDAP picks the larger coordinate value**,
+  whichever way the axis runs, and for time too. Probed with exact float64
+  midpoints on etopo5 (0.0417 -> 0.0833, -0.0417 -> 0.0), float32 ties on
+  both CRW sets ((0.0) -> 0.025 ascending and descending), and a time
+  midpoint (1985-01-17T00:00 -> 1985-02-01T12:00). We pick the first index.
+- The info table's `variable` row **does** carry the variable's dimensions in
+  `Value` ("time, latitude, longitude"), so the format can express
+  per-variable dimensions; clients still build one bracket set per dataset.
+
+## Step 1 status (2026-09-16)
+
+Built: `tests/parity/` (cases, capture, snapshot, compare) and
+`tests/test_parity.py`; goldens committed (~770 KB); weekly workflow
+`parity.yml` recaptures into a scratch dir, runs the tests against it, and
+reports drift. Result: 75 pass, 57 strict xfail, grouped in `KNOWN`:
+
+1. **float32 printed at float64 precision** (19.225000381469727) in csv/json,
+   and float32 attributes typed/printed as Float64. Most visible to users.
+2. **Globals sorted case-sensitively**; ERDDAP ignores case. (README quirk 3
+   says "alphabetically" -- it is case-insensitive.)
+3. **`_xpublish_id` leaks** into every globals listing.
+4. `_FillValue`/`missing_value` missing from DAS/info/NcML/.nc (xarray keeps
+   them in `.encoding`). Axes in our .nc get a NaN `_FillValue`.
+5. info table: Data Type always "String"; dimension Value lacks
+   `evenlySpaced`/`averageSpacing`; variable Value lacks dims; newlines not
+   escaped as `\n`.
+6. NcML: ERDDAP puts globals directly under `<netcdf>` with `type=`; we use
+   an `NC_GLOBAL` group and no types; `location` should be the URL.
+7. Subset `.nc`: ERDDAP rewrites actual_range, geospatial_*, *most_*,
+   time_coverage_* for the subset; our time units say `+00:00`.
+8. Axis variable with `[...]` selectors (`time[(last)]`) is rejected (400).
+9. DDS for a data request should list only the GRIDs.
+10. Ties (#11), CSV missing values should read `NaN`, JSON time
+    columnType should be `String`, DAS number format (`4.734288e+8`).
+11. Media type: ERDDAP 2.31 serves `.das` as text/csv (2.22: text/plain);
+    not copying that.
+
 - `curl` globs `[]`; use `curl -g`.

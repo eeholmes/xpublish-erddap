@@ -1,0 +1,98 @@
+{
+  "server": "https://erddap.ioos.us/erddap",
+  "dataset_id": "etopo5_EDDGridCopy",
+  "erddap_version": "ERDDAP_version=2.31",
+  "captured": "2026-09-16",
+  "requests": [
+    {
+      "path": "griddap/etopo5_EDDGridCopy.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/etopo5_EDDGridCopy/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/etopo5_EDDGridCopy/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csvp?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv0?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.json?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.nc?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "10.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csvp?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "11.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv0?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "12.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.json?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "13.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.nc?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "14.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    }
+  ]
+}

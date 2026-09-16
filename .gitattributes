@@ -1,0 +1,2 @@
+# Byte-for-byte captures of real ERDDAP responses: never convert line endings.
+tests/parity/golden/** -text

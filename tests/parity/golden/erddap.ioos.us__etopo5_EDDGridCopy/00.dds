@@ -1,0 +1,11 @@
+Dataset {
+  Float64 latitude[latitude = 2161];
+  Float64 longitude[longitude = 4320];
+  GRID {
+    ARRAY:
+      Float32 ROSE[latitude = 2161][longitude = 4320];
+    MAPS:
+      Float64 latitude[latitude = 2161];
+      Float64 longitude[longitude = 4320];
+  } ROSE;
+} etopo5_EDDGridCopy;
