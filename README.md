@@ -158,8 +158,9 @@ attribution:
 python -m pip install -r requirements-dev.txt
 python -m pip install -e .
 pre-commit install
-pytest tests            # includes live-server tests against erddapy
+pytest tests            # includes live-server erddapy and tutorial tests
 Rscript tests/test_rerddap.R   # after starting `python tests/server.py`
+Rscript tests/test_tutorials.R # same server; needs rerddapXtracto, httr, ncdf4
 ```
 
 `nox` runs the suite against the same Python versions as CI.

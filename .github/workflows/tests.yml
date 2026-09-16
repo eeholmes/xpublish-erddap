@@ -78,9 +78,13 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          packages: rerddap
+          packages: |
+            any::rerddap
+            any::rerddapXtracto
+            any::httr
+            any::ncdf4
 
-      - name: Run rerddap against a live server
+      - name: Run rerddap and the R tutorials against a live server
         shell: bash -l {0}
         # Server and client must share one step: a process backgrounded in an
         # earlier step does not survive the step boundary.
@@ -94,3 +98,4 @@ jobs:
           done
           curl -sf http://127.0.0.1:9000/erddap/version
           Rscript tests/test_rerddap.R
+          Rscript tests/test_tutorials.R

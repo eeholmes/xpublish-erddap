@@ -94,6 +94,27 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
   `Value` ("time, latitude, longitude"), so the format can express
   per-variable dimensions; clients still build one bracket set per dataset.
 
+## Step 2: tutorial tests (2026-09-16)
+
+`tests/tutorial_data.py` builds stand-ins with the real ids and **real axes**
+(read from the parity snapshots; the CRW time axis is irregular, 35 months
+not on the 1st) and formula values computed lazily per request, so values
+are checked exactly. `tests/server.py` serves them next to `air`. Air's
+metadata moved onto the dataset: plugin `metadata` applies to *every*
+dataset.
+
+- `tests/test_tutorials.py`: CoastWatch Python 1 and 3 (shapes 12x261x301 and
+  12x252x424, as the tutorials print), erddapy `01a` (defaults are strings,
+  step 10 gives 217x432, bbox coordinates match erddap.ioos.us exactly).
+  `response="opendap"` is a strict xfail on #2.
+- `tests/test_tutorials.R`: R 1 (GET + ncdf4) and R 3 (`info` +
+  `rxtractogon` across the dateline). The tutorial's dataset is
+  `goes-poes-monthly-ghrsst-RAN`; the stand-in is CRW. rxtracto fetches
+  `csvp?time`, `?latitude`, `?longitude` itself, picks the enclosing cells,
+  and requests exact values, so its box can extend one cell past the polygon.
+- All pass. Nothing new found: our `.nc` time units spelled `+00:00` are
+  read fine by `num2date` and ncdf4.
+
 ## Fixed on the branch (2026-09-16, PR #15)
 
 Items 1, 2, 3, 8 and the #11 tie rule below. Float32 values and attributes
