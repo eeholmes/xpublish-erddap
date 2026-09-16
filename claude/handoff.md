@@ -31,9 +31,8 @@ priority.
 
 - **PR #15 merged: #1 is done.** Every captured real-ERDDAP response matches.
   See `notes/erddap-parity-plan.md`.
-- **This repo now uses branches and PRs** (PR #15 was the first). The old
-  branch `verify-erddap-parity` still exists locally and on GitHub; it is
-  merged.
+- **This repo now uses branches and PRs** (PR #15 was the first; its branch
+  is deleted).
 - CI: 10 jobs green (3 OSes × Python 3.12–3.14, plus a Linux R job that runs
   `test_rerddap.R` and `test_tutorials.R`). Local: 220 passed, 4 skipped,
   2 xfailed. The Windows jobs skip the live-server tests.
@@ -41,8 +40,7 @@ priority.
   **It has not run yet.**
 - #13 is the hackweek proposal (collaborators reviewing); **#14 is its second
   project, the Zarr/Icechunk validator.**
-- #11 (tie-breaking) was answered and fixed in #15 but is still open.
-  Closing it is EH's call.
+- #11 (tie-breaking) was fixed in #15 and closed.
 
 ## ⚠ Check the environment before trusting any local result
 
