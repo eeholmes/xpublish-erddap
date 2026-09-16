@@ -2,7 +2,7 @@
 # Run by CI after starting tests/server.py; see .github/workflows/tests.yml.
 library(rerddap)
 
-url <- "http://0.0.0.0:9000/erddap/"
+url <- "http://127.0.0.1:9000/erddap/"
 ok <- function(msg) cat("ok -", msg, "\n")
 
 i <- info("air", url = url)

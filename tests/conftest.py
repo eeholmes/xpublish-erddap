@@ -34,7 +34,7 @@ def xpublish_server(xprocess):
         terminate_on_interrupt = True
 
     xprocess.ensure("xpublish-erddap", Starter)
-    yield "http://0.0.0.0:9000/erddap"
+    yield "http://127.0.0.1:9000/erddap"
     xprocess.getinfo("xpublish-erddap").terminate()
 
 

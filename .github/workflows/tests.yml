@@ -80,14 +80,17 @@ jobs:
         with:
           packages: rerddap
 
-      - name: Start the test server
+      - name: Run rerddap against a live server
         shell: bash -l {0}
+        # Server and client must share one step: a process backgrounded in an
+        # earlier step does not survive the step boundary.
         run: |
           python tests/server.py &
+          SERVER=$!
+          trap "kill $SERVER" EXIT
           for i in $(seq 1 60); do
-            curl -sf http://0.0.0.0:9000/erddap/version && break
+            curl -sf http://127.0.0.1:9000/erddap/version >/dev/null && break
             sleep 2
           done
-
-      - name: Run rerddap against it
-        run: Rscript tests/test_rerddap.R
+          curl -sf http://127.0.0.1:9000/erddap/version
+          Rscript tests/test_rerddap.R
