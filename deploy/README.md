@@ -104,6 +104,8 @@ sudo systemctl restart xpublish-erddap
 Run `git` as `xpe`, which owns the checkout; as root it refuses with "dubious
 ownership". The live server was created from the `aws-test-server` branch and
 switched to `main` this way after #20 merged, so the stack's `GitRef`
-parameter still says `aws-test-server`. That is only the first-boot value.
+parameter still says `aws-test-server`, a branch since deleted. That is only
+the first-boot value and does nothing on a running instance; the next
+`deploy.sh` run sets it to `main`.
 
 Logs: `journalctl -u xpublish-erddap` and `journalctl -u caddy`.
