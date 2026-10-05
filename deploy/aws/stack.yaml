@@ -7,7 +7,7 @@ Description: >-
 Parameters:
   GitRef:
     Type: String
-    Default: aws-test-server
+    Default: main
     Description: Branch, tag or commit of github.com/eeholmes/xpublish-erddap to run.
   TokenParameter:
     Type: String
