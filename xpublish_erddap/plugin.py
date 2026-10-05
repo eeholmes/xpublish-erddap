@@ -70,6 +70,48 @@ def erddap_root(request: Request, prefix: str) -> str:
     return f"{request.url.scheme}://{request.url.netloc}{root_path}{prefix}"
 
 
+#: ERDDAP counts megabytes in units of 2**20 bytes (``Math2.BytesPerMB``).
+BYTES_PER_MB = 2**20
+
+#: Real ERDDAP servers refuse a ``.nc`` response over 2 GB; we copy that.
+NC_LIMIT_MB = 2 * 1024
+
+
+def estimated_bytes(ds: xr.Dataset, variables: list[str], selections) -> int:
+    """Size of the requested values in bytes, computed before reading any data.
+
+    Each requested variable counts its selected cells times its itemsize. Text
+    responses (csv, json) are several times larger than this; ``.nc`` is close.
+    """
+    total = 0
+    for name in variables:
+        var = ds[name]
+        cells = 1
+        for dim in var.dims:
+            cells *= selections[dim].size if dim in selections else var.sizes[dim]
+        total += cells * formats._dtype_of(var).itemsize  # noqa: SLF001
+    return total
+
+
+def too_much_data(size_mb: int, limit: str) -> HTTPException:
+    """ERDDAP's 413, with its message wording (captured from coastwatch.pfeg)."""
+    return HTTPException(
+        413,
+        "Payload Too Large: Your query produced too much data.  "
+        f"Try to request less data. [memory]  {size_mb} MB is more than {limit}.",
+    )
+
+
+def check_size(ds: xr.Dataset, parsed, ext: str, limit_mb: float | None) -> None:
+    """Refuse a data request over the server's limit, or a ``.nc`` over 2 GB."""
+    size = estimated_bytes(ds, parsed.variables, parsed.selections)
+    size_mb = round(size / BYTES_PER_MB)
+    if limit_mb is not None and size > limit_mb * BYTES_PER_MB:
+        raise too_much_data(size_mb, f"this server's {limit_mb:g} MB limit")
+    if ext == "nc" and size > NC_LIMIT_MB * BYTES_PER_MB:
+        raise too_much_data(size_mb, "the .nc 2 GB limit")
+
+
 class ErddapPlugin(Plugin):
     """ERDDAP griddap API plugin for Xpublish."""
 
@@ -83,6 +125,12 @@ class ErddapPlugin(Plugin):
 
     #: Drop datasets whose axes are not strictly monotonic, as ERDDAP does.
     strict_axes: bool = True
+
+    #: Refuse a data request (nc, csv, json, ...) whose values would exceed
+    #: this many MB, before reading any data. ``None`` means no limit beyond
+    #: the 2 GB ``.nc`` cap copied from real ERDDAP servers. Responses are
+    #: built in memory, so a public server should set this.
+    max_response_mb: float | None = None
 
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:  # noqa: ARG002, PLR0915
@@ -309,6 +357,9 @@ class ErddapPlugin(Plugin):
                 )
             except ConstraintError as exc:
                 raise HTTPException(400, str(exc)) from exc
+
+            if ext != "dds":
+                check_size(ed.ds, parsed, ext, plugin.max_response_mb)
 
             indexers = {d: sel.as_slice() for d, sel in parsed.selections.items()}
             sub: xr.Dataset = ed.ds.isel(indexers)
