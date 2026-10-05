@@ -28,6 +28,8 @@ Run::
 
     python deploy/server.py                 # http://127.0.0.1:9100
     HOST=0.0.0.0 PORT=8000 python deploy/server.py
+
+Data requests over ``MAX_RESPONSE_MB`` (default 500) get ERDDAP's 413.
 """
 
 from __future__ import annotations
@@ -141,7 +143,10 @@ def make_app():
         plugins={
             "icechunk-provider": IcechunkProvider(),
             "opendap": OpenDapPlugin(),
-            "erddap": ErddapPlugin(),
+            # A public server must cap what one request can pull (#16).
+            "erddap": ErddapPlugin(
+                max_response_mb=float(os.environ.get("MAX_RESPONSE_MB", "500")),
+            ),
         },
     )
     return rest.app
