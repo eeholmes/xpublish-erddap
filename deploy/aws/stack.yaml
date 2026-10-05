@@ -9,9 +9,10 @@ Parameters:
     Type: String
     Default: aws-test-server
     Description: Branch, tag or commit of github.com/eeholmes/xpublish-erddap to run.
-  TokenSecretArn:
+  TokenParameter:
     Type: String
-    Description: Secrets Manager secret holding the Arraylake API key (ARRAYLAKE_TOKEN).
+    Default: /xpublish-erddap-demo/arraylake-token
+    Description: SSM SecureString parameter holding the Arraylake API key.
   MaxResponseMb:
     Type: Number
     Default: 500
@@ -53,8 +54,8 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: secretsmanager:GetSecretValue
-                Resource: !Ref TokenSecretArn
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${TokenParameter}"
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -107,9 +108,9 @@ Resources:
             cat > /opt/start.sh <<'EOS'
             #!/bin/bash
             set -euo pipefail
-            ARRAYLAKE_TOKEN=$(aws secretsmanager get-secret-value \
-              --region ${AWS::Region} --secret-id "${TokenSecretArn}" \
-              --query SecretString --output text)
+            ARRAYLAKE_TOKEN=$(aws ssm get-parameter --with-decryption \
+              --region ${AWS::Region} --name "${TokenParameter}" \
+              --query Parameter.Value --output text)
             export ARRAYLAKE_TOKEN
             exec /opt/venv/bin/python /opt/xpublish-erddap/deploy/server.py
             EOS
