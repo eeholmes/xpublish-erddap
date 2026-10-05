@@ -3,8 +3,8 @@
 # Planned teardown date: 2026-11-13.
 set -euo pipefail
 
-PROFILE=${AWS_PROFILE:-greenfield}
-REGION=${AWS_REGION:-us-east-2}
+PROFILE=${DEPLOY_PROFILE:-greenfield}
+REGION=${DEPLOY_REGION:-us-east-2}
 STACK=${STACK:-xpublish-erddap-demo}
 PARAM=${PARAM:-/xpublish-erddap-demo/arraylake-token}
 

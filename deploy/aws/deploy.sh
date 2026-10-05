@@ -6,13 +6,14 @@
 #
 # Needs: AWS CLI v2 logged in to the target account, and an Arraylake API key
 # (read-only is enough; any org's key can read the public CEFI repo) in
-# TOKEN_FILE. The key goes to an SSM SecureString parameter (the account's
-# policy blocks Secrets Manager); it is never put in the template, the
-# instance's disk, or the repo.
+# TOKEN_FILE. The key goes to an SSM SecureString parameter, as in the other
+# stacks in this account; it is never put in the template, the instance's
+# disk, or the repo.
 set -euo pipefail
 
-PROFILE=${AWS_PROFILE:-greenfield}
-REGION=${AWS_REGION:-us-east-2}   # the account's policy allows EC2 only here
+PROFILE=${DEPLOY_PROFILE:-greenfield}
+# Not AWS_REGION: JupyterHub sets that for its own account.
+REGION=${DEPLOY_REGION:-us-east-2}   # the account's policy allows EC2 only here
 STACK=${STACK:-xpublish-erddap-demo}
 PARAM=${PARAM:-/xpublish-erddap-demo/arraylake-token}
 TOKEN_FILE=${TOKEN_FILE:-$HOME/.arraylake-token}
