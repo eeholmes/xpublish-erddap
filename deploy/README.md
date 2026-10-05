@@ -27,4 +27,74 @@ Rscript deploy/check_rerddap.R http://127.0.0.1:9100
 ERDDAP clients point at `http://127.0.0.1:9100/erddap`. Datasets:
 `cefi_nep_hindcast_daily` (Arraylake) and `gobai_o2_monthly` (Source Cooperative S3).
 
-The AWS deployment recipe will be added here (#17).
+## Try the public test server
+
+Until **2026-11-13**, a copy runs at **https://18-119-42-78.sslip.io**. Point
+your own ERDDAP client code at its `/erddap` root; nothing else needs to change.
+
+```python
+from erddapy import ERDDAP
+e = ERDDAP(server="https://18-119-42-78.sslip.io/erddap", protocol="griddap", response="nc")
+e.dataset_id = "gobai_o2_monthly"
+e.griddap_initialize()
+e.constraints.update({"time>=": "2020-01-15", "time<=": "2020-03-15",
+                      "pres>=": 10, "pres<=": 20,
+                      "lat>=": 0, "lat<=": 5, "lon>=": 180, "lon<=": 185})
+e.variables = ["oxy"]
+ds = e.to_xarray()
+```
+
+```r
+library(rerddap)
+url <- "https://18-119-42-78.sslip.io/erddap/"
+info("cefi_nep_hindcast_daily", url = url)
+griddap("cefi_nep_hindcast_daily", url = url,
+        time = c("2024-07-01", "2024-07-03"), lat = c(45, 46), lon = c(230, 231),
+        fields = "tos")
+```
+
+Hand-built griddap URLs work too, for example
+`https://18-119-42-78.sslip.io/erddap/griddap/gobai_o2_monthly.csv?oxy[(2020-01-15)][(10)][(0):(2)][(180):(182)]`.
+
+Things to know:
+
+- **Datasets:** `cefi_nep_hindcast_daily` (NOAA CEFI NE Pacific hindcast,
+  virtual Icechunk on Arraylake) and `gobai_o2_monthly` (GOBAI-O2, Icechunk on
+  Source Cooperative). GOBAI longitudes run 20.5 to 379.5, as in the source.
+- **Requests over 500 MB** are refused with ERDDAP's "Your query produced too
+  much data" error. Ask for a smaller subset.
+- **The OPeNDAP endpoints** (`/datasets/{id}/opendap`) are stock
+  xpublish-opendap, which returns **wrong values for strided requests**
+  (`lat[0:1:4]` gives 1 value, not 5). They are here to show they run, not for
+  real use.
+- **Known gaps:** `searchFor=all` returns 404 (#19), and there is no `.dods` on
+  the ERDDAP side (#2).
+
+## Deploy to AWS
+
+`aws/stack.yaml` is a CloudFormation stack: one t4g.medium (ARM) running the
+server behind [Caddy](https://caddyserver.com), which gets an HTTPS
+certificate for an `sslip.io` name made from the instance's Elastic IP. There
+is no SSH; use SSM Session Manager. The Arraylake key is kept in an SSM
+SecureString parameter and read into memory when the service starts.
+
+```bash
+deploy/aws/deploy.sh      # create or update; prints the URL
+deploy/aws/teardown.sh    # delete the stack and the key parameter
+```
+
+Both use the `greenfield` profile and us-east-2 unless `DEPLOY_PROFILE` and
+`DEPLOY_REGION` say otherwise. They deliberately ignore `AWS_REGION`, which
+JupyterHub sets for its own account. `GIT_REF` picks the branch the instance
+runs (default `aws-test-server`), and `MAX_RESPONSE_MB` sets the size limit
+(default 500). The instance clones the repository at boot, so push before
+deploying.
+
+To pick up a new commit on a running instance:
+
+```bash
+aws ssm start-session --profile greenfield --region us-east-2 --target <InstanceId>
+sudo -u xpe git -C /opt/xpublish-erddap pull && sudo systemctl restart xpublish-erddap
+```
+
+Logs: `journalctl -u xpublish-erddap` and `journalctl -u caddy`.

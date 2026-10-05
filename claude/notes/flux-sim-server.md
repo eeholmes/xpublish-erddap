@@ -68,3 +68,42 @@ Earthmover is the one to ask what they actually run.
 - icechunk 2.x needs Python ≥ 3.12. On 3.11, pip quietly installs 1.x and
   `icechunk.http_storage` is missing.
 - `pres` (GOBAI's pressure dimension) is on codespell's ignore list.
+
+## Phase B: on AWS (2026-10-05)
+
+Stack `xpublish-erddap-demo` in EH's `greenfield` account (865526619870),
+**us-east-2**, URL **https://18-119-42-78.sslip.io**, instance
+`i-0e80a89b8eb8b2fcd` (t4g.medium). Teardown **2026-11-13**:
+`deploy/aws/teardown.sh`, then revoke the Arraylake key.
+
+Account facts a future session needs:
+
+- An organization policy (SCP) allows EC2 **only in us-east-2**: us-east-1
+  and us-west-2 are explicitly denied. SSM parameters in other regions are
+  denied too.
+- **JupyterHub sets `AWS_REGION=us-west-2`** for the hub's own account. Any
+  script that honours it lands in a blocked region, and the error looks like
+  a missing permission. The deploy scripts read `DEPLOY_REGION` instead.
+- The account already has a **$100/month budget** (alerts at 85% and 100% of
+  actual, 100% of forecast). It is shared with two LiteLLM t4g.small stacks
+  (`litellm-smoke`, `agent-coders-gateway`), about $30/month between them.
+  This server adds about $28/month (t4g.medium, Elastic IP, 20 GB gp3).
+- The Arraylake key is a read-only API client in the **ocean-icechunks** org,
+  stored as SSM SecureString `/xpublish-erddap-demo/arraylake-token`, as the
+  other stacks store their secrets. A key from any org can read the CEFI repo
+  (it is public to any logged-in account); verified with only the key.
+
+Measured against the public URL:
+
+- `check_clients.py`: 0 unexpected failures. Every returned URL is the public
+  `https://` host, so Caddy's forwarded headers plus `uvicorn --proxy-headers`
+  work. Subsets match a direct read of both stores.
+- `check_rerddap.R`: all pass (0.2 to 0.8 s per call).
+- Whole-variable `.nc` gives the 413 in 0.16 s, with no data read
+  ("2910 MB is more than this server's 500 MB limit").
+- HTTP redirects to HTTPS (308). The Let's Encrypt certificate for the
+  sslip.io name was obtained on the first try.
+- One 10-day CEFI subset (2.3 MB of csv): 2.3 s. Eight at once: about 12 s in
+  total, so concurrent requests mostly queue on the 2-vCPU instance. Fine for
+  a demo; a real deployment would want more workers.
+- Server memory after the checks: 270 MB of 3.8 GB, no restarts.
