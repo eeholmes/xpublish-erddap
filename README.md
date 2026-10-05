@@ -19,7 +19,7 @@ Icechunk / Zarr / any xarray Dataset
   -> erddapy / rerddap, unmodified
 ```
 
-This is a proof of concept for a project to be worked on at the [2026 IOOS Code Sprint](https://ioos.github.io/ioos-code-sprint/2026/).
+This is a proof of concept.
 
 
 ## Motivation
