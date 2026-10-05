@@ -86,15 +86,24 @@ deploy/aws/teardown.sh    # delete the stack and the key parameter
 Both use the `greenfield` profile and us-east-2 unless `DEPLOY_PROFILE` and
 `DEPLOY_REGION` say otherwise. They deliberately ignore `AWS_REGION`, which
 JupyterHub sets for its own account. `GIT_REF` picks the branch the instance
-runs (default `aws-test-server`), and `MAX_RESPONSE_MB` sets the size limit
-(default 500). The instance clones the repository at boot, so push before
-deploying.
+runs (default `main`), and `MAX_RESPONSE_MB` sets the size limit
+(default 500). The instance clones the repository on its first boot only, so
+push before creating the stack.
 
-To pick up a new commit on a running instance:
+To change the code a running instance serves, do it on the instance; running
+`deploy.sh` again with another `GIT_REF` only stops and starts the instance,
+and does not check anything out. In a Session Manager shell (`aws ssm
+start-session --profile greenfield --region us-east-2 --target <InstanceId>`):
 
 ```bash
-aws ssm start-session --profile greenfield --region us-east-2 --target <InstanceId>
-sudo -u xpe git -C /opt/xpublish-erddap pull && sudo systemctl restart xpublish-erddap
+cd /opt/xpublish-erddap
+sudo -u xpe git fetch origin && sudo -u xpe git checkout main && sudo -u xpe git pull
+sudo systemctl restart xpublish-erddap
 ```
+
+Run `git` as `xpe`, which owns the checkout; as root it refuses with "dubious
+ownership". The live server was created from the `aws-test-server` branch and
+switched to `main` this way after #20 merged, so the stack's `GitRef`
+parameter still says `aws-test-server`. That is only the first-boot value.
 
 Logs: `journalctl -u xpublish-erddap` and `journalctl -u caddy`.

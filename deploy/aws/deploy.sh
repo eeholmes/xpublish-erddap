@@ -2,7 +2,7 @@
 # Create or update the xpublish-erddap test server on AWS (issue #17).
 #
 #   deploy/aws/deploy.sh                 # uses the defaults below
-#   GIT_REF=main deploy/aws/deploy.sh    # run another branch/tag/commit
+#   GIT_REF=my-branch deploy/aws/deploy.sh   # run another branch/tag/commit
 #
 # Needs: AWS CLI v2 logged in to the target account, and an Arraylake API key
 # (read-only is enough; any org's key can read the public CEFI repo) in
@@ -17,7 +17,7 @@ REGION=${DEPLOY_REGION:-us-east-2}   # the account's policy allows EC2 only here
 STACK=${STACK:-xpublish-erddap-demo}
 PARAM=${PARAM:-/xpublish-erddap-demo/arraylake-token}
 TOKEN_FILE=${TOKEN_FILE:-$HOME/.arraylake-token}
-GIT_REF=${GIT_REF:-aws-test-server}
+GIT_REF=${GIT_REF:-main}
 MAX_RESPONSE_MB=${MAX_RESPONSE_MB:-500}
 
 aws_() { aws --profile "$PROFILE" --region "$REGION" "$@"; }

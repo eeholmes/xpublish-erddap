@@ -15,7 +15,16 @@ python -c "import xpublish_erddap, xpublish"              # editable install sti
 gh auth status                                            # if logged out: `! gh auth login`
 ```
 
-Fix:
+**Preferred (EH, 2026-10-05): a lean venv instead of the notebook env**, which
+hides missing dependencies. Python 3.12, because icechunk 2.x needs it:
+
+```bash
+/srv/conda/bin/python3.12 -m venv ~/venvs/xpe
+~/venvs/xpe/bin/pip install -e . -r requirements-dev.txt -r deploy/requirements.txt
+PATH=~/venvs/xpe/bin:$PATH python -m pytest -q   # PATH matters on branches older than #20
+```
+
+Fix for the notebook env, if you must use it:
 
 ```bash
 pip install -U erddapy && pip install -e . && pip install -r requirements-dev.txt
