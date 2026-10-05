@@ -25,7 +25,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 
 ## Repo state (2026-10-05)
 
-- **A public test server is live until 2026-11-13** (#17, PR #20):
+- **A public test server is live until 2026-11-13** (#17 closed; PRs #20, #22):
   https://18-119-42-78.sslip.io/erddap, serving CEFI (Arraylake) and
   GOBAI-O2 (Source Cooperative S3) through `deploy/server.py`, on EH's AWS
   account. It runs `main`. Hackweek collaborators use it. **Tear it down on
@@ -35,7 +35,8 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
 - The repo now uses **branches and PRs**; a task stays on its branch until
-  the definition of done on its issue is met.
+  the definition of done on its issue is met. All task branches so far are
+  merged and deleted; only `main` exists.
 - CI: 10 jobs green, including a Linux R job (rerddap + tutorials): 231
   passed, 4 skipped, 2 xfailed on Linux/macOS; Windows skips the live-server
   tests (218 passed, 18 skipped).
