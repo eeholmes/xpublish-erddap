@@ -20,6 +20,8 @@ repos:
     hooks:
       - id: codespell
         exclude: ^LICENSE.txt$
+        # pres: GOBAI-O2's pressure dimension (deploy/)
+        args: [--ignore-words-list=pres]
 
   - repo: https://github.com/asottile/add-trailing-comma
     rev: v3.1.0

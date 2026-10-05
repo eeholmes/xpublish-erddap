@@ -1,5 +1,6 @@
 """Py.test configuration and shared fixtures."""
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,7 @@ def xpublish_server(xprocess):
         pattern = "Uvicorn running on"
 
         # server startup args
-        args = ["python", str(server_path)]
+        args = [sys.executable, str(server_path)]
 
         # seconds before timing out on server startup
         timeout = 60

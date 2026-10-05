@@ -1,0 +1,10 @@
+# What deploy/server.py needs on top of the package itself.
+# Install with: pip install -e . -r deploy/requirements.txt
+arraylake
+icechunk>=2.1
+# opendap-protocol, which xpublish-opendap uses, imports pkg_resources,
+# which setuptools 81 removed.
+setuptools<81
+uvicorn
+xpublish-opendap
+zarr>=3

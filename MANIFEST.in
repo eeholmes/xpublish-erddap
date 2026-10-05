@@ -6,6 +6,7 @@ graft xpublish_erddap
 
 prune claude
 prune demo
+prune deploy
 prune tests
 prune *.egg-info
 
