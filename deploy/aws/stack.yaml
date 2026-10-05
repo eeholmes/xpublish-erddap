@@ -1,0 +1,182 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  xpublish-erddap test server (issue #17): deploy/server.py behind Caddy with
+  automatic HTTPS on an sslip.io hostname. One small EC2 instance, no SSH
+  (admin via SSM Session Manager). Delete the stack to remove everything.
+
+Parameters:
+  GitRef:
+    Type: String
+    Default: aws-test-server
+    Description: Branch, tag or commit of github.com/eeholmes/xpublish-erddap to run.
+  TokenParameter:
+    Type: String
+    Default: /xpublish-erddap-demo/arraylake-token
+    Description: SSM SecureString parameter holding the Arraylake API key.
+  MaxResponseMb:
+    Type: Number
+    Default: 500
+    Description: Largest data response the server will build (#16).
+  InstanceType:
+    Type: String
+    Default: t4g.medium
+  LatestAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+Resources:
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: xpublish-erddap demo, HTTP and HTTPS only (no SSH)
+      SecurityGroupIngress:
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0}
+        - {IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIpv6: "::/0"}
+        - {IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIpv6: "::/0"}
+      Tags:
+        - {Key: Name, Value: !Ref AWS::StackName}
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ec2.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: read-arraylake-token
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${TokenParameter}"
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  # Allocated before the instance so its address can go into the hostname.
+  PublicIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - {Key: Name, Value: !Ref AWS::StackName}
+
+  Server:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmi
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds: [!GetAtt WebSecurityGroup.GroupId]
+      MetadataOptions: {HttpTokens: required}
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: {VolumeSize: 20, VolumeType: gp3, Encrypted: true}
+      Tags:
+        - {Key: Name, Value: !Ref AWS::StackName}
+        - {Key: project, Value: xpublish-erddap}
+        - {Key: teardown, Value: "2026-11-13"}
+      UserData:
+        Fn::Base64: !Sub
+          - |
+            #!/bin/bash
+            set -euxo pipefail
+            HOST="${Dashed}.sslip.io"
+
+            dnf install -y python3.12 git
+            useradd --system --create-home --home-dir /var/lib/xpe xpe
+
+            # The app: this repo at GitRef, in its own venv.
+            git clone https://github.com/eeholmes/xpublish-erddap /opt/xpublish-erddap
+            git -C /opt/xpublish-erddap checkout ${GitRef}
+            python3.12 -m venv /opt/venv
+            /opt/venv/bin/pip install --upgrade pip
+            /opt/venv/bin/pip install -e /opt/xpublish-erddap \
+              -r /opt/xpublish-erddap/deploy/requirements.txt
+            chown -R xpe /opt/xpublish-erddap
+
+            # The Arraylake key is fetched at each start and only kept in memory.
+            cat > /opt/start.sh <<'EOS'
+            #!/bin/bash
+            set -euo pipefail
+            ARRAYLAKE_TOKEN=$(aws ssm get-parameter --with-decryption \
+              --region ${AWS::Region} --name "${TokenParameter}" \
+              --query Parameter.Value --output text)
+            export ARRAYLAKE_TOKEN
+            exec /opt/venv/bin/python /opt/xpublish-erddap/deploy/server.py
+            EOS
+            chmod 755 /opt/start.sh
+
+            cat > /etc/systemd/system/xpublish-erddap.service <<EOS
+            [Unit]
+            Description=xpublish-erddap test server (#17)
+            After=network-online.target
+            Wants=network-online.target
+            [Service]
+            User=xpe
+            Environment=HOST=127.0.0.1 PORT=9100 MAX_RESPONSE_MB=${MaxResponseMb}
+            ExecStart=/opt/start.sh
+            Restart=always
+            RestartSec=5
+            MemoryMax=3G
+            [Install]
+            WantedBy=multi-user.target
+            EOS
+
+            # Caddy: the reverse proxy, with automatic HTTPS for the sslip.io name.
+            cd /tmp
+            curl -fsSLO https://github.com/caddyserver/caddy/releases/download/v2.11.7/caddy_2.11.7_linux_arm64.tar.gz
+            echo "3db36ba90c7a6e8dda40ee3dd71fa08844c76b5fb08f61b31e5e78d2ed38e71c51dc7baed875e50d1ca1279196e84302967237386ae87c91ae9f2aaceada682e  caddy_2.11.7_linux_arm64.tar.gz" | sha512sum -c
+            tar -xzf caddy_2.11.7_linux_arm64.tar.gz caddy
+            install -m 755 caddy /usr/local/bin/caddy
+            useradd --system --create-home --home-dir /var/lib/caddy caddy
+            mkdir -p /etc/caddy
+            cat > /etc/caddy/Caddyfile <<EOS
+            $HOST {
+              encode gzip
+              reverse_proxy 127.0.0.1:9100
+              log
+            }
+            EOS
+            cat > /etc/systemd/system/caddy.service <<'EOS'
+            [Unit]
+            Description=Caddy
+            After=network-online.target
+            Wants=network-online.target
+            [Service]
+            User=caddy
+            ExecStart=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile
+            ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile
+            AmbientCapabilities=CAP_NET_BIND_SERVICE
+            Restart=always
+            [Install]
+            WantedBy=multi-user.target
+            EOS
+
+            systemctl daemon-reload
+            systemctl enable --now xpublish-erddap caddy
+          - Dashed: !Join ["-", !Split [".", !Ref PublicIp]]
+
+  PublicIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt PublicIp.AllocationId
+      InstanceId: !Ref Server
+
+Outputs:
+  Url:
+    Description: Public base URL; ERDDAP clients use {Url}/erddap
+    Value: !Sub
+      - "https://${Dashed}.sslip.io"
+      - Dashed: !Join ["-", !Split [".", !Ref PublicIp]]
+  InstanceId:
+    Value: !Ref Server
