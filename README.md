@@ -89,6 +89,21 @@ d <- griddap("my_dataset", url = "http://localhost:9000/erddap/",
              time = c("2024-07-01", "2024-07-05"), fields = "tos")
 ```
 
+### Limiting response size
+
+Responses are built in memory, so a request for a whole variable can be
+gigabytes. `ErddapPlugin(max_response_mb=500)` refuses any data request (`.nc`,
+`.csv`, `.json`, ...) whose values would exceed 500 MB. It answers the way a real
+ERDDAP server does, with a 413 "Your query produced too much data" error, and it
+decides from the query before reading any data. The estimate is the size of the values themselves;
+text formats come out several times larger. Metadata requests (`.das`, `.dds`,
+`.ncml`, info, search) are never limited.
+
+With no limit set (the default), one limit still applies, copied from real
+ERDDAP servers: they refuse any `.nc` response over 2 GB, so this package does
+too, and client code sees the same error either way. A public server should
+set its own, lower limit.
+
 ## What is implemented
 
 | Endpoint | Purpose |
