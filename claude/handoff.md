@@ -93,6 +93,8 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/design-and-history.md` — direction changes, structure, `strict_axes`.
 - `notes/cefi-flux-findings.md` — CEFI via Flux: duplicate times, mixed dims.
 - `notes/opendap-background.md` — DAP2 and xpublish-opendap (for #2).
+- `notes/plugin-comparison.md` — #29: us against the community plugins and
+  norms; a proposed plan.
 - `tools/fluxlint.py` — rough readiness linter; a start for #14.
 
 ## Open threads (a record, not a task list)
@@ -100,7 +102,10 @@ run the R tests: `notes/dev-environment.md`.
 - **Fitting into Flux:** #18 (per-group `/erddap`). Ask Earthmover how they
   run xpublish-opendap and would wire in an ERDDAP service before designing.
 - **#27:** search (and maybe catalog) columns should be ERDDAP's 17.
-- **#29** (EH, new): compare xpublish-erddap to other xpublish plugins.
+- **#29:** compare with the other xpublish plugins. Report and plan in
+  `notes/plugin-comparison.md` (name clash with
+  `xpublish-experiments/xpublish-erddap`; we bypass `deps`; xpublish 0.5
+  DataTree bears on #18).
 - **Deployment blockers:** #3 (catalog cached forever), #8 (no auth).
 - **#2 `.dods`:** reuse xpublish-opendap's encoder, later, but its released
   version mis-reads DAP strides (comment on #2). A strict xfail in
