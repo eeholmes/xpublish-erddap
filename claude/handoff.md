@@ -23,7 +23,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   *released* xpublish-opendap, as EH's colleague suspected
   (`notes/flux-sim-server.md`).
 
-## Repo state (2026-10-05)
+## Repo state (2026-10-06)
 
 - **A public test server is live until 2026-11-13** (#17 closed; PRs #20, #22):
   https://18-119-42-78.sslip.io/erddap, serving CEFI (Arraylake) and
@@ -31,6 +31,13 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   account. It runs `main`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
   (ocean-icechunks org). Account limits and results: `notes/flux-sim-server.md`.
+- **Collaborator test kit (2026-10-06), local only, deliberately not in
+  git:** `collaborator-test/` on this hub, hidden by `.git/info/exclude`.
+  EH shares it by Slack. `test_erddap_server.{py,R}` print PASS/FAIL per
+  check (9/9 Python in a clean venv, 10/10 with icechunk's direct-read
+  comparison; 7/7 R); `example_python.py` and `example_r.R` are plain
+  user-style code (search, info, subsets, a plot). All point at the test
+  server above. Do not commit them unless EH asks.
 - **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
