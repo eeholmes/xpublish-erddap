@@ -25,9 +25,10 @@ Rscript deploy/check_rerddap.R http://127.0.0.1:9100
 ```
 
 ERDDAP clients point at `http://127.0.0.1:9100/erddap`. Datasets: five NOAA
-CEFI stores on Arraylake (`cefi_*`) and `gobai_o2_monthly` (Source Cooperative
-S3); see the list below. The server opens them all in the background at
-startup, which takes about 20 seconds.
+CEFI stores on Arraylake (`cefi_*`), `gobai_o2_monthly` (Source Cooperative
+S3) and six `ocean-icechunks` stores on Source Cooperative served whole, one
+dataset per group; see the list below. The server opens them all in the
+background at startup, which takes about 30 seconds.
 
 ## Try the public test server
 
@@ -74,6 +75,21 @@ Things to know:
 
   A store whose variables sit on different grids is split into one dataset
   per grid, named with the extra dimensions (`cefi_nep_hindcast_monthly_z_l`).
+
+  Six stores from [ocean-icechunks](https://source.coop/ocean-icechunks) on
+  Source Cooperative are published **whole**: every group that holds
+  variables is its own dataset, named store id + group path. All are virtual
+  except OISST `monthly`, so reads go to the source host named here.
+
+  | dataset id | store, group | data read from |
+  |---|---|---|
+  | `hycom_gofs31`, `hycom_gofs31_depth` | `hycom/hycom-gofs-3pt1-reanalysis` (tag `v1`), root | HYCOM bucket, AWS us-west-2 |
+  | `ohc_{na,np,sp}_daily`, `_14day_v1`, `_14day` | `noaa-ohc/{na,np,sp}`, groups `daily`, `14day_v1`, `14day` | coastwatch.noaa.gov |
+  | `oisst_daily`, `oisst_monthly` | `noaa-oisst/oisst.icechunk`, groups `daily`, `monthly` | NOAA CDR bucket, AWS us-east-1 (`monthly`: the store) |
+  | `oa_indicators` | `oa-indicators/climatology`, root | www.ncei.noaa.gov |
+
+  coastwatch.noaa.gov drops connections under load, so an OHC request can
+  fail and work on a retry.
 - **rerddap and the decadal forecasts:** their `lead` axis holds dates but is
   not called `time`, and rerddap only accepts date strings for an axis called
   `time`. Give `lead` in seconds since 1970 instead

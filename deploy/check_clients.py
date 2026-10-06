@@ -69,7 +69,24 @@ SUBSETS = {
             "lon<=": 185.0,
         },
     ),
+    # A group of a store published whole (real data, held in the store).
+    "oisst_monthly": (
+        "sst_mean",
+        {
+            "time>=": "2020-01-01T00:00:00Z",
+            "time<=": "2020-03-01T00:00:00Z",
+            "zlev>=": 0.0,
+            "zlev<=": 0.0,
+            "lat>=": 40.0,
+            "lat<=": 41.0,
+            "lon>=": 290.0,
+            "lon<=": 291.0,
+        },
+    ),
 }
+
+#: ERDDAP datasetID -> (store id, group) where it is not a store's root.
+GROUPS = {"oisst_monthly": ("oisst", "monthly")}
 
 failures: list[str] = []
 
@@ -145,6 +162,7 @@ def main(base: str) -> int:  # noqa: C901
         for term, dataset_id in [
             ("cefi", "cefi_nep_hindcast_daily"),
             ("oxygen", "gobai_o2_monthly"),
+            ("heat", "ohc_na_daily"),
         ]:
             found = pd.read_csv(e.get_search_url(search_for=term, response="csv"))
             assert dataset_id in set(
@@ -216,7 +234,10 @@ def main(base: str) -> int:  # noqa: C901
             @check(f"{dataset_id}: subset matches a direct read of the store")
             def _(dataset_id=dataset_id, var=var, got=got):
                 erd = got["nc"]
-                ref = open_store(dataset_id)[var].sel(
+                store_id, group = GROUPS.get(dataset_id, (dataset_id, ""))
+                tree = open_store(store_id)
+                node = tree[group] if group else tree
+                ref = node.to_dataset()[var].sel(
                     {d: erd[d].values for d in erd.dims},
                 )
                 np.testing.assert_allclose(
