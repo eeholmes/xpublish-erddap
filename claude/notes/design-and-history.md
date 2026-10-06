@@ -42,6 +42,18 @@ ERDDAP.
   getters. Until #32 they called the module-level
   `xpublish.dependencies.get_dataset` and friends instead, which ignored a
   caller's own `Dependencies`, against xpublish's plugin guide.
+- **Groups of a published DataTree are datasets (#33, EH's call 2026-10-06).**
+  Since xpublish 0.5 everything published is a DataTree. The server-wide
+  catalog walks each tree (`catalog.tree_datasets`, via `deps.datatree`), and
+  every group with data variables becomes a source named by xpublish id plus
+  group path: `store` + `native/monthly` gives `store_native_monthly`. The
+  root keeps the plain id. A group carries the coordinates it inherits but
+  only its own attributes, as when xarray opens one group. Before this, a
+  store whose variables were all in groups gave an empty catalog, with no
+  error. Two sources that sanitize to one datasetID are both refused with a
+  logged error (`catalog.unique_ids`); before, the later one silently
+  replaced the earlier. The per-group router beside Flux's `/opendap` is a
+  separate piece of work (#18), at EH's request.
 - **One source dataset can become several ERDDAP datasets.** In ERDDAP, every
   data variable in a dataset must use all of the dataset's axes, so a Zarr
   group whose variables have different dimensions has to be split.

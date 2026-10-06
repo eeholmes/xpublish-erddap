@@ -21,7 +21,12 @@ from fastapi.responses import PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
 
 from xpublish_erddap import formats
-from xpublish_erddap.catalog import ErddapDataset, build_catalog
+from xpublish_erddap.catalog import (
+    ErddapDataset,
+    build_catalog,
+    tree_datasets,
+    unique_ids,
+)
 from xpublish_erddap.constraints import ConstraintError, parse_griddap_query
 
 logger = logging.getLogger("uvicorn")
@@ -153,17 +158,17 @@ class ErddapPlugin(Plugin):
             found = cache.get(key) if cache is not None else None
             if found is not None:
                 return found
-            out: dict[str, ErddapDataset] = {}
-            for source_id in _resolve(request, deps.dataset_ids):
-                ds = _resolve(request, deps.dataset, source_id)
-                entries = build_catalog(
-                    source_id,
-                    ds,
-                    metadata=plugin.metadata,
-                    strict_axes=plugin.strict_axes,
-                )
-                for entry in entries:
-                    out[entry.dataset_id] = entry
+            entries: list[ErddapDataset] = []
+            for xpublish_id in _resolve(request, deps.dataset_ids):
+                tree = _resolve(request, deps.datatree, xpublish_id)
+                for source_id, ds in tree_datasets(xpublish_id, tree):
+                    entries += build_catalog(
+                        source_id,
+                        ds,
+                        metadata=plugin.metadata,
+                        strict_axes=plugin.strict_axes,
+                    )
+            out = unique_ids(entries)
             if cache is not None:
                 cache.put(key, out, 99999)
             return out
