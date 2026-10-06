@@ -10,6 +10,10 @@ it, and serves two kinds of public Icechunk store:
   Arraylake login or API token.
 - ``gobai_o2_monthly``: plain Icechunk on S3 (Source Cooperative,
   ``fish-pace/gobai-o2/monthly``), read anonymously.
+- ``hycom_gofs31``, ``ohc_*``, ``oisst``, ``oa_indicators``: EH's
+  ``ocean-icechunks`` stores on Source Cooperative, read anonymously over
+  HTTPS. These are published whole, as DataTrees: each group with variables
+  is its own ERDDAP dataset (``ohc_na`` + ``daily`` is ``ohc_na_daily``).
 
 Routes::
 
@@ -19,6 +23,7 @@ Routes::
 Flux is one app too, but routes by store and group:
 ``.../{org}/{repo}/{ref}/{group path}/opendap``. ErddapPlugin cannot sit beside
 each group yet (#18), so this server has a single ``/erddap`` root instead.
+For a grouped store, ``/datasets/{id}/opendap`` shows only its (empty) root.
 Stock xpublish-opendap also mis-reads DAP strides (see #2); Flux does not.
 
 Stores are opened in the background at startup (or on first request, if that
@@ -148,20 +153,131 @@ def _open_gobai() -> tuple[xr.Dataset, str]:
     return ds, session.snapshot_id
 
 
-#: Dataset id -> function that opens it lazily and returns (dataset, snapshot).
-STORES: dict[str, Callable[[], tuple[xr.Dataset, str]]] = {
-    **{dataset_id: partial(_open_cefi, dataset_id) for dataset_id in CEFI},
-    "gobai_o2_monthly": _open_gobai,
+OCEAN_ICECHUNKS = "https://data.source.coop/ocean-icechunks"
+
+_OHC_REGIONS = {"na": "North Atlantic", "np": "North Pacific", "sp": "South Pacific"}
+
+#: EH's ocean-icechunks stores on Source Cooperative:
+#: store id -> (path, ref, info page, {group: attributes to set}). The ref is
+#: a tag when the store has a versioned one. Titles are set where the store's
+#: own do not tell the groups apart (every OHC ``daily`` group is "Ocean Heat
+#: Content Product Suite", ``14day*`` are ``OHC_NAQG3`` and so on) or are
+#: missing (OISST ``monthly`` has no attributes at all), and summaries where
+#: there is none, since search reads them. ``.`` is the root.
+OCEAN_STORES: dict[str, tuple[str, dict, str, dict[str, dict[str, str]]]] = {
+    "hycom_gofs31": (
+        "hycom/hycom-gofs-3pt1-reanalysis",
+        {"tag": "v1"},
+        "https://source.coop/ocean-icechunks/hycom/docs/hycom-gofs-3pt1-reanalysis",
+        {
+            ".": {
+                "summary": "HYCOM + NCODA global ocean reanalysis (GOFS 3.1, "
+                "GLBv0.08 expt_53.X): temperature, salinity, currents and sea "
+                "surface elevation at 1/12 degree on 40 depth levels, 3-hourly, "
+                "1994-2015. A virtual Icechunk store over the NetCDF files in "
+                "the HYCOM bucket on AWS Open Data.",
+            },
+        },
+    ),
+    **{
+        f"ohc_{region}": (
+            f"noaa-ohc/{region}",
+            {"branch": "main"},
+            "https://source.coop/ocean-icechunks/noaa-ohc",
+            {
+                "daily": {
+                    "title": f"NOAA CoastWatch Ocean Heat Content, {name}, "
+                    "Daily, 2020-04 to 2024-01",
+                },
+                "14day_v1": {
+                    "title": f"NOAA CoastWatch Ocean Heat Content, {name}, "
+                    "Daily (OHC14 product), 2024-01 to 2025-03",
+                },
+                "14day": {
+                    "title": f"NOAA CoastWatch Ocean Heat Content, {name}, "
+                    "Daily (OHC14 product), 2025-03 onward",
+                },
+            },
+        )
+        for region, name in _OHC_REGIONS.items()
+    },
+    "oisst": (
+        "noaa-oisst/oisst.icechunk",
+        {"branch": "main"},
+        "https://source.coop/ocean-icechunks/noaa-oisst",
+        {
+            "monthly": {
+                "title": "NOAA OISST v2.1 Sea Surface Temperature, Monthly "
+                "Statistics of the Daily Fields",
+                "summary": "Minimum, maximum, mean and standard deviation of "
+                "NOAA's 1/4-degree Daily Optimum Interpolation SST v2.1 (sea "
+                "surface temperature, its anomaly, analysis error and sea ice "
+                "concentration) for every complete month since 1981-09, "
+                "computed by NERACOOS/GMRI.",
+                "institution": "NERACOOS / GMRI, from NOAA NCEI OISST v2.1",
+            },
+        },
+    ),
+    "oa_indicators": (
+        "oa-indicators/climatology",
+        {"branch": "main"},
+        "https://source.coop/ocean-icechunks/oa-indicators",
+        {},
+    ),
+}
+
+
+def _open_ocean_icechunk(store_id: str) -> tuple[xr.DataTree, str]:
+    path, ref, info_url, group_attrs = OCEAN_STORES[store_id]
+    repo = icechunk.Repository.open(icechunk.http_storage(f"{OCEAN_ICECHUNKS}/{path}"))
+    # The stores are virtual: their chunks are in other hosts' files, and each
+    # host has to be authorized. All are public; OISST's are s3:// URLs.
+    auth = icechunk.containers_credentials(
+        {
+            prefix: icechunk.s3_anonymous_credentials()
+            if prefix.startswith("s3://")
+            else icechunk.credentials.HttpAccess
+            for prefix in repo.config.virtual_chunk_containers or {}
+        }
+    )
+    session = repo.reopen(authorize_virtual_chunk_access=auth).readonly_session(**ref)
+    tree = xr.open_datatree(session.store, engine="zarr", consolidated=False, chunks={})
+    for node in tree.subtree:
+        if not node.data_vars:
+            continue
+        node.attrs.setdefault("infoUrl", info_url)
+        node.attrs.setdefault("cdm_data_type", "Grid")
+        node.attrs.update(group_attrs.get(node.relative_to(tree), {}))
+    return tree, session.snapshot_id
+
+
+def _as_tree(opener: Callable[[], tuple[xr.Dataset, str]]) -> tuple[xr.DataTree, str]:
+    ds, snapshot = opener()
+    return xr.DataTree(dataset=ds), snapshot
+
+
+#: Store id -> function that opens it lazily and returns (tree, snapshot).
+#: A store whose variables are all at the root is a one-node tree, served
+#: under the store id itself.
+STORES: dict[str, Callable[[], tuple[xr.DataTree, str]]] = {
+    **{
+        dataset_id: partial(_as_tree, partial(_open_cefi, dataset_id))
+        for dataset_id in CEFI
+    },
+    "gobai_o2_monthly": partial(_as_tree, _open_gobai),
+    **{store_id: partial(_open_ocean_icechunk, store_id) for store_id in OCEAN_STORES},
 }
 
 
 @cache
-def open_store(dataset_id: str) -> xr.Dataset:
+def open_store(store_id: str) -> xr.DataTree:
     """Open a store once and keep it; record the snapshot it was pinned to."""
-    ds, snapshot = STORES[dataset_id]()
-    ds.attrs["icechunk_snapshot"] = snapshot
-    log.info("opened %s at snapshot %s", dataset_id, snapshot)
-    return ds
+    tree, snapshot = STORES[store_id]()
+    for node in tree.subtree:
+        if node.data_vars:
+            node.attrs["icechunk_snapshot"] = snapshot
+    log.info("opened %s at snapshot %s", store_id, snapshot)
+    return tree
 
 
 class IcechunkProvider(Plugin):
@@ -175,11 +291,12 @@ class IcechunkProvider(Plugin):
         return list(STORES)
 
     @hookimpl
-    def get_dataset(self, dataset_id: str):
+    def get_datatree(self, dataset_id: str, group: str):
         """Open the store on first use; ``None`` lets other providers try."""
         if dataset_id not in STORES:
             return None
-        return open_store(dataset_id)
+        tree = open_store(dataset_id)
+        return tree[group] if group else tree
 
 
 def make_app():
@@ -204,14 +321,15 @@ app = make_app()
 def warm_up() -> None:
     """Open every store now, so the first client does not wait for all of them.
 
-    The first catalog request opens them all (about 20 s for the CEFI stores).
+    The first catalog request opens them all (about 20 s for the CEFI stores,
+    a few more for the ocean-icechunks ones).
     A store that fails here is logged and tried again on first request.
     """
-    for dataset_id in STORES:
+    for store_id in STORES:
         try:
-            open_store(dataset_id)
+            open_store(store_id)
         except Exception:
-            log.exception("could not open %s at startup", dataset_id)
+            log.exception("could not open %s at startup", store_id)
 
 
 if __name__ == "__main__":
