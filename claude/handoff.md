@@ -44,7 +44,8 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Shipped 2026-10-06:** #19 search fix (PR #26: `searchFor=all`, refusing
   an empty query; search requests are now parity cases); #24 more datasets
   (PR #28). Closed #9, #16, #19, #24. Opened #27 (search columns differ
-  from ERDDAP's).
+  from ERDDAP's). #29 plugin comparison (PR #31, awaiting EH's merge):
+  report in `notes/plugin-comparison.md`, plan opened as #32–#37.
 - **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
