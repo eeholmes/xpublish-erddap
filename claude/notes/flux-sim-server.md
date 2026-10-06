@@ -35,12 +35,12 @@ but it shows up in latency.
 
 ## Findings that became issues
 
-- **#19, our bug:** ERDDAP treats `searchFor=all` as "every dataset". We
-  return 404, and do the reverse for an empty `searchFor`. Checked against
-  erddap.ioos.us.
+- **#19, our bug (fixed, PR #26):** ERDDAP treats `searchFor=all` as "every
+  dataset". We returned 404, and did the reverse for an empty `searchFor`.
+  Checked against erddap.ioos.us.
 - **#18, our gap:** under `SingleDatasetRest` the `/erddap` catalog is empty,
   with no error. Its comment records how Flux really routes (below).
-- **#16:** no maximum response size. Needed before the public URL is shared.
+- **#16 (done, PR #21):** no maximum response size.
 
 ## How Flux routes (probed 2026-10-05)
 
@@ -107,3 +107,40 @@ Measured against the public URL:
   total, so concurrent requests mostly queue on the 2-vCPU instance. Fine for
   a demo; a real deployment would want more workers.
 - Server memory after the checks: 270 MB of 3.8 GB, no restarts.
+
+## More datasets (#24, 2026-10-06)
+
+EH listed six Flux URLs. All six open and serve, but **only the four
+regridded ones are in** (PR #28): the two native-grid (`raw/main`) stores
+split into 27 catalog rows under two titles, and EH said that was far too
+busy. Keep the demo catalog small and readable over complete. With them went
+a fix they needed: their `geolat`/`geolon` are 2-D coordinates, which the
+plugin does not serve, so those datasets had no positions.
+
+- The stores' own titles are model run names (`NEP10k_202507_physics_bgc`).
+  `server.py` sets ERDDAP-style title/summary/infoUrl per store from the
+  `CEFI` table, so a search for "ocean" finds them. License CC-BY-4.0 is
+  from each Zenodo data DOI (checked via the Zenodo API).
+- The NEP monthly store still splits in three (`_z_l`, `_zi` for depth).
+- **rerddap vs a date axis not called `time`:** the decadal forecasts'
+  `lead` holds dates. rerddap converts date strings only for `time` and
+  fails with "argument is of length zero"; numeric seconds since 1970 work.
+  erddapy is fine. Documented in `deploy/README.md`. Not checked against a
+  real ERDDAP with such an axis.
+- Stores open in a background thread at startup: first request 0.3 s
+  instead of ~18 s. On AWS all six open in about 6 s; memory ~220 MB.
+
+## Updating the running server without a shell session
+
+`aws ssm send-command` runs the README's update steps non-interactively
+(used twice on 2026-10-06; `env -u AWS_REGION aws --profile greenfield
+--region us-east-2`):
+
+```
+ssm send-command --instance-ids i-0e80a89b8eb8b2fcd --document-name AWS-RunShellScript \
+  --parameters 'commands=["set -e","cd /opt/xpublish-erddap","sudo -u xpe git fetch origin","sudo -u xpe git checkout main","sudo -u xpe git pull --ff-only","systemctl restart xpublish-erddap"]'
+ssm get-command-invocation --command-id <id> --instance-id i-0e80a89b8eb8b2fcd
+```
+
+The package is installed editable, so a restart picks up new code. Then run
+`deploy/check_clients.py https://18-119-42-78.sslip.io` from the hub.

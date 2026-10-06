@@ -26,9 +26,11 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 ## Repo state (2026-10-06)
 
 - **A public test server is live until 2026-11-13** (#17 closed; PRs #20, #22):
-  https://18-119-42-78.sslip.io/erddap, serving CEFI (Arraylake) and
-  GOBAI-O2 (Source Cooperative S3) through `deploy/server.py`, on EH's AWS
-  account. It runs `main`. Hackweek collaborators use it. **Tear it down on
+  https://18-119-42-78.sslip.io/erddap, serving five regridded CEFI stores
+  (Arraylake) and GOBAI-O2 (Source Cooperative S3) through `deploy/server.py`,
+  on EH's AWS account: 8 ERDDAP datasets. It runs `main` (`7a62dd4`,
+  redeployed 2026-10-06; how: `notes/flux-sim-server.md`). Hackweek
+  collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
   (ocean-icechunks org). Account limits and results: `notes/flux-sim-server.md`.
 - **Collaborator test kit (2026-10-06), local only, deliberately not in
@@ -37,16 +39,23 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   check (9/9 Python in a clean venv, 10/10 with icechunk's direct-read
   comparison; 7/7 R); `example_python.py` and `example_r.R` are plain
   user-style code (search, info, subsets, a plot). All point at the test
-  server above. Do not commit them unless EH asks.
+  server above, and were re-checked after #24 (all pass). Do not commit
+  them unless EH asks.
+- **Shipped 2026-10-06:** #19 search fix (PR #26: `searchFor=all`, refusing
+  an empty query; search requests are now parity cases); #24 more datasets
+  (PR #28). Closed #9, #16, #24. Opened #27 (search columns differ from
+  ERDDAP's). **#19 is still open** though its definition of done is met
+  (the PR said "Part of"); EH decides when to close it.
 - **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
-- The repo now uses **branches and PRs**; a task stays on its branch until
-  the definition of done on its issue is met. All task branches so far are
-  merged and deleted; only `main` exists.
-- CI: 10 jobs green, including a Linux R job (rerddap + tutorials): 231
-  passed, 4 skipped, 2 xfailed on Linux/macOS; Windows skips the live-server
-  tests (218 passed, 18 skipped).
+- The repo uses **branches and PRs**; a task stays on its branch until
+  the definition of done on its issue is met. Merged branches not yet
+  deleted: `handoff-2026-10-05`, `handoff-2026-10-06`, `search-for-all-19`,
+  `more-datasets-24` (suggest, don't delete unasked).
+- CI: 10 jobs green, including a Linux R job (rerddap + tutorials): 255
+  passed, 10 skipped, 2 xfailed on Linux/macOS; Windows skips the live-server
+  tests (240 passed, 26 skipped).
 - #13 is the hackweek proposal; #14 (the Zarr/Icechunk validator) is its
   second project. Collaborators are reviewing it.
 
@@ -92,7 +101,8 @@ run the R tests: `notes/dev-environment.md`.
 
 - **Fitting into Flux:** #18 (per-group `/erddap`). Ask Earthmover how they
   run xpublish-opendap and would wire in an ERDDAP service before designing.
-- **#19:** `searchFor=all` must list every dataset (real ERDDAP does).
+- **#27:** search (and maybe catalog) columns should be ERDDAP's 17.
+- **#29** (EH, new): compare xpublish-erddap to other xpublish plugins.
 - **Deployment blockers:** #3 (catalog cached forever), #8 (no auth).
 - **#2 `.dods`:** reuse xpublish-opendap's encoder, later, but its released
   version mis-reads DAP strides (comment on #2). A strict xfail in
