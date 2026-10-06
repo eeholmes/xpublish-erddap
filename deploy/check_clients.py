@@ -42,6 +42,20 @@ SUBSETS = {
             "lon<=": 231.0,
         },
     ),
+    # A date-valued axis that is not called time, and an ensemble axis.
+    "cefi_nwa_decadal_forecast_monthly_i196501": (
+        "tos",
+        {
+            "member>=": 1,
+            "member<=": 2,
+            "lead>=": "1970-07-16T12:00:00Z",
+            "lead<=": "1970-08-16T12:00:00Z",
+            "lat>=": 40.0,
+            "lat<=": 40.3,
+            "lon>=": -68.0,
+            "lon<=": -67.7,
+        },
+    ),
     "gobai_o2_monthly": (
         "oxy",
         {
@@ -119,7 +133,7 @@ def main(base: str) -> int:  # noqa: C901
     client = httpx.Client(timeout=120)
     open_store = direct_opener()
 
-    @check("catalog lists both datasets")
+    @check("catalog lists every dataset checked here")
     def _():
         text = client.get(f"{ROOT}/info/index.csv").text
         missing = [d for d in SUBSETS if d not in text]
