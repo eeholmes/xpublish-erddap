@@ -7,7 +7,10 @@ import pandas as pd
 import pytest
 import xarray as xr
 import xpublish
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from xpublish import Dependencies
+from xpublish.dependencies import get_dataset, get_dataset_ids
 
 from xpublish_erddap import ErddapPlugin
 from xpublish_erddap.catalog import check_axes
@@ -358,3 +361,33 @@ def test_integer_variable_with_nan_fill_still_serves_metadata():
     das = c.get("/erddap/griddap/ints.das")
     assert das.status_code == 200
     assert "_FillValue" not in das.text
+
+
+def test_router_uses_the_deps_it_is_given(grid_dataset):
+    """A caller can hand the router its own Dependencies (xpublish's plugin guide)."""
+
+    deps = Dependencies(
+        dataset_ids=lambda: ["custom"],
+        dataset=lambda dataset_id: grid_dataset,
+        cache=lambda: None,
+    )
+    app = FastAPI()
+    app.include_router(ErddapPlugin().app_router(deps))
+    client = TestClient(app)
+
+    body = client.get("/erddap/griddap/index.csv").text
+    assert "custom" in body
+    assert "custom_depth" in body
+    assert "testgrid" not in body
+    assert client.get("/erddap/griddap/custom.das").status_code == 200
+
+
+def test_default_deps_resolve_through_overrides(grid_dataset):
+    """Default Dependencies() hold placeholders that the app overrides."""
+
+    app = FastAPI()
+    app.include_router(ErddapPlugin().app_router(Dependencies()))
+    app.dependency_overrides[get_dataset_ids] = lambda: ["overridden"]
+    app.dependency_overrides[get_dataset] = lambda dataset_id: grid_dataset
+    body = TestClient(app).get("/erddap/griddap/index.csv").text
+    assert "overridden" in body
