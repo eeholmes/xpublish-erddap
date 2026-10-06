@@ -112,7 +112,7 @@ set its own, lower limit.
 | `/erddap/griddap/index.{csv,json}` | dataset catalog |
 | `/erddap/tabledap/index.{csv,json}` | empty catalog (rerddap needs it to classify a dataset) |
 | `/erddap/info/{id}/index.{csv,json}` | variable and attribute table |
-| `/erddap/search/index.{csv,json}`, `/erddap/search/advanced.{csv,json}` | free-text search |
+| `/erddap/search/index.{csv,json}`, `/erddap/search/advanced.{csv,json}` | free-text search; `searchFor=all` lists every dataset, as in ERDDAP. Advanced search filters only on `searchFor` so far (#4) |
 | `/erddap/version` | version banner |
 
 Constraint syntax: coordinate values `[(2024-07-01):1:(2024-07-05)]`, integer

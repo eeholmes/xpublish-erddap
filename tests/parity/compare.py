@@ -49,6 +49,15 @@ def comparable(body: bytes, ext: str, server: str):
     return text
 
 
+def lists(body: str, dataset_id: str) -> bool:
+    """Whether a search response lists ``dataset_id``.
+
+    A search lists the whole server's catalog, so its body cannot be compared
+    with ours; whether it includes the case's dataset can.
+    """
+    return dataset_id in body
+
+
 def ext_of(path: str) -> str:
     """File type of a request path (``griddap/x.csv?...`` -> ``csv``)."""
     return path.split("?", 1)[0].rsplit(".", 1)[-1]

@@ -2,7 +2,7 @@
   "server": "https://erddap.ioos.us/erddap",
   "dataset_id": "etopo5_EDDGridCopy",
   "erddap_version": "ERDDAP_version=2.31",
-  "captured": "2026-09-16",
+  "captured": "2026-10-06",
   "requests": [
     {
       "path": "griddap/etopo5_EDDGridCopy.dds",
@@ -93,6 +93,97 @@
       "file": "14.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "search/index.csv?searchFor=etopo5",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=zzznope",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/index.csv?searchFor=all",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.json?searchFor=all",
+      "catalog": true,
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=+ALL+",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?searchFor=all",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/index.csv",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?searchFor=",
+      "catalog": true,
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv",
+      "catalog": true,
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=griddap&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=griddap&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=&searchFor=all",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=(ANY)&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=",
+      "catalog": true,
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
     }
   ]
 }

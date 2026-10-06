@@ -137,7 +137,7 @@ def main(base: str) -> int:  # noqa: C901
                 found["Dataset ID"],
             ), f"{term!r} -> {list(found['Dataset ID'])}"
 
-    @check("erddapy search for 'all' lists everything", known="#19")
+    @check("erddapy search for 'all' lists everything")
     def _():
         e = ERDDAP(server=ROOT, protocol="griddap")
         found = pd.read_csv(e.get_search_url(search_for="all", response="csv"))

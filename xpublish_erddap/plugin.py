@@ -275,11 +275,49 @@ class ErddapPlugin(Plugin):
             return _table(columns, rows, ext, dataset_id)
 
         @router.get("/search/index.{ext}")
-        @router.get("/search/advanced.{ext}")
         def search(request: Request, ext: str, searchFor: str = "") -> Response:  # noqa: N803
             """Free-text search across dataset metadata."""
+            if not searchFor.split():
+                raise HTTPException(
+                    404,
+                    f"A .{ext} search request must include a query, for "
+                    'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
+                )
+            return _search(request, ext, searchFor)
+
+        @router.get("/search/advanced.{ext}")
+        def advanced_search(
+            request: Request,
+            ext: str,
+            searchFor: str = "",  # noqa: N803
+        ) -> Response:
+            """Advanced search. Only ``searchFor`` filters so far (#4).
+
+            As in ERDDAP, the request needs at least one criterion: erddapy
+            sends every field, with ``(ANY)`` or an empty value for those
+            not in use, and ``protocol=griddap`` counts as one.
+            """
+            criteria = [
+                value
+                for key, value in request.query_params.items()
+                if key not in {"page", "itemsPerPage"}
+                and value.strip() not in {"", "(ANY)"}
+            ]
+            if not criteria:
+                raise HTTPException(
+                    400,
+                    f"Query error: A .{ext} Advanced Search request must include "
+                    "one or more criteria, for example, "
+                    '"?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
+                )
+            return _search(request, ext, searchFor)
+
+        def _search(request: Request, ext: str, searchFor: str) -> Response:  # noqa: N803
             cat = catalog(request)
-            terms = [t for t in searchFor.lower().split() if t]
+            terms = searchFor.lower().split()
+            # ERDDAP's special case: "all" on its own lists every dataset.
+            if terms == ["all"]:
+                terms = []
             base = erddap_root(request, plugin.app_router_prefix)
             rows = []
             for d in cat.values():
