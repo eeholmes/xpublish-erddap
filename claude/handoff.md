@@ -43,16 +43,14 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   them unless EH asks.
 - **Shipped 2026-10-06:** #19 search fix (PR #26: `searchFor=all`, refusing
   an empty query; search requests are now parity cases); #24 more datasets
-  (PR #28). Closed #9, #16, #24. Opened #27 (search columns differ from
-  ERDDAP's). **#19 is still open** though its definition of done is met
-  (the PR said "Part of"); EH decides when to close it.
+  (PR #28). Closed #9, #16, #19, #24. Opened #27 (search columns differ
+  from ERDDAP's).
 - **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
 - The repo uses **branches and PRs**; a task stays on its branch until
-  the definition of done on its issue is met. Merged branches not yet
-  deleted: `handoff-2026-10-05`, `handoff-2026-10-06`, `search-for-all-19`,
-  `more-datasets-24` (suggest, don't delete unasked).
+  the definition of done on its issue is met. Merged branches are deleted,
+  on GitHub and on the hub (the repo does not auto-delete them).
 - CI: 10 jobs green, including a Linux R job (rerddap + tutorials): 255
   passed, 10 skipped, 2 xfailed on Linux/macOS; Windows skips the live-server
   tests (240 passed, 26 skipped).
