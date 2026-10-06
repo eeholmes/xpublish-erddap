@@ -46,6 +46,32 @@ jobs:
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v4
 
+  min-deps:
+    # The matrix above tests the newest releases (and xpublish main). This job
+    # tests the floors in requirements.txt: the lowest version of each runtime
+    # dependency, on the lowest supported Python. Dev tools are installed
+    # normally afterwards; they are not part of what users install.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          activate-environment: true
+
+      - name: Install the lowest allowed runtime dependencies
+        run: |
+          uv pip install --resolution lowest-direct -e .
+          uv pip install -r requirements-dev.txt
+          uv pip list
+
+      - name: Tests
+        run: python -m pytest -rxs tests
+
   rerddap:
     # The R client is a first-class target for this package, so it is tested
     # too -- but only on Linux, since installing R across the full matrix is

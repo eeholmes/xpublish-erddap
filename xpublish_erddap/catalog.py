@@ -324,6 +324,52 @@ def coverage_globals(
     return out
 
 
+def tree_datasets(xpublish_id: str, tree: xr.DataTree) -> list[tuple[str, xr.Dataset]]:
+    """The groups of a published DataTree that hold variables, as datasets.
+
+    Since xpublish 0.5 everything published is a DataTree; a plain Dataset is
+    a tree with only a root. Each group with data variables becomes a source
+    for ``build_catalog``, named by the xpublish id plus the group path
+    (``store`` and ``native/monthly`` give ``store/native/monthly``, which
+    ``sanitize_id`` turns into ``store_native_monthly``). The root keeps the
+    plain id. A group's dataset includes the coordinates it inherits from its
+    parents, and only its own attributes, as when xarray opens one group.
+    """
+    out = []
+    for node in tree.subtree:
+        if not node.data_vars:
+            continue
+        path = node.relative_to(tree)
+        source_id = xpublish_id if path == "." else f"{xpublish_id}/{path}"
+        out.append((source_id, node.to_dataset()))
+    return out
+
+
+def unique_ids(entries: list[ErddapDataset]) -> dict[str, ErddapDataset]:
+    """Index ``entries`` by datasetID, dropping every entry whose id is taken twice.
+
+    Different sources can sanitize to the same datasetID (``a-b`` and ``a_b``,
+    or a store ``x_y`` and the group ``y`` of a store ``x``). Serving either one
+    under the shared id would hide the other, so both are left out, with an
+    error naming the sources.
+    """
+    by_id: dict[str, list[ErddapDataset]] = {}
+    for entry in entries:
+        by_id.setdefault(entry.dataset_id, []).append(entry)
+    out = {}
+    for dataset_id, found in by_id.items():
+        if len(found) == 1:
+            out[dataset_id] = found[0]
+            continue
+        logger.error(
+            "ERDDAP: refusing datasetID %r -- it names more than one source (%s). "
+            "Rename a dataset or group so their ids differ.",
+            dataset_id,
+            ", ".join(repr(e.source_id) for e in found),
+        )
+    return out
+
+
 def _signature(da: xr.DataArray) -> tuple[str, ...]:
     return tuple(str(d) for d in da.dims)
 

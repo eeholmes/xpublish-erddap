@@ -10,7 +10,7 @@ import xpublish
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from xpublish import Dependencies
-from xpublish.dependencies import get_dataset, get_dataset_ids
+from xpublish.dependencies import get_dataset_ids, get_datatree
 
 from xpublish_erddap import ErddapPlugin
 from xpublish_erddap.catalog import check_axes
@@ -368,7 +368,7 @@ def test_router_uses_the_deps_it_is_given(grid_dataset):
 
     deps = Dependencies(
         dataset_ids=lambda: ["custom"],
-        dataset=lambda dataset_id: grid_dataset,
+        datatree=lambda dataset_id: xr.DataTree(grid_dataset),
         cache=lambda: None,
     )
     app = FastAPI()
@@ -388,6 +388,56 @@ def test_default_deps_resolve_through_overrides(grid_dataset):
     app = FastAPI()
     app.include_router(ErddapPlugin().app_router(Dependencies()))
     app.dependency_overrides[get_dataset_ids] = lambda: ["overridden"]
-    app.dependency_overrides[get_dataset] = lambda dataset_id: grid_dataset
+    app.dependency_overrides[get_datatree] = lambda dataset_id: xr.DataTree(
+        grid_dataset
+    )
     body = TestClient(app).get("/erddap/griddap/index.csv").text
     assert "overridden" in body
+
+
+@pytest.fixture(scope="module")
+def tree_client(grid_dataset):
+    """A store whose variables are all in groups, one of them nested."""
+    tos = grid_dataset[["tos"]]
+    tree = xr.DataTree.from_dict(
+        {
+            "/": xr.Dataset(attrs={"title": "The whole store"}),
+            "/regrid": tos.assign_attrs(title="Regridded"),
+            "/native/monthly": tos,
+        }
+    )
+    rest = xpublish.Rest({"store": tree}, plugins={"erddap": ErddapPlugin()})
+    return TestClient(rest.app)
+
+
+def test_groups_of_a_datatree_are_datasets(tree_client):
+    """Each group with variables is listed; the empty root and parent are not."""
+    table = pd.read_csv(io.StringIO(tree_client.get("/erddap/griddap/index.csv").text))
+    assert sorted(table["Dataset ID"]) == ["store_native_monthly", "store_regrid"]
+
+
+def test_group_keeps_its_own_attributes(tree_client):
+    body = tree_client.get("/erddap/info/store_regrid/index.csv").text
+    assert "Regridded" in body
+    assert "The whole store" not in body
+
+
+def test_group_serves_data(tree_client):
+    resp = tree_client.get("/erddap/griddap/store_native_monthly.csv?tos[0][0][0]")
+    assert resp.status_code == 200
+    assert resp.text.splitlines()[0].startswith("time,")
+
+
+def test_duplicate_dataset_ids_are_both_refused(grid_dataset, caplog):
+    """A store 'a_b' and the group 'b' of a store 'a' would share an id."""
+    tos = grid_dataset[["tos"]]
+    rest = xpublish.Rest(
+        {"a_b": tos, "a": xr.DataTree.from_dict({"/b": tos}), "c": tos},
+        plugins={"erddap": ErddapPlugin()},
+    )
+    with caplog.at_level("ERROR"):
+        body = TestClient(rest.app).get("/erddap/griddap/index.csv").text
+    table = pd.read_csv(io.StringIO(body))
+    assert list(table["Dataset ID"]) == ["c"]
+    assert "'a_b'" in caplog.text
+    assert "'a/b'" in caplog.text
