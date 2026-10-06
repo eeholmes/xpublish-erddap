@@ -35,7 +35,13 @@ ERDDAP.
 - **`app_router`, not `dataset_router`.** ERDDAP is organized around a catalog:
   clients point at one server root and address many flat datasetIDs. The
   datasetIDs do not map one-to-one onto xpublish dataset ids (see the split
-  below), so the plugin gets datasets through `app.dependency_overrides`.
+  below), and with no `{dataset_id}` in the path `Depends(deps.dataset)`
+  cannot be used. So the routes call the `deps` xpublish passes to
+  `app_router` themselves (`plugin.py`, `_resolve`), first looking each one up
+  in `app.dependency_overrides` in case it is one of xpublish's placeholder
+  getters. Until #32 they called the module-level
+  `xpublish.dependencies.get_dataset` and friends instead, which ignored a
+  caller's own `Dependencies`, against xpublish's plugin guide.
 - **One source dataset can become several ERDDAP datasets.** In ERDDAP, every
   data variable in a dataset must use all of the dataset's axes, so a Zarr
   group whose variables have different dimensions has to be split.

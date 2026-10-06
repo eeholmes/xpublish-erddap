@@ -19,9 +19,6 @@ import xarray as xr
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
-from xpublish.dependencies import get_cache as _cache_dep
-from xpublish.dependencies import get_dataset as _dataset_dep
-from xpublish.dependencies import get_dataset_ids as _dataset_ids_dep
 
 from xpublish_erddap import formats
 from xpublish_erddap.catalog import ErddapDataset, build_catalog
@@ -53,7 +50,14 @@ PLANNED_EXTENSIONS = {
 
 
 def _resolve(request: Request, dep, *args):
-    """Call an xpublish dependency through the app's overrides."""
+    """Call one of the ``deps`` xpublish gave the router, outside FastAPI's DI.
+
+    An app router has no ``{dataset_id}`` in its path, so it cannot use
+    ``Depends(deps.dataset)``; it calls the function itself. ``xpublish.Rest``
+    passes its real getters, which are called directly. Default
+    ``Dependencies()`` hold xpublish's placeholder getters, which an app fills
+    in through ``dependency_overrides``, so look there first.
+    """
     fn = request.app.dependency_overrides.get(dep, dep)
     return fn(*args)
 
@@ -133,7 +137,7 @@ class ErddapPlugin(Plugin):
     max_response_mb: float | None = None
 
     @hookimpl
-    def app_router(self, deps: Dependencies) -> APIRouter:  # noqa: ARG002, PLR0915
+    def app_router(self, deps: Dependencies) -> APIRouter:  # noqa: PLR0915
         """Create the ERDDAP router.
 
         All routes live on one router because ERDDAP's catalog endpoints and
@@ -144,14 +148,14 @@ class ErddapPlugin(Plugin):
 
         # -- catalog ----------------------------------------------------
         def catalog(request: Request) -> dict[str, ErddapDataset]:
-            cache = _resolve(request, _cache_dep)
+            cache = _resolve(request, deps.cache)
             key = "erddap_catalog"
             found = cache.get(key) if cache is not None else None
             if found is not None:
                 return found
             out: dict[str, ErddapDataset] = {}
-            for source_id in _resolve(request, _dataset_ids_dep):
-                ds = _resolve(request, _dataset_dep, source_id)
+            for source_id in _resolve(request, deps.dataset_ids):
+                ds = _resolve(request, deps.dataset, source_id)
                 entries = build_catalog(
                     source_id,
                     ds,
