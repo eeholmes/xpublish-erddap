@@ -24,8 +24,10 @@ python deploy/check_clients.py http://127.0.0.1:9100
 Rscript deploy/check_rerddap.R http://127.0.0.1:9100
 ```
 
-ERDDAP clients point at `http://127.0.0.1:9100/erddap`. Datasets:
-`cefi_nep_hindcast_daily` (Arraylake) and `gobai_o2_monthly` (Source Cooperative S3).
+ERDDAP clients point at `http://127.0.0.1:9100/erddap`. Datasets: seven NOAA
+CEFI stores on Arraylake (`cefi_*`) and `gobai_o2_monthly` (Source Cooperative
+S3); see the list below. The server opens them all in the background at
+startup, which takes about 20 seconds.
 
 ## Try the public test server
 
@@ -58,9 +60,28 @@ Hand-built griddap URLs work too, for example
 
 Things to know:
 
-- **Datasets:** `cefi_nep_hindcast_daily` (NOAA CEFI NE Pacific hindcast,
-  virtual Icechunk on Arraylake) and `gobai_o2_monthly` (GOBAI-O2, Icechunk on
-  Source Cooperative). GOBAI longitudes run 20.5 to 379.5, as in the source.
+- **Datasets:** `gobai_o2_monthly` (GOBAI-O2, Icechunk on Source
+  Cooperative; longitudes run 20.5 to 379.5, as in the source) and seven NOAA
+  CEFI MOM6-COBALT stores, all virtual Icechunk on Arraylake (`NOAA-PMEL/*`):
+
+  | dataset id | store, group | axes |
+  |---|---|---|
+  | `cefi_nep_hindcast_daily` | `cefi-nep-hindcast-daily`, `regrid/main` | time, lat, lon (0-360) |
+  | `cefi_nep_hindcast_monthly` | `cefi-nep-hindcast-monthly`, `regrid/main` | time, lat, lon (0-360); depth in `_z_l`, `_zi` |
+  | `cefi_nep_hindcast_monthly_raw` | `cefi-nep-hindcast-monthly`, `raw/main` | native grid: index axes, `geolat`/`geolon` variables |
+  | `cefi_nwa_hindcast_monthly_raw` | `cefi-nwa-hindcast-monthly`, `raw/main` | native grid, as above |
+  | `cefi_nwa_decadal_forecast_monthly_i196501` | `cefi-nwa-decadal-forecast-monthly`, `regrid/i196501` | member, lead (dates), lat, lon (-180-180) |
+  | `cefi_nwa_decadal_forecast_yearly_i196501` | `cefi-nwa-decadal-forecast-yearly`, `regrid/i196501` | member, lead (dates), lat, lon |
+  | `cefi_nwa_seasonal_reforecast_monthly_i199401` | `cefi-nwa-seasonal-reforecast-monthly`, `regrid/i199401` | member, lead (months, 0-11), lat, lon |
+
+  A store whose variables sit on different grids is split into one dataset
+  per grid, named with the extra dimensions (`cefi_nep_hindcast_monthly_z_l`);
+  the native-grid stores split into a dozen or more each.
+- **rerddap and the decadal forecasts:** their `lead` axis holds dates but is
+  not called `time`, and rerddap only accepts date strings for an axis called
+  `time`. Give `lead` in seconds since 1970 instead
+  (`lead = c(16977600, 16977600)` is 1970-07-16T12:00Z). erddapy and
+  hand-built URLs take dates there.
 - **Requests over 500 MB** are refused with ERDDAP's "Your query produced too
   much data" error. Ask for a smaller subset.
 - **The OPeNDAP endpoints** (`/datasets/{id}/opendap`) are stock
