@@ -56,18 +56,6 @@ SUBSETS = {
             "lon<=": -67.7,
         },
     ),
-    # The model's native grid: index axes.
-    "cefi_nep_hindcast_monthly_raw": (
-        "chlos",
-        {
-            "time>=": "2020-07-16T12:00:00Z",
-            "time<=": "2020-08-16T12:00:00Z",
-            "jh>=": 400,
-            "jh<=": 402,
-            "ih>=": 200,
-            "ih<=": 202,
-        },
-    ),
     "gobai_o2_monthly": (
         "oxy",
         {

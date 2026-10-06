@@ -4,7 +4,7 @@ Earthmover Flux serves Arraylake Icechunk stores with xpublish and the stock
 xpublish-opendap plugin. This server does the same, adds xpublish-erddap beside
 it, and serves two kinds of public Icechunk store:
 
-- ``cefi_*``: seven NOAA CEFI stores on Arraylake (``NOAA-PMEL/cefi-*``; see
+- ``cefi_*``: five NOAA CEFI stores on Arraylake (``NOAA-PMEL/cefi-*``; see
   ``CEFI`` below). Virtual stores; their chunks are CEFI NetCDF files in
   NODD. The repos are public to any Arraylake account, so the server needs an
   Arraylake login or API token.
@@ -71,22 +71,6 @@ CEFI: dict[str, tuple[str, str, str, str]] = {
         "hindcast for the Northeast Pacific, monthly means, regridded to a "
         "regular latitude-longitude grid",
     ),
-    "cefi_nep_hindcast_monthly_raw": (
-        "cefi-nep-hindcast-monthly",
-        "raw/main",
-        "CEFI Northeast Pacific 10 km Hindcast, Monthly, Native Model Grid",
-        "hindcast for the Northeast Pacific, monthly means, on the model's "
-        "native curvilinear grid (index axes; latitude and longitude are the "
-        "geolat and geolon variables)",
-    ),
-    "cefi_nwa_hindcast_monthly_raw": (
-        "cefi-nwa-hindcast-monthly",
-        "raw/main",
-        "CEFI Northwest Atlantic 12 km Hindcast, Monthly, Native Model Grid",
-        "hindcast for the Northwest Atlantic, monthly means, on the model's "
-        "native curvilinear grid (index axes; latitude and longitude are the "
-        "geolat and geolon variables)",
-    ),
     "cefi_nwa_decadal_forecast_monthly_i196501": (
         "cefi-nwa-decadal-forecast-monthly",
         "regrid/i196501",
@@ -123,10 +107,6 @@ def _open_cefi(dataset_id: str) -> tuple[xr.Dataset, str]:
     repo_name, group, title, about = CEFI[dataset_id]
     session = Client().get_repo(f"NOAA-PMEL/{repo_name}").readonly_session("main")
     ds = xr.open_zarr(session.store, group=group, consolidated=False, chunks={})
-    # On the native grids, latitude and longitude are 2-D coordinates
-    # (geolat, geolon). Serve them as variables, as ERDDAP does for a
-    # curvilinear grid, or no one could tell where a cell is.
-    ds = ds.reset_coords([name for name, c in ds.coords.items() if c.ndim >= 2])  # noqa: PLR2004
     # ACDD attributes ERDDAP clients expect and the store does not carry, the
     # counterpart of <addAttributes> in an ERDDAP datasets.xml. The store's
     # own title is the model run name, which no one would search for.
@@ -222,7 +202,7 @@ app = make_app()
 
 
 def warm_up() -> None:
-    """Open every store now, so the first client does not wait for all eight.
+    """Open every store now, so the first client does not wait for all of them.
 
     The first catalog request opens them all (about 20 s for the CEFI stores).
     A store that fails here is logged and tried again on first request.
