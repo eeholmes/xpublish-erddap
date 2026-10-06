@@ -54,6 +54,12 @@ ERDDAP.
   logged error (`catalog.unique_ids`); before, the later one silently
   replaced the earlier. The per-group router beside Flux's `/opendap` is a
   separate piece of work (#18), at EH's request.
+- **Route handlers are module-level functions (#34).** `plugin.py`'s helpers
+  (`lookup`, `table_response`, `index_response`, `search_response`,
+  `split_target`, `griddap_response`, ...) take the catalog and the public
+  base URL, not the router, and `app_router` only declares routes. This is so
+  #18's per-dataset router can reuse them with its own catalog and prefix.
+  The server-wide catalog is `ErddapPlugin.server_catalog`.
 - **One source dataset can become several ERDDAP datasets.** In ERDDAP, every
   data variable in a dataset must use all of the dataset's axes, so a Zarr
   group whose variables have different dimensions has to be split.
