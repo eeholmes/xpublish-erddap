@@ -44,7 +44,8 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Shipped 2026-10-06:** #19 search fix (PR #26: `searchFor=all`, refusing
   an empty query; search requests are now parity cases); #24 more datasets
   (PR #28). Closed #9, #16, #19, #24. Opened #27 (search columns differ
-  from ERDDAP's).
+  from ERDDAP's). #29 plugin comparison (PR #31, awaiting EH's merge):
+  report in `notes/plugin-comparison.md`, plan opened as #32–#37.
 - **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
   ERDDAP's 2 GB `.nc` cap.
 - **#1 is done** (PR #15): every captured real-ERDDAP response matches.
@@ -93,6 +94,8 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/design-and-history.md` — direction changes, structure, `strict_axes`.
 - `notes/cefi-flux-findings.md` — CEFI via Flux: duplicate times, mixed dims.
 - `notes/opendap-background.md` — DAP2 and xpublish-opendap (for #2).
+- `notes/plugin-comparison.md` — #29: us against the community plugins and
+  norms; a proposed plan.
 - `tools/fluxlint.py` — rough readiness linter; a start for #14.
 
 ## Open threads (a record, not a task list)
@@ -100,7 +103,14 @@ run the R tests: `notes/dev-environment.md`.
 - **Fitting into Flux:** #18 (per-group `/erddap`). Ask Earthmover how they
   run xpublish-opendap and would wire in an ERDDAP service before designing.
 - **#27:** search (and maybe catalog) columns should be ERDDAP's 17.
-- **#29** (EH, new): compare xpublish-erddap to other xpublish plugins.
+- **#29:** compared with the other xpublish plugins; report and plan in
+  `notes/plugin-comparison.md`. The plan became #32 (use `deps`), #33
+  (xpublish 0.5 DataTree, bears on #18), #34 (split `app_router`), #35
+  (tooling), #36 (error bodies), #37 (release and listing). The name clash
+  with `xpublish-experiments/xpublish-erddap` is settled: Alex Kerney made it
+  and is EH's collaborator.
+- **More test data:** coastwatch.noaa.gov/erddap has ~1,045 griddap datasets
+  and real ERDDAP error bodies (`notes/erddap-parity-plan.md`).
 - **Deployment blockers:** #3 (catalog cached forever), #8 (no auth).
 - **#2 `.dods`:** reuse xpublish-opendap's encoder, later, but its released
   version mis-reads DAP strides (comment on #2). A strict xfail in

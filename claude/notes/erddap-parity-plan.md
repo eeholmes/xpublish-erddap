@@ -91,6 +91,12 @@ The validator (#14) should check the client rules, not all of ERDDAP's.
 ## Observed on the real ERDDAP
 
 - Servers: oceanwatch.pifsc.noaa.gov runs ERDDAP 2.22, erddap.ioos.us 2.31.
+- **More griddap to test against (EH, 2026-10-06):** coastwatch.noaa.gov/erddap
+  (ERDDAP 2.31, about 1,045 griddap datasets; full list at
+  `/erddap/info/index.html?page=1&itemsPerPage=1000`). Unlike oceanwatch, it
+  returns ERDDAP's own error bodies (`Error {\n    code=404;\n    message=...;\n}`),
+  so it is the server to capture error cases from (#36). Not yet in
+  `tests/parity/cases.py`.
   Our `/version` says 2.23.
 - Reference datasets: `CRW_sst_v1_0_monthly` (tutorials; deprecated;
   ascending lat; times on the 1st at 12:00), `CRW_sst_v3_1_monthly` (current;
