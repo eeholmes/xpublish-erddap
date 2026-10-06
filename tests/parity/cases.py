@@ -34,6 +34,10 @@ class Case:
     queries: list[str] = field(default_factory=list)
     #: Extra full requests, compared as-is (e.g. axis-only, dds with a query).
     extra: list[str] = field(default_factory=list)
+    #: Server-wide requests (search). The real answer lists the whole
+    #: server's catalog, so only the status and whether this dataset is
+    #: listed are compared.
+    catalog: list[str] = field(default_factory=list)
 
     @property
     def slug(self) -> str:
@@ -48,6 +52,16 @@ class Case:
             paths.extend(f"griddap/{{id}}.{ext}?{query}" for ext in DATA_TYPES)
         paths.extend(self.extra)
         return [p.replace("{id}", self.dataset_id) for p in paths]
+
+
+#: What erddapy 3.3 sends for a griddap search: every advanced-search field,
+#: unused ones as ``(ANY)`` or empty. ``searchFor`` is appended when given.
+ERDDAPY_SEARCH = (
+    "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=griddap"
+    "&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)"
+    "&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)"
+    "&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime="
+)
 
 
 OCEANWATCH = "https://oceanwatch.pifsc.noaa.gov/erddap"
@@ -113,6 +127,26 @@ CASES = [
             # smaller box than its (-60.533, 0.033) x (290.908, 340.365)
             "ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
             "ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+        ],
+        # This server has one griddap dataset, so a search that should list
+        # every dataset must list this one.
+        catalog=[
+            "search/index.csv?searchFor=etopo5",
+            "search/index.csv?searchFor=zzznope",
+            # "all" on its own means every dataset, in any case (#19) ...
+            "search/index.csv?searchFor=all",
+            "search/index.json?searchFor=all",
+            "search/index.csv?searchFor=+ALL+",
+            "search/advanced.csv?searchFor=all",
+            # ... while no searchFor at all is refused
+            "search/index.csv?searchFor=",
+            "search/index.csv",
+            "search/advanced.csv?searchFor=",
+            "search/advanced.csv",
+            # erddapy's own search URLs, with and without search_for
+            ERDDAPY_SEARCH,
+            ERDDAPY_SEARCH + "&searchFor=all",
+            ERDDAPY_SEARCH.replace("protocol=griddap", "protocol=(ANY)"),
         ],
     ),
 ]

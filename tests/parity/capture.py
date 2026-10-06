@@ -34,7 +34,7 @@ import xarray as xr
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from parity.cases import CASES, Case  # noqa: E402
-from parity.compare import comparable, ext_of  # noqa: E402
+from parity.compare import comparable, ext_of, lists  # noqa: E402
 from parity.snapshot import block_bounds, write_snapshot  # noqa: E402
 from xpublish_erddap.constraints import (  # noqa: E402
     ConstraintError,
@@ -100,6 +100,19 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
             },
         )
         print(f"   {resp.status_code} {path}")
+    for path in case.catalog:
+        resp = client.get(f"{case.server}/{path}")
+        ok = resp.status_code == HTTP_OK
+        entries.append(
+            {
+                "path": path,
+                "catalog": True,
+                "status": resp.status_code,
+                "content_type": resp.headers.get("content-type", ""),
+                "lists_dataset": ok and lists(resp.text, case.dataset_id),
+            },
+        )
+        print(f"   {resp.status_code} {path}  (catalog)")
 
     manifest = {
         "server": case.server,
@@ -131,6 +144,10 @@ def drift(case: Case, new_root: Path, old_root: Path) -> list[str]:
             changed.append(f"{entry['path']}: status or content type")
             continue
         if entry["status"] != HTTP_OK:
+            continue
+        if entry.get("catalog"):
+            if before.get("lists_dataset") != entry["lists_dataset"]:
+                changed.append(f"{entry['path']}: lists the dataset or not")
             continue
         ext = ext_of(entry["path"])
         before_body = (old_root / case.slug / before["file"]).read_bytes()

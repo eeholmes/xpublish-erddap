@@ -131,6 +131,32 @@ def test_search_finds_and_filters(client):
     assert client.get("/erddap/search/index.csv?searchFor=zzznope").status_code == 404
 
 
+def test_search_for_all_lists_every_dataset(client):
+    """As in ERDDAP, "all" on its own (any case) means every dataset (#19)."""
+    for query in ["all", "ALL", " all "]:
+        for page in ["index", "advanced"]:
+            resp = client.get(f"/erddap/search/{page}.csv", params={"searchFor": query})
+            assert resp.status_code == 200, (page, query)
+            assert "testgrid" in resp.text
+    # With other words, "all" is an ordinary word, as in ERDDAP.
+    resp = client.get("/erddap/search/index.csv?searchFor=all+testgrid")
+    assert resp.status_code == 404
+
+
+def test_search_needs_a_query(client):
+    """Without searchFor, ERDDAP refuses: 404 from index, 400 from advanced."""
+    assert client.get("/erddap/search/index.csv").status_code == 404
+    assert client.get("/erddap/search/index.csv?searchFor=+").status_code == 404
+    assert client.get("/erddap/search/advanced.csv").status_code == 400
+    any_ = (
+        "/erddap/search/advanced.csv?page=1&itemsPerPage=1000&protocol=(ANY)&minTime="
+    )
+    assert client.get(any_).status_code == 400
+    # Any other criterion counts, e.g. erddapy's protocol=griddap.
+    griddap = any_.replace("(ANY)", "griddap")
+    assert client.get(griddap).status_code == 200
+
+
 def test_unknown_dataset_is_404(client):
     assert client.get("/erddap/griddap/nope.csv").status_code == 404
 

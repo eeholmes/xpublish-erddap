@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 import xpublish
 from fastapi.testclient import TestClient
-from parity.compare import comparable, ext_of, media_type
+from parity.compare import comparable, ext_of, lists, media_type
 from parity.snapshot import load_snapshot
 
 from xpublish_erddap import ErddapPlugin
@@ -93,6 +93,11 @@ def test_matches_real_erddap(slug, manifest, entry):
         return
 
     assert ours.status_code == HTTP_OK, ours.text[:500]
+    if entry.get("catalog"):
+        # A search: the real server lists its whole catalog, so compare only
+        # whether this dataset is in the result.
+        assert lists(ours.text, manifest["dataset_id"]) == entry["lists_dataset"]
+        return
     ext = ext_of(entry["path"])
     server = manifest["server"]
     real = (GOLDEN / slug / entry["file"]).read_bytes()

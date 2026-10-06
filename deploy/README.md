@@ -67,8 +67,7 @@ Things to know:
   xpublish-opendap, which returns **wrong values for strided requests**
   (`lat[0:1:4]` gives 1 value, not 5). They are here to show they run, not for
   real use.
-- **Known gaps:** `searchFor=all` returns 404 (#19), and there is no `.dods` on
-  the ERDDAP side (#2).
+- **Known gap:** there is no `.dods` on the ERDDAP side (#2).
 
 ## Deploy to AWS
 

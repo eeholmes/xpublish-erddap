@@ -106,3 +106,14 @@ def test_griddap_initialize_on_the_split_dataset(xpublish_server):
     # the source's dimension order
     assert e.dim_names == ["level", "time", "lat", "lon"]
     assert e.variables == ["air_levels"]
+
+
+@pytest.mark.parametrize("search_for", ["all", None])
+def test_erddapy_search_lists_every_dataset(xpublish_server, search_for):
+    """erddapy's search for "all", or with no words, lists the whole catalog (#19)."""
+    import pandas as pd
+
+    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
+    every = set(pd.read_csv(f"{xpublish_server}/griddap/index.csv")["Dataset ID"])
+    found = pd.read_csv(e.get_search_url(search_for=search_for, response="csv"))
+    assert set(found["Dataset ID"]) == every
