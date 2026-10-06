@@ -102,10 +102,14 @@ run the R tests: `notes/dev-environment.md`.
 - **Fitting into Flux:** #18 (per-group `/erddap`). Ask Earthmover how they
   run xpublish-opendap and would wire in an ERDDAP service before designing.
 - **#27:** search (and maybe catalog) columns should be ERDDAP's 17.
-- **#29:** compare with the other xpublish plugins. Report and plan in
-  `notes/plugin-comparison.md` (name clash with
-  `xpublish-experiments/xpublish-erddap`; we bypass `deps`; xpublish 0.5
-  DataTree bears on #18).
+- **#29:** compared with the other xpublish plugins; report and plan in
+  `notes/plugin-comparison.md`. The plan became #32 (use `deps`), #33
+  (xpublish 0.5 DataTree, bears on #18), #34 (split `app_router`), #35
+  (tooling), #36 (error bodies), #37 (release and listing). The name clash
+  with `xpublish-experiments/xpublish-erddap` is settled: Alex Kerney made it
+  and is EH's collaborator.
+- **More test data:** coastwatch.noaa.gov/erddap has ~1,045 griddap datasets
+  and real ERDDAP error bodies (`notes/erddap-parity-plan.md`).
 - **Deployment blockers:** #3 (catalog cached forever), #8 (no auth).
 - **#2 `.dods`:** reuse xpublish-opendap's encoder, later, but its released
   version mis-reads DAP strides (comment on #2). A strict xfail in

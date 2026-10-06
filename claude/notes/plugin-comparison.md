@@ -32,10 +32,9 @@ PyPI (checked: 404). The two orgs are separate, so GitHub would allow the
 transfer, but two `xpublish-erddap` repos run by the same people would
 confuse users.
 
-**Alex Kerney is EH's main collaborator** (EH, 2026-10-06), so this is a
-conversation between collaborators, not a cold approach to a stranger. They
-can settle together whether the 2022 experiment is archived, renamed or kept,
-and they are also the natural person to sponsor the donation into the org.
+**Resolved (EH, 2026-10-06):** Alex Kerney is EH's main collaborator and
+knows about this work, so the clash is settled between them and needs no
+issue. Nothing to do here unless the plan for the 2022 repo changes.
 
 ## 2. How the org takes plugins (explicit vs implicit)
 
@@ -174,36 +173,31 @@ None of these is a defect in behaviour. The pattern is typical of code grown
 feature-by-feature in one file: correct, well-commented, tested, but with one
 function that collected everything.
 
-## 6. Plan (proposed; each is a separate issue, nothing coded under #29)
+## 6. Plan (items 2–7 opened as #32–#37 on 2026-10-06; nothing coded under #29)
 
 Ordered by what blocks a donation first.
 
-1. **Settle the name and the route with Alex Kerney first.** They are EH's
-   main collaborator, made the 2022 experiment, and maintain the plugin
-   system. Agree on what happens to the experiment repo and on how a donation
-   should go. A public Show-and-tell Discussion in
-   `xpublish-community/community` (and ESIP `#xpublish`) can follow, if the
-   org wants a public record. *EH's call.*
-2. **Use `deps` as xpublish documents** (small; code issue). Resolve
+1. ~~Settle the name with Alex Kerney.~~ Resolved; see section 1.
+2. **Use `deps` as xpublish documents** (#32) (small; code issue). Resolve
    `deps.dataset`, `deps.dataset_ids`, `deps.cache` through the overrides,
    drop the `ARG002` noqa, add a test that a custom `Dependencies` is
    honoured.
-3. **Move to xpublish ≥0.5 and design for DataTree** (medium; fold into #18).
+3. **Move to xpublish ≥0.5 and design for DataTree** (#33; medium; related to #18).
    Decide how Zarr groups map to ERDDAP datasetIDs now that xpublish models
    groups itself; set the floor to `>=0.5` and add a min-deps CI job so it is
    tested.
-4. **Split `app_router`** (small refactor; parity tests guard it). Helpers to
+4. **Split `app_router`** (#34) (small refactor; parity tests guard it). Helpers to
    module level, remove the unused logger and argument, make `_dtype_of`
    public, type `ed`.
-5. **Tooling refresh** (small, mechanical): ruff line length 100, bump hook
+5. **Tooling refresh** (#35) (small, mechanical): ruff line length 100, bump hook
    revs, add pre-commit.ci (`ci:` block) and zizmor, pin actions by SHA with
    `permissions: {}`, run build + `check-manifest` on PRs, align the CI matrix
    with `requires-python`. Leave packaging (setuptools_scm,
    `requirements.txt`) as is; it matches opendap and wms.
-6. **ERDDAP-shaped error bodies** (investigate first): check whether erddapy
+6. **ERDDAP-shaped error bodies** (#36) (investigate first): check whether erddapy
    or rerddap surface the body; if so, copy ogc-core's `APIRoute` pattern and
    make parity tests compare error text.
-7. **After a PyPI release:** conda-forge recipe, PyPI/conda badges, PR to
+7. **After a PyPI release** (#37): conda-forge recipe, PyPI/conda badges, PR to
    xpublish's `ecosystem/index.md`. README: an endpoint table like zarr's and
    a line on how this differs from the 2022 experiment.
 
