@@ -30,8 +30,12 @@ reverse of ours: it adds EDR and Zarr endpoints in front of *existing* ERDDAP
 datasets. xpublish issue #138 links it. The name `xpublish-erddap` is free on
 PyPI (checked: 404). The two orgs are separate, so GitHub would allow the
 transfer, but two `xpublish-erddap` repos run by the same people would
-confuse users. Raise it with abkfenris first (archive or rename his, or
-say in our README how they differ).
+confuse users.
+
+**Alex Kerney is EH's main collaborator** (EH, 2026-10-06), so this is a
+conversation between collaborators, not a cold approach to a stranger. They
+can settle together whether the 2022 experiment is archived, renamed or kept,
+and they are also the natural person to sponsor the donation into the org.
 
 ## 2. How the org takes plugins (explicit vs implicit)
 
@@ -174,10 +178,12 @@ function that collected everything.
 
 Ordered by what blocks a donation first.
 
-1. **Talk before transferring.** Open a Show-and-tell Discussion in
-   `xpublish-community/community`, tag @abkfenris, explain the plugin, ask
-   about the name clash with his 2022 experiment and whether the org wants it.
-   Mention it in ESIP `#xpublish`. *EH's call; outward-facing.*
+1. **Settle the name and the route with Alex Kerney first.** They are EH's
+   main collaborator, made the 2022 experiment, and maintain the plugin
+   system. Agree on what happens to the experiment repo and on how a donation
+   should go. A public Show-and-tell Discussion in
+   `xpublish-community/community` (and ESIP `#xpublish`) can follow, if the
+   org wants a public record. *EH's call.*
 2. **Use `deps` as xpublish documents** (small; code issue). Resolve
    `deps.dataset`, `deps.dataset_ids`, `deps.cache` through the overrides,
    drop the `ARG002` noqa, add a test that a custom `Dependencies` is
