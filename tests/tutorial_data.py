@@ -46,8 +46,7 @@ def sst(time: np.ndarray, lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
 def rose(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
     """Elevation in meters for broadcastable lat and lon."""
     return (
-        1000.0 * np.sin(np.radians(np.asarray(lat, "float64")) * 3)
-        + np.asarray(lon, "float64")
+        1000.0 * np.sin(np.radians(np.asarray(lat, "float64")) * 3) + np.asarray(lon, "float64")
     ).round()
 
 
@@ -74,9 +73,7 @@ class FormulaArray(BackendArray):
         picked = [np.atleast_1d(a[k]) for a, k in zip(self.axes, key, strict=True)]
         grids = np.meshgrid(*picked, indexing="ij")
         out = self.formula(*grids).astype(self.dtype)
-        scalar_axes = tuple(
-            i for i, k in enumerate(key) if isinstance(k, int | np.integer)
-        )
+        scalar_axes = tuple(i for i, k in enumerate(key) if isinstance(k, int | np.integer))
         return out.squeeze(axis=scalar_axes) if scalar_axes else out
 
 

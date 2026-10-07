@@ -5,22 +5,29 @@ on:
   push:
     branches: [main]
 
+permissions: {}
+
 jobs:
   run:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
+        # requires-python is >=3.11; 3.11 runs in the min-deps job below, at
+        # the lowest allowed dependency versions.
         python-version: ["3.12", "3.13", "3.14"]
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
+          persist-credentials: false
           fetch-depth: 0  # setuptools_scm needs the tags
 
       - name: Setup Micromamba ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@4b9113af4fba0e9e1124b252dd6497a419e7396d  # v1.11.0
         with:
           environment-name: TEST
           init-shell: bash
@@ -44,7 +51,32 @@ jobs:
           python -m pytest -rxs --cov=xpublish_erddap --cov-report=xml tests
 
       - name: Upload coverage reports to Codecov with GitHub Action
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4.6.0
+
+  package:
+    # The release workflow builds and checks the package; doing it on every PR
+    # finds a broken sdist or README before release day, as xpublish core and
+    # xpublish-opendap do.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # setuptools_scm needs the tags
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Build and check the package
+        run: |
+          python -m pip install --upgrade build twine check-manifest
+          check-manifest
+          python -m build
+          twine check --strict dist/*
 
   min-deps:
     # The matrix above tests the newest releases (and xpublish main). This job
@@ -52,13 +84,16 @@ jobs:
     # dependency, on the lowest supported Python. Dev tools are installed
     # normally afterwards; they are not part of what users install.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
+          persist-credentials: false
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6.8.0
         with:
           python-version: "3.11"
           activate-environment: true
@@ -77,18 +112,21 @@ jobs:
     # too -- but only on Linux, since installing R across the full matrix is
     # disproportionate to the risk.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # A normal run takes 2-10 minutes. Without a limit, a hang in setup-r's
     # apt-get update (the runner's Ubuntu mirror not answering, #45) runs for
     # GitHub's 6-hour default.
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@4b9113af4fba0e9e1124b252dd6497a419e7396d  # v1.11.0
         with:
           environment-name: TEST
           init-shell: bash
@@ -102,11 +140,11 @@ jobs:
         shell: bash -l {0}
         run: python -m pip install -e . --no-deps --force-reinstall
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
           r-version: release
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
           packages: |
             any::rerddap

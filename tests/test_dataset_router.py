@@ -61,7 +61,7 @@ def test_dataset_naming_is_configurable(grid_dataset):
     """A host can name datasets its own way (docs/hosting.md)."""
     plugin = ErddapPlugin(name_dataset=lambda params, group: "sst_analysis")
     client = TestClient(
-        xpublish.SingleDatasetRest(grid_dataset, plugins={"erddap": plugin}).app
+        xpublish.SingleDatasetRest(grid_dataset, plugins={"erddap": plugin}).app,
     )
     assert ids(client, "/erddap") == ["sst_analysis", "sst_analysis_depth"]
 
@@ -70,7 +70,8 @@ def test_dataset_naming_is_configurable(grid_dataset):
 def flux_client(tos_only):
     tree = xr.DataTree.from_dict({"/regrid/main": tos_only, "/raw": tos_only})
     host = FluxLikeRest(
-        {"NOAA-PMEL/cefi-store": tree}, plugins={"erddap": ErddapPlugin()}
+        {"NOAA-PMEL/cefi-store": tree},
+        plugins={"erddap": ErddapPlugin()},
     )
     return TestClient(host.app)
 
@@ -130,5 +131,5 @@ def test_flux_like_host_can_drop_org_and_ref(tos_only):
     )
     client = TestClient(host.app)
     assert ids(client, "/NOAA-PMEL/cefi-store/main/regrid/main/erddap") == [
-        "cefi_store_regrid_main"
+        "cefi_store_regrid_main",
     ]

@@ -295,9 +295,7 @@ def file_name_safe(text: str) -> str:
     """ERDDAP's ``String2.modifyToBeFileNameSafe`` (A-Z, a-z, 0-9, _, - and .)."""
     if not text:
         return "_"
-    ascii_text = (
-        unicodedata.normalize("NFKD", text).encode("ascii", "replace").decode("ascii")
-    )
+    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "replace").decode("ascii")
     safe = re.sub(r"[^A-Za-z0-9_.\-]", "_", ascii_text)
     while "__" in safe:
         safe = safe.replace("__", "_")
@@ -375,14 +373,16 @@ def _time(params: dict[str, str], key: str) -> float:
             return stamp.timestamp()
     except ValueError as err:
         raise HTTPException(
-            400, f"Query error: {key}={value} is not a valid time."
+            400,
+            f"Query error: {key}={value} is not a valid time.",
         ) from err
 
 
 def _now(value: str) -> float:
     """ERDDAP's ``now``, ``now-7days``, ``now+1hour``."""
     match = re.fullmatch(
-        r"now(?:([+-])(\d+)\s*([a-z]+?)s?)?", value.lower().replace(" ", "")
+        r"now(?:([+-])(\d+)\s*([a-z]+?)s?)?",
+        value.lower().replace(" ", ""),
     )
     if not match or (match.group(3) and match.group(3) not in _TIME_UNITS):
         raise ValueError(value)
@@ -394,7 +394,11 @@ def _now(value: str) -> float:
 
 
 def _ordered(
-    params: dict[str, str], low: str, high: str, *, time: bool = False
+    params: dict[str, str],
+    low: str,
+    high: str,
+    *,
+    time: bool = False,
 ) -> tuple:
     get = _time if time else _number
     lo, hi = get(params, low), get(params, high)
@@ -433,7 +437,8 @@ def _overlaps(ed: ErddapDataset, axis: str, lo: float, hi: float) -> bool:
 
 
 def advanced_filter(
-    datasets: list[ErddapDataset], params: dict[str, str]
+    datasets: list[ErddapDataset],
+    params: dict[str, str],
 ) -> list[ErddapDataset]:
     """Apply advanced search's protocol, category and bounds constraints.
 
@@ -471,9 +476,7 @@ def advanced_filter(
     return [
         d
         for d in datasets
-        if _overlaps(d, "lon", *lon)
-        and _overlaps(d, "lat", *lat)
-        and _overlaps(d, "time", *when)
+        if _overlaps(d, "lon", *lon) and _overlaps(d, "lat", *lat) and _overlaps(d, "time", *when)
     ]
 
 
@@ -484,7 +487,8 @@ def page_of(datasets: list, params: dict[str, str]) -> list:
         per_page = max(1, int(params.get("itemsPerPage", ITEMS_PER_PAGE)))
     except ValueError as err:
         raise HTTPException(
-            400, "Query error: page and itemsPerPage must be integers."
+            400,
+            "Query error: page and itemsPerPage must be integers.",
         ) from err
     start = (page - 1) * per_page
     return datasets[start : start + per_page]

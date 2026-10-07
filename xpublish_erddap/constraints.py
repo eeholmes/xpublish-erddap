@@ -181,10 +181,7 @@ def _resolve_token(token: str, values: np.ndarray, *, default: int) -> int:
     try:
         idx = int(inner)
     except ValueError as exc:
-        msg = (
-            f"cannot interpret {token!r} as an index; "
-            "use (value) for coordinate values"
-        )
+        msg = f"cannot interpret {token!r} as an index; use (value) for coordinate values"
         raise ConstraintError(msg) from exc
     if idx < 0:
         idx += n

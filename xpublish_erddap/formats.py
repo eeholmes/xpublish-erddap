@@ -320,23 +320,21 @@ def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
     types = [erddap_type(sub[c]) for c in cols]
     times = [_is_time(sub[c]) for c in cols]
     axis_values = [np.asarray(sub[a].values) for a in axis_names]
-    stacked = [
-        np.asarray(sub[v].transpose(*axis_names).values).ravel() for v in value_names
-    ]
+    stacked = [np.asarray(sub[v].transpose(*axis_names).values).ravel() for v in value_names]
 
     def rows():
         for i, combo in enumerate(itertools.product(*axis_values)):
             row = list(combo) + [arr[i] for arr in stacked]
-            yield [
-                format_value(v, is_time=is_t)
-                for v, is_t in zip(row, times, strict=True)
-            ]
+            yield [format_value(v, is_time=is_t) for v, is_t in zip(row, times, strict=True)]
 
     return cols, units, types, rows()
 
 
 def to_csv(
-    ed: ErddapDataset, sub: xr.Dataset, variables: list[str], style: str = "csv"
+    ed: ErddapDataset,
+    sub: xr.Dataset,
+    variables: list[str],
+    style: str = "csv",
 ) -> str:
     """ERDDAP ``.csv`` / ``.csvp`` / ``.csv0``.
 

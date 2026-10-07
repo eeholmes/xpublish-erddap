@@ -196,7 +196,10 @@ def query_params(request: Request) -> dict[str, str]:
 
 
 def index_response(
-    catalog: dict[str, ErddapDataset], base: str, ext: str, params: dict[str, str]
+    catalog: dict[str, ErddapDataset],
+    base: str,
+    ext: str,
+    params: dict[str, str],
 ) -> Response:
     """ERDDAP's table of every griddap dataset, by title (``griddap/index``)."""
     found = search.page_of(search.by_title(list(catalog.values())), params)
@@ -244,8 +247,7 @@ def split_target(target: str) -> tuple[str, str]:
     if "." not in target:
         raise HTTPException(
             400,
-            f"missing fileType: use {target}.<type>, one of "
-            f"{', '.join(sorted(ALL_EXTENSIONS))}",
+            f"missing fileType: use {target}.<type>, one of {', '.join(sorted(ALL_EXTENSIONS))}",
         )
     dataset_id, _, ext = target.rpartition(".")
     if ext in PLANNED_EXTENSIONS:
@@ -377,20 +379,30 @@ def add_erddap_routes(
 
     @router.get(GRIDDAP_INDEX)
     def griddap_index(
-        request: Request, ext: str, cat: Catalog = Depends(catalog)
+        request: Request,
+        ext: str,
+        cat: Catalog = Depends(catalog),
     ) -> Response:
         """List every griddap dataset under this root."""
         return index_response(
-            cat, root_of(request, GRIDDAP_INDEX), ext, query_params(request)
+            cat,
+            root_of(request, GRIDDAP_INDEX),
+            ext,
+            query_params(request),
         )
 
     @router.get(INFO_INDEX)
     def info_index(
-        request: Request, ext: str, cat: Catalog = Depends(catalog)
+        request: Request,
+        ext: str,
+        cat: Catalog = Depends(catalog),
     ) -> Response:
         """The same list, as ERDDAP serves it under ``info``."""
         return index_response(
-            cat, root_of(request, INFO_INDEX), ext, query_params(request)
+            cat,
+            root_of(request, INFO_INDEX),
+            ext,
+            query_params(request),
         )
 
     @router.get(TABLEDAP_INDEX)
@@ -405,7 +417,9 @@ def add_erddap_routes(
 
     @router.get(INFO)
     def dataset_info(
-        erddap_id: str, ext: str, cat: Catalog = Depends(catalog)
+        erddap_id: str,
+        ext: str,
+        cat: Catalog = Depends(catalog),
     ) -> Response:
         """Variable and attribute table for one dataset."""
         return table_response(*formats.info_table(lookup(cat, erddap_id)), ext)
@@ -452,7 +466,9 @@ def add_erddap_routes(
 
     @router.get(GRIDDAP)
     def griddap(
-        request: Request, target: str, cat: Catalog = Depends(catalog)
+        request: Request,
+        target: str,
+        cat: Catalog = Depends(catalog),
     ) -> Response:
         """Serve a griddap request: ``{datasetID}.{fileType}?{query}``."""
         dataset_id, ext = split_target(target)
@@ -511,7 +527,7 @@ def tree_version(tree: xr.DataTree) -> str | None:
     provider has not set it.
     """
     return tree.attrs.get(DATASET_ID_ATTR_KEY) or tree.root.attrs.get(
-        DATASET_ID_ATTR_KEY
+        DATASET_ID_ATTR_KEY,
     )
 
 
@@ -613,7 +629,9 @@ class ErddapPlugin(Plugin):
         )
 
     def server_catalog(
-        self, request: Request, deps: Dependencies
+        self,
+        request: Request,
+        deps: Dependencies,
     ) -> dict[str, ErddapDataset]:
         """Every group of every published dataset, by ERDDAP datasetID (cached).
 
@@ -645,7 +663,8 @@ class ErddapPlugin(Plugin):
     def dataset_router(self, deps: Dependencies) -> APIRouter:
         """A per-dataset ERDDAP root, listing that dataset or group only."""
         router = APIRouter(
-            prefix=self.dataset_router_prefix, tags=self.dataset_router_tags
+            prefix=self.dataset_router_prefix,
+            tags=self.dataset_router_tags,
         )
 
         def catalog(

@@ -38,10 +38,7 @@ ALL_DATASETS_SUMMARY = (
 
 def grid(n_vars: int = 1, summary: str = "A summary.", **attrs) -> xr.Dataset:
     lat, lon = np.arange(3.0), np.arange(4.0)
-    data = {
-        f"v{i:02d}": (("lat", "lon"), np.zeros((3, 4)), {"units": "m"})
-        for i in range(n_vars)
-    }
+    data = {f"v{i:02d}": (("lat", "lon"), np.zeros((3, 4)), {"units": "m"}) for i in range(n_vars)}
     return xr.Dataset(
         data,
         coords={"lat": lat, "lon": lon},
@@ -75,8 +72,7 @@ def test_variable_detail_follows_erddap():
     assert "v00 (Sea Height, m)\n" in summary
     assert "sst\n" in summary
     assert (
-        "cdm_data_type = Grid\nVARIABLES (all of which use the dimensions [lat][lon]):"
-        in summary
+        "cdm_data_type = Grid\nVARIABLES (all of which use the dimensions [lat][lon]):" in summary
     )
 
 

@@ -39,6 +39,7 @@ write_to = "xpublish_erddap/_version.py"
 ignore = ["xpublish_erddap/_version.py"]
 
 [tool.ruff]
+line-length = 100
 # claude/ holds session notes and rough scratch tools, not package code.
 # force-exclude so pre-commit, which passes filenames explicitly, honours it.
 extend-exclude = ["claude"]
