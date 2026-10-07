@@ -5,7 +5,9 @@ actually call, so existing client code works unchanged against an Xpublish
 server. The HTML interfaces (Data Access Form, Make-A-Graph) are out of scope.
 
 ERDDAP is catalog-oriented -- clients point at one server root holding many
-flat datasetIDs -- so this is an ``app_router``, not a ``dataset_router``.
+flat datasetIDs -- so the main router is a server-wide ``app_router``; a
+``dataset_router`` serves the same API for one dataset or group (see
+``docs/hosting.md``).
 """
 
 from __future__ import annotations
