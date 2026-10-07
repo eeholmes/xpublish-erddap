@@ -37,6 +37,18 @@ on the hub already.
 `.ncml`; 3.1 uses DDS + csvp. A local pass with 3.1 does not test what CI and
 most users run (#10).
 
+## Session gotchas (2026-10-07)
+
+- **A stray `tests/server.py` hangs the test suite.** The live-server tests
+  start their own server on port 9000; one left running by hand (for an R
+  check, say) makes them hang until the tool times out. Stop it first:
+  `pgrep -af server.py`.
+- **Do not `pkill -f <pattern>` from a Bash tool call** when the pattern is
+  in the command itself: it matches the calling shell and kills the call
+  (exit 144). Kill by PID from `pgrep`.
+- **`curl -g`** for ERDDAP URLs with `[...]`: without it curl treats the
+  brackets as its own globbing and sends nothing.
+
 ## Other limits of the hub
 
 - **Python 3.11.** CI tests 3.12–3.14; the package still allows 3.11.

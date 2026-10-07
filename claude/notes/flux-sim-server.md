@@ -181,3 +181,23 @@ code; check `pip list` there when `requirements.txt` floors change (on
 local `deploy/server.py` with `pkill -f deploy/server.py` from a Bash tool
 call: the pattern matches the calling shell and kills it. Then run
 `deploy/check_clients.py https://18-119-42-78.sslip.io` from the hub.
+
+## Redeploys on 2026-10-07
+
+Three redeploys from `main` (`7ac2e88` after #18, `4fec382` after #35,
+`1ea2888` after #36), each followed by the same checks: all 12 stores open
+(~290 MB), `check_clients.py` 0 unexpected failures, collaborator kit 10/10
+Python and 7/7 R. What the server gained:
+
+- **One ERDDAP root per store** at `/datasets/{id}/erddap` (#18), beside the
+  server-wide `/erddap`. This server uses xpublish's plain routing, so roots
+  are per store, not per group; per-group roots need a host that puts the
+  group in the path (`tests/flux_host.py`).
+- **Catalogs refresh** when a store's `_xpublish_id` changes (#3). This server
+  pins stores at startup and Rest's id is the store id, so in practice a
+  restart is still needed to see new commits.
+- ERDDAP's dataset table and advanced search (#27, #4), and ERDDAP's error
+  bodies (#36).
+
+The AWS session for `greenfield` expires; when `sts get-caller-identity` says
+so, EH runs `! env -u AWS_REGION aws login --remote --profile litellm-poc`.

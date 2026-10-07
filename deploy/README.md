@@ -71,6 +71,10 @@ Hand-built griddap URLs work too, for example
 
 Things to know:
 
+- **Two kinds of root.** `/erddap` lists every dataset on the server; each
+  store also has its own root listing only its datasets, at
+  `/datasets/{store id}/erddap` (for example `/datasets/oisst/erddap`). Point
+  ERDDAP code at either.
 - **Datasets:** `gobai_o2_monthly` (GOBAI-O2, Icechunk on Source
   Cooperative; longitudes run 20.5 to 379.5, as in the source) and five NOAA
   CEFI MOM6-COBALT stores, all virtual Icechunk on Arraylake (`NOAA-PMEL/*`):
