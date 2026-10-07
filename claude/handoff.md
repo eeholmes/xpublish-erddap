@@ -15,59 +15,53 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   NOAA Apache-2.0 default). Do not flag or change it.
 - `~/xpublish-opendap` is a **reference-only** clone. Do not modify it.
 - **Deployment model (EH):** each Flux-served store gets an `/erddap` root
-  beside its `/opendap`. Details in `notes/erddap-parity-plan.md`. Probing
-  Flux (2026-10-05) showed it is one service per protocol, routed
+  beside its `/opendap`. Flux is one service per protocol, routed
   `.../services/{protocol}/{org}/{repo}/{ref}/{group path}/{protocol}`, so
-  "beside" means a **per-group** ERDDAP root, which the `app_router` plugin
-  cannot be yet (#18). Earthmover's own plugin, xpublish-tiles, shows the
-  likely shape: a plain `dataset_router` using `deps.datatree`, with the host
-  putting the group in the path (comment on #18). Flux's DAP2 also behaves
-  differently from the *released* xpublish-opendap, as EH's colleague
-  suspected (`notes/flux-sim-server.md`).
+  that means a **per-group** root: since #18 a `dataset_router` that gets its
+  data only through `deps` (as Earthmover's xpublish-tiles does), beside the
+  server-wide `/erddap`. **`docs/hosting.md` is the note for Earthmover**:
+  every choice a host may need to change (dataset naming, the likeliest, via
+  `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
+  URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-06)
+## Repo state (2026-10-07)
 
-- **A public test server is live until 2026-11-13** (#17 closed; PRs #20, #22):
-  https://18-119-42-78.sslip.io/erddap, serving five regridded CEFI stores
-  (Arraylake), GOBAI-O2 (Source Cooperative S3) and EH's six
-  `ocean-icechunks` stores (Source Cooperative, served whole, one dataset per
-  group) through `deploy/server.py`, on EH's AWS account: 22 ERDDAP datasets.
-  It runs `main` (`bb31481`, redeployed 2026-10-06; how:
-  `notes/flux-sim-server.md`). Hackweek
-  collaborators use it. **Tear it down on
+- **Public test server, live until 2026-11-13:**
+  https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
+  account, running `main` at `1ea2888` (redeployed 2026-10-07). 12 stores,
+  22 datasets in the server-wide root, plus one root per store at
+  `/datasets/{id}/erddap`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
-  (ocean-icechunks org). Account limits and results: `notes/flux-sim-server.md`.
-- **Collaborator test kit (2026-10-06), local only, deliberately not in
-  git:** `collaborator-test/` on this hub, hidden by `.git/info/exclude`.
-  EH shares it by Slack. `test_erddap_server.{py,R}` print PASS/FAIL per
-  check (9/9 Python in a clean venv, 10/10 with icechunk's direct-read
-  comparison; 7/7 R); `example_python.py` and `example_r.R` are plain
-  user-style code (search, info, subsets, a plot). All point at the test
-  server above, and were re-checked after #40 (all pass; they now report 22
-  datasets). Do not commit them unless EH asks.
-- **Shipped 2026-10-06:** #19 search fix (PR #26: `searchFor=all`, refusing
-  an empty query; search requests are now parity cases); #24 more datasets
-  (PR #28). Closed #9, #16, #19, #24. Opened #27 (search columns differ
-  from ERDDAP's). #29 plugin comparison (PR #31): report in
-  `notes/plugin-comparison.md`, plan opened as #32–#37.
-- **Shipped later on 2026-10-06:** #32 (PR #38: the router uses the `deps`
-  xpublish passes it). #33 (PR #39: `xpublish>=0.5` with tested floors; the
-  catalog lists each DataTree group with variables as its own dataset,
-  `store` + `native/monthly` → `store_native_monthly`; duplicate datasetIDs
-  are refused). PR #40 put the ocean-icechunks stores on the test server.
-  Closed #32, #33. Decision and reasons: `notes/design-and-history.md`.
-- **#16 is done** (PR #21): `ErddapPlugin(max_response_mb=...)`, plus real
-  ERDDAP's 2 GB `.nc` cap.
-- **#1 is done** (PR #15): every captured real-ERDDAP response matches.
-- The repo uses **branches and PRs**; a task stays on its branch until
-  the definition of done on its issue is met. Merged branches are deleted,
-  on GitHub and on the hub (the repo does not auto-delete them).
-- CI: 11 jobs green, including a Linux R job (rerddap + tutorials) and
-  `min-deps` (Python 3.11, lowest allowed versions via uv): 261 passed, 10
-  skipped, 2 xfailed on Linux/macOS/min-deps; Windows skips the live-server
-  tests (246 passed, 26 skipped, 1 xfailed).
+  (ocean-icechunks org). How to redeploy and check: `notes/flux-sim-server.md`.
+- **Collaborator test kit, local only, deliberately not in git:**
+  `collaborator-test/` on this hub (hidden by `.git/info/exclude`); EH shares
+  it by Slack. Re-checked after every redeploy on 2026-10-07: 10/10 Python,
+  7/7 R. Do not commit it unless EH asks.
+- **Shipped 2026-10-07** (all closed; decisions and reasons in
+  `notes/design-and-history.md`):
+  - #34 (PR #42): route helpers at module level.
+  - #18 (PR #43): per-dataset/per-group root; `name_dataset`; `docs/hosting.md`.
+  - #3 (PR #44): catalogs rebuilt when `_xpublish_id` changes;
+    `catalog_max_age_s`.
+  - #27, #4 (PR #47): ERDDAP's dataset table (CoastWatch's 15 columns, EH's
+    choice), extended summary, ranked `searchFor`, every advanced-search
+    filter, all **ported from ERDDAP's source** (`xpublish_erddap/search.py`).
+  - #35 (PR #48): ruff 100 cols, hooks bumped, zizmor with SHA-pinned
+    actions, a `package` CI job; pre-commit.ci enabled by EH.
+  - #36 (PR #49): errors are ERDDAP's plain-text body (`errors.py`); both
+    clients show it to users.
+  - #45/#46: the `rerddap` job hung in `apt-get update` (runner mirror); it
+    now has `timeout-minutes: 20`.
+  - Earlier (2026-10-06): #32, #33, #40 (ocean-icechunks stores on the server).
+- **CI, 13 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
+  `package`, `rerddap`, pre-commit.ci. 324 passed, 22 skipped, 2 xfailed on
+  Linux/macOS/min-deps; Windows 308/39/1 (skips the live-server tests). The
+  22 skips include 12 parity media-type checks on error responses, expected.
+- The repo uses **branches and PRs**. A task stays on its branch until the
+  definition of done on its issue is met. EH often says "merge #N when CI is
+  green"; merged branches are deleted on GitHub and on the hub.
 - #13 is the hackweek proposal; #14 (the Zarr/Icechunk validator) is its
-  second project. Collaborators are reviewing it.
+  second project.
 
 ## ⚠ Check the environment first
 
@@ -90,6 +84,9 @@ run the R tests: `notes/dev-environment.md`.
 - **Test against lazily opened data**; never materialize a remote array.
 - **Refuse bad axes instead of serving wrong answers** (`strict_axes`).
 - **Check pass/skip counts in CI logs**, not just the colour.
+- **When ERDDAP's behaviour decides a question, read ERDDAP's source**
+  (github.com/ERDDAP/erddap), port it, cite the class and method, and check
+  it against a live server (EH asked for this on 2026-10-07).
 
 ## Notes
 
@@ -106,30 +103,29 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/cefi-flux-findings.md` — CEFI via Flux: duplicate times, mixed dims.
 - `notes/opendap-background.md` — DAP2 and xpublish-opendap (for #2).
 - `notes/plugin-comparison.md` — #29: us against the community plugins and
-  norms; a proposed plan.
+  norms; its plan (#32–#37) is done except #37.
+- `docs/hosting.md` (not a note: public) — for Earthmover and other hosts.
 - `tools/fluxlint.py` — rough readiness linter; a start for #14.
 
 ## Open threads (a record, not a task list)
 
-- **Fitting into Flux:** #18 (per-group `/erddap`), next after #33. EH: keep
-  the server-wide catalog and add a `dataset_router` beside it (as
-  xpublish-tiles does), not one PR with #33. The code does not need Earthmover;
-  how Flux registers a new service and builds the group prefix still does.
-- **#27:** search (and maybe catalog) columns should be ERDDAP's 17.
-- **#29:** compared with the other xpublish plugins; report and plan in
-  `notes/plugin-comparison.md`. The plan became #32 (done), #33 (done),
-  #34 (split `app_router`), #35 (tooling), #36 (error bodies), #37 (release
-  and listing). The name clash
-  with `xpublish-experiments/xpublish-erddap` is settled: Alex Kerney made it
-  and is EH's collaborator.
-- **More test data:** coastwatch.noaa.gov/erddap has ~1,045 griddap datasets
-  and real ERDDAP error bodies (`notes/erddap-parity-plan.md`). EH's
-  ocean-icechunks stores (listed on #33) are "fairly typical" stores; they
-  are on the test server.
-- **Deployment blockers:** #3 (catalog cached forever), #8 (no auth).
-- **#2 `.dods`:** reuse xpublish-opendap's encoder, later, but its released
-  version mis-reads DAP strides (comment on #2). A strict xfail in
-  `test_tutorials.py` will flip when it works.
+- **#37, first release and listing.** EH wants to talk it through first. The
+  open question: release before or after donating the repo to
+  xpublish-community (PyPI trusted publishing is tied to the repo owner).
+  `xpublish-erddap` is free on PyPI and conda-forge (checked 2026-10-07).
+  Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
+  xpublish ecosystem PR) each need EH's yes.
+- **#50, whole-repo audit** written as a task for an agent: a report of
+  proposed work, no fixes, no issues opened; EH picks what becomes issues.
+- **Earthmover:** send `docs/hosting.md`; ask how Flux registers a service,
+  names its path parameters, and sets `_xpublish_id`.
+- **Test server, small idea:** have `deploy/server.py` put the snapshot in
+  `_xpublish_id` and reopen stores now and then, so new commits show up
+  without a restart (a live demo of #3).
+- **Known differences kept on purpose:** constraint-error wording; 400 where
+  ERDDAP gives 404 (value off an axis) or 500 (unknown variable); `/erddap/nope`
+  paths get FastAPI's 404. See `design-and-history.md`.
+- **Other open issues:** #8 (auth), #2 (`.dods`), #5 (`categorize`, now cheap:
+  `search.categories` exists), #6, #7, #10, #14.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
-- Pinned dev environment, `CODECOV_TOKEN`, first PyPI release: all not started.
