@@ -102,6 +102,16 @@ path (`my_dataset` + `regrid/main` gives `my_dataset_regrid_main`). Where the UR
 names no dataset (`SingleDatasetRest`), the id is `dataset`; pass
 `ErddapPlugin(name_dataset=lambda params, group: "my_dataset")` to change it.
 
+### Keeping up with data that changes
+
+The plugin caches each dataset's catalog (axes, attributes) and rebuilds it when
+the dataset's `_xpublish_id` attribute changes, the key xpublish and its other
+plugins use. Earthmover Flux puts the Icechunk snapshot in that id, so new
+commits appear on the next request. Plain `xpublish.Rest` uses the dataset id,
+which never changes: for a store that changes in place, put a version in
+`_xpublish_id` or set `ErddapPlugin(catalog_max_age_s=600)` to rebuild at least
+every 10 minutes. Details: [docs/hosting.md](docs/hosting.md).
+
 **Running the plugin in a host such as Earthmover Flux?** See
 [docs/hosting.md](docs/hosting.md) for the choices it makes about routing,
 naming and URLs, and what to change if yours differs.
