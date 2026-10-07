@@ -24,7 +24,7 @@ from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
 from xpublish.utils.api import DATASET_ID_ATTR_KEY
 
-from xpublish_erddap import formats
+from xpublish_erddap import formats, search
 from xpublish_erddap.catalog import (
     ErddapDataset,
     build_catalog,
@@ -123,13 +123,6 @@ def check_size(ds: xr.Dataset, parsed, ext: str, limit_mb: float | None) -> None
         raise too_much_data(size_mb, "the .nc 2 GB limit")
 
 
-#: Columns of the griddap/info catalog tables (and the empty tabledap one).
-CATALOG_COLUMNS = ["griddap", "Info", "Institution", "Title", "Summary", "Dataset ID"]
-
-#: Columns of the search results table.
-SEARCH_COLUMNS = ["protocol", "griddap", "Info", "Title", "Summary", "Dataset ID"]
-
-
 # -- helpers the routes share ------------------------------------------------
 # They take the catalog and the public base URL instead of a request, so any
 # router that can produce those (the server-wide one, a per-dataset one) can
@@ -197,20 +190,18 @@ def table_response(columns: list[str], rows: list[list], ext: str) -> Response:
     return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
 
-def index_response(catalog: dict[str, ErddapDataset], base: str, ext: str) -> Response:
-    """The table of every griddap dataset."""
-    rows = [
-        [
-            f"{base}/griddap/{d.dataset_id}",
-            f"{base}/info/{d.dataset_id}/index.json",
-            str(d.globals_.get("institution", "")),
-            str(d.globals_.get("title", d.dataset_id)),
-            str(d.globals_.get("summary", "")),
-            d.dataset_id,
-        ]
-        for d in catalog.values()
-    ]
-    return table_response(CATALOG_COLUMNS, rows, ext)
+def query_params(request: Request) -> dict[str, str]:
+    """The query's parameters, the first value winning as in ERDDAP's servlets."""
+    return dict(reversed(request.query_params.multi_items()))
+
+
+def index_response(
+    catalog: dict[str, ErddapDataset], base: str, ext: str, params: dict[str, str]
+) -> Response:
+    """ERDDAP's table of every griddap dataset, by title (``griddap/index``)."""
+    found = search.page_of(search.by_title(list(catalog.values())), params)
+    rows = [search.dataset_row(d, base, ext) for d in found]
+    return table_response(search.DATASET_COLUMNS, rows, ext)
 
 
 def advanced_search_criteria(request: Request, ext: str) -> None:
@@ -234,43 +225,18 @@ def advanced_search_criteria(request: Request, ext: str) -> None:
 
 
 def search_response(
-    catalog: dict[str, ErddapDataset],
+    datasets: list[ErddapDataset],
     base: str,
     ext: str,
     search_for: str,
+    params: dict[str, str],
 ) -> Response:
-    """Datasets whose id, global attributes or variable names hold every term."""
-    terms = search_for.lower().split()
-    # ERDDAP's special case: "all" on its own lists every dataset.
-    if terms == ["all"]:
-        terms = []
-    rows = []
-    for d in catalog.values():
-        blob = " ".join(
-            [
-                d.dataset_id,
-                *[f"{k} {v}" for k, v in d.globals_.items()],
-                *d.data_vars,
-            ],
-        ).lower()
-        if terms and not all(t in blob for t in terms):
-            continue
-        rows.append(
-            [
-                "griddap",
-                f"{base}/griddap/{d.dataset_id}",
-                f"{base}/info/{d.dataset_id}/index.json",
-                str(d.globals_.get("title", d.dataset_id)),
-                str(d.globals_.get("summary", "")),
-                d.dataset_id,
-            ],
-        )
-    if not rows:
-        raise HTTPException(
-            404,
-            f"Your query produced no matching results: {search_for!r}",
-        )
-    return table_response(SEARCH_COLUMNS, rows, ext)
+    """ERDDAP's dataset table for the datasets matching ``search_for``, ranked."""
+    found = search.page_of(search.text_search(datasets, search_for), params)
+    if not found:
+        raise search.no_matches()
+    rows = [search.dataset_row(d, base, ext) for d in found]
+    return table_response(search.DATASET_COLUMNS, rows, ext)
 
 
 def split_target(target: str) -> tuple[str, str]:
@@ -414,14 +380,18 @@ def add_erddap_routes(
         request: Request, ext: str, cat: Catalog = Depends(catalog)
     ) -> Response:
         """List every griddap dataset under this root."""
-        return index_response(cat, root_of(request, GRIDDAP_INDEX), ext)
+        return index_response(
+            cat, root_of(request, GRIDDAP_INDEX), ext, query_params(request)
+        )
 
     @router.get(INFO_INDEX)
     def info_index(
         request: Request, ext: str, cat: Catalog = Depends(catalog)
     ) -> Response:
         """The same list, as ERDDAP serves it under ``info``."""
-        return index_response(cat, root_of(request, INFO_INDEX), ext)
+        return index_response(
+            cat, root_of(request, INFO_INDEX), ext, query_params(request)
+        )
 
     @router.get(TABLEDAP_INDEX)
     def tabledap_index(ext: str) -> Response:
@@ -431,7 +401,7 @@ def add_erddap_routes(
         griddap, so it must answer with a well-formed (if empty) table
         rather than a 404.
         """
-        return table_response(CATALOG_COLUMNS, [], ext)
+        return table_response(search.DATASET_COLUMNS, [], ext)
 
     @router.get(INFO)
     def dataset_info(
@@ -441,7 +411,7 @@ def add_erddap_routes(
         return table_response(*formats.info_table(lookup(cat, erddap_id)), ext)
 
     @router.get(SEARCH)
-    def search(
+    def search_index(
         request: Request,
         ext: str,
         searchFor: str = "",  # noqa: N803
@@ -454,7 +424,13 @@ def add_erddap_routes(
                 f"A .{ext} search request must include a query, for "
                 'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
             )
-        return search_response(cat, root_of(request, SEARCH), ext, searchFor)
+        return search_response(
+            list(cat.values()),
+            root_of(request, SEARCH),
+            ext,
+            searchFor,
+            query_params(request),
+        )
 
     @router.get(ADVANCED_SEARCH)
     def advanced_search(
@@ -463,9 +439,16 @@ def add_erddap_routes(
         searchFor: str = "",  # noqa: N803
         cat: Catalog = Depends(catalog),
     ) -> Response:
-        """Advanced search. Only ``searchFor`` filters so far (#4)."""
+        """Advanced search: protocol, categories, bounds, then ``searchFor`` (#4)."""
         advanced_search_criteria(request, ext)
-        return search_response(cat, root_of(request, ADVANCED_SEARCH), ext, searchFor)
+        params = query_params(request)
+        return search_response(
+            search.advanced_filter(list(cat.values()), params),
+            root_of(request, ADVANCED_SEARCH),
+            ext,
+            searchFor,
+            params,
+        )
 
     @router.get(GRIDDAP)
     def griddap(

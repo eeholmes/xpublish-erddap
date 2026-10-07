@@ -124,6 +124,8 @@ axes, bounding-box globals only for those, as ERDDAP does -- checked and
 added to the cases); `_unescape` only for reserved names; table routes
 (catalog/info/search/tabledap) 404 on unknown fileTypes, as ERDDAP does;
 missing-fileType message built from `ALL_EXTENSIONS`.
+Since #27, catalog and search requests save the real body too, and the
+table's header and the case's row are compared, not only whether it is listed.
 
 Rejected: comparing exact error codes. oceanwatch's proxy turns ERDDAP query
 errors into a bare 500; a bad request should not get a 500 from us.

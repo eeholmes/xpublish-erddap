@@ -42,7 +42,7 @@ def test_rest_has_a_root_per_dataset(grid_dataset):
 
     body = client.get("/datasets/a/erddap/info/index.csv").text
     assert "http://testserver/datasets/a/erddap/griddap/a," in body
-    assert "http://testserver/datasets/a/erddap/info/a_depth/index.json" in body
+    assert "http://testserver/datasets/a/erddap/info/a_depth/index.csv" in body
     resp = client.get(f"/datasets/a/erddap/griddap/a.csv?{TOS}")
     assert resp.status_code == 200
     assert client.get("/datasets/a/erddap/info/b/index.csv").status_code == 404

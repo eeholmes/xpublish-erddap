@@ -136,10 +136,10 @@ set its own, lower limit.
 | Endpoint | Purpose |
 | --- | --- |
 | `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, ncml, csv, csvp, csv0, json, das, dds`; `.dods` is planned ([#2](https://github.com/eeholmes/xpublish-erddap/issues/2)) |
-| `/erddap/griddap/index.{csv,json}` | dataset catalog |
+| `/erddap/griddap/index.{csv,json}`, `/erddap/info/index.{csv,json}` | dataset catalog, in ERDDAP's 15 columns (as on coastwatch.noaa.gov); links to services this plugin does not offer are empty |
 | `/erddap/tabledap/index.{csv,json}` | empty catalog (rerddap needs it to classify a dataset) |
 | `/erddap/info/{id}/index.{csv,json}` | variable and attribute table |
-| `/erddap/search/index.{csv,json}`, `/erddap/search/advanced.{csv,json}` | free-text search; `searchFor=all` lists every dataset, as in ERDDAP. Advanced search filters only on `searchFor` so far (#4) |
+| `/erddap/search/index.{csv,json}`, `/erddap/search/advanced.{csv,json}` | search, as ERDDAP's default ("original") engine: every word must appear, `"quoted phrases"`, `-word` to exclude, ranked by where the words appear; `searchFor=all` lists every dataset. Advanced search also filters by `protocol`, the category attributes (`institution`, `keywords`, `ioos_category`, `long_name`, `standard_name`, `variableName`, `cdm_data_type`) and lon/lat/time bounds; `page` and `itemsPerPage` work |
 | `/erddap/version` | version banner |
 
 Constraint syntax: coordinate values `[(2024-07-01):1:(2024-07-05)]`, integer

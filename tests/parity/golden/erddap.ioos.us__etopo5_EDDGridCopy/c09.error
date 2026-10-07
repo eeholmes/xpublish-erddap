@@ -1,0 +1,4 @@
+Error {
+    code=400;
+    message="Bad Request: Query error: A .csv Advanced Search request must include one or more criteria, for example, \"?page=1&itemsPerPage=1000&searchFor=wind+temperature\".";
+}

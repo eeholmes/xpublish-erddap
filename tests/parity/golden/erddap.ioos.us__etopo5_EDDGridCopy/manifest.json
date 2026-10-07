@@ -2,7 +2,7 @@
   "server": "https://erddap.ioos.us/erddap",
   "dataset_id": "etopo5_EDDGridCopy",
   "erddap_version": "ERDDAP_version=2.31",
-  "captured": "2026-10-06",
+  "captured": "2026-10-07",
   "requests": [
     {
       "path": "griddap/etopo5_EDDGridCopy.dds",
@@ -96,6 +96,7 @@
     },
     {
       "path": "search/index.csv?searchFor=etopo5",
+      "file": "c00.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -103,6 +104,7 @@
     },
     {
       "path": "search/index.csv?searchFor=zzznope",
+      "file": "c01.error",
       "catalog": true,
       "status": 404,
       "content_type": "text/plain;charset=UTF-8",
@@ -110,6 +112,7 @@
     },
     {
       "path": "search/index.csv?searchFor=all",
+      "file": "c02.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -117,6 +120,7 @@
     },
     {
       "path": "search/index.json?searchFor=all",
+      "file": "c03.json",
       "catalog": true,
       "status": 200,
       "content_type": "application/json;charset=UTF-8",
@@ -124,6 +128,7 @@
     },
     {
       "path": "search/index.csv?searchFor=+ALL+",
+      "file": "c04.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -131,6 +136,7 @@
     },
     {
       "path": "search/advanced.csv?searchFor=all",
+      "file": "c05.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -138,6 +144,7 @@
     },
     {
       "path": "search/index.csv?searchFor=",
+      "file": "c06.error",
       "catalog": true,
       "status": 404,
       "content_type": "text/plain;charset=UTF-8",
@@ -145,6 +152,7 @@
     },
     {
       "path": "search/index.csv",
+      "file": "c07.error",
       "catalog": true,
       "status": 404,
       "content_type": "text/plain;charset=UTF-8",
@@ -152,6 +160,7 @@
     },
     {
       "path": "search/advanced.csv?searchFor=",
+      "file": "c08.error",
       "catalog": true,
       "status": 400,
       "content_type": "text/plain;charset=UTF-8",
@@ -159,6 +168,7 @@
     },
     {
       "path": "search/advanced.csv",
+      "file": "c09.error",
       "catalog": true,
       "status": 400,
       "content_type": "text/plain;charset=UTF-8",
@@ -166,6 +176,7 @@
     },
     {
       "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=griddap&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=",
+      "file": "c10.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -173,6 +184,7 @@
     },
     {
       "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=griddap&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=&searchFor=all",
+      "file": "c11.csv",
       "catalog": true,
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1",
@@ -180,8 +192,209 @@
     },
     {
       "path": "search/advanced.csv?page=1&itemsPerPage=1000000&protocol=(ANY)&cdm_data_type=(ANY)&institution=(ANY)&ioos_category=(ANY)&keywords=(ANY)&long_name=(ANY)&standard_name=(ANY)&variableName=(ANY)&minLon=(ANY)&maxLon=(ANY)&minLat=(ANY)&maxLat=(ANY)&minTime=&maxTime=",
+      "file": "c12.error",
       "catalog": true,
       "status": 400,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "griddap/index.csv?page=1&itemsPerPage=1000",
+      "file": "c13.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "griddap/index.json?page=1&itemsPerPage=1000",
+      "file": "c14.json",
+      "catalog": true,
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "lists_dataset": true
+    },
+    {
+      "path": "info/index.csv?page=1&itemsPerPage=1000",
+      "file": "c15.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.json?searchFor=etopo5",
+      "file": "c16.json",
+      "catalog": true,
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=all+etopo5",
+      "file": "c17.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=all+zzznope",
+      "file": "c18.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/index.csv?searchFor=\"global+surface+relief\"",
+      "file": "c19.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/index.csv?searchFor=\"surface+global\"",
+      "file": "c20.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/index.csv?searchFor=etopo5+-relief",
+      "file": "c21.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/index.csv?searchFor=etopo5+-zzznope",
+      "file": "c22.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&minLon=0&maxLon=10",
+      "file": "c23.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&minLon=10&maxLon=0",
+      "file": "c24.error",
+      "catalog": true,
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&minLat=95&maxLat=100",
+      "file": "c25.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&minTime=2000-01-01",
+      "file": "c26.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&institution=noaa_marine_geology_and_geophysics_mgg_",
+      "file": "c27.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&institution=nonsense",
+      "file": "c28.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&variableName=ROSE",
+      "file": "c29.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&long_name=relief_of_the_surface_of_the_earth",
+      "file": "c30.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&standard_name=altitude",
+      "file": "c31.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&ioos_category=bathymetry",
+      "file": "c32.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&ioos_category=temperature",
+      "file": "c33.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&cdm_data_type=grid",
+      "file": "c34.csv",
+      "catalog": true,
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1",
+      "lists_dataset": true
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&keywords=topography",
+      "file": "c35.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=wcs",
+      "file": "c36.error",
+      "catalog": true,
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8",
+      "lists_dataset": false
+    },
+    {
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=tabledap&searchFor=etopo5",
+      "file": "c37.error",
+      "catalog": true,
+      "status": 404,
       "content_type": "text/plain;charset=UTF-8",
       "lists_dataset": false
     }

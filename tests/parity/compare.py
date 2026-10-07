@@ -7,6 +7,7 @@ Everything else is compared as the client receives it.
 
 from __future__ import annotations
 
+import csv
 import io
 import json
 import math
@@ -99,3 +100,49 @@ def _nan_to_none(value):
     if isinstance(value, float) and math.isnan(value):
         return None
     return value
+
+
+#: Dataset-table columns that depend on the server's configuration, not the
+#: dataset: ``Accessible`` (logins) and ``Email`` (subscriptions). We copy a
+#: server with neither (#27), so they are left out of the comparison.
+CONFIG_COLUMNS = {"Accessible", "Email"}
+
+#: Dataset-table columns we fill. The rest link to services we do not offer
+#: (Make A Graph, WMS, files, FGDC, ISO 19115, RSS) and are empty in ours.
+COMPARED_COLUMNS = (
+    "griddap",
+    "Subset",
+    "tabledap",
+    "Title",
+    "Summary",
+    "Info",
+    "Background Info",
+    "Institution",
+    "Dataset ID",
+)
+
+
+def _table(body: str, ext: str) -> tuple[list[str], list[list[str]]]:
+    if ext == "json":
+        table = json.loads(body)["table"]
+        return table["columnNames"], [[str(v) for v in row] for row in table["rows"]]
+    rows = list(csv.reader(io.StringIO(body)))
+    return rows[0], rows[1:]
+
+
+def dataset_table(body: bytes, ext: str, dataset_id: str, server: str) -> dict:
+    """What we compare of ERDDAP's dataset table (search, griddap/index, ...).
+
+    The header without the configuration columns, and the row for
+    ``dataset_id`` in the columns we fill. The rest of the server's catalog
+    cannot be compared with ours.
+    """
+    text = normalise_text(body.decode("utf-8", "replace"), server)
+    header, rows = _table(text, ext)
+    row = next((r for r in rows if r[header.index("Dataset ID")] == dataset_id), None)
+    return {
+        "header": [c for c in header if c not in CONFIG_COLUMNS],
+        "row": None
+        if row is None
+        else {c: row[header.index(c)] for c in COMPARED_COLUMNS},
+    }
