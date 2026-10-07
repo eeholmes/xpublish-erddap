@@ -54,20 +54,18 @@ at first request.
 import xarray as xr, xpublish
 from xpublish_erddap import ErddapPlugin
 
-ds = xr.open_zarr("...")            # or icechunk, or anything xarray opens
+ds = xr.open_zarr("...")  # or icechunk, or anything xarray opens
 
-rest = xpublish.Rest(
-    {"my_dataset": ds},
-    plugins={"erddap": ErddapPlugin(metadata={
-        # ERDDAP requires these; most Zarr stores do not carry them.
-        # This is the equivalent of ERDDAP's datasets.xml <addAttributes>.
-        "title": "My Dataset",
-        "summary": "...",
-        "institution": "...",
-        "infoUrl": "https://example.org",
-        "license": "[standard]",
-    })},
-)
+# ERDDAP requires these; most Zarr stores do not carry them.
+# This is the equivalent of ERDDAP's datasets.xml <addAttributes>.
+metadata = {
+    "title": "My Dataset",
+    "summary": "...",
+    "institution": "...",
+    "infoUrl": "https://example.org",
+    "license": "[standard]",
+}
+rest = xpublish.Rest({"my_dataset": ds}, plugins={"erddap": ErddapPlugin(metadata=metadata)})
 rest.serve(port=9000)
 ```
 
@@ -75,6 +73,7 @@ Then, unchanged client code:
 
 ```python
 from erddapy import ERDDAP
+
 e = ERDDAP(server="http://localhost:9000/erddap", protocol="griddap", response="nc")
 e.dataset_id = "my_dataset"
 e.griddap_initialize()

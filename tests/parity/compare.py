@@ -142,7 +142,5 @@ def dataset_table(body: bytes, ext: str, dataset_id: str, server: str) -> dict:
     row = next((r for r in rows if r[header.index("Dataset ID")] == dataset_id), None)
     return {
         "header": [c for c in header if c not in CONFIG_COLUMNS],
-        "row": None
-        if row is None
-        else {c: row[header.index(c)] for c in COMPARED_COLUMNS},
+        "row": None if row is None else {c: row[header.index(c)] for c in COMPARED_COLUMNS},
     }

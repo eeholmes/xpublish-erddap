@@ -1,6 +1,7 @@
 """End-to-end tests of the ERDDAP API surface via FastAPI's TestClient."""
 
 import io
+import xml.etree.ElementTree as ET
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,7 @@ from xpublish.dependencies import get_dataset_ids, get_datatree
 
 from xpublish_erddap import ErddapPlugin
 from xpublish_erddap.catalog import check_axes
+from xpublish_erddap.formats import NCML_NS
 
 
 @pytest.fixture(scope="session")
@@ -144,12 +146,8 @@ def test_search_for_all_lists_every_dataset(client):
     # With other words, "all" is an ordinary word. Every dataset's search text
     # starts with "all" in ERDDAP (EDD.searchString), so it still matches
     # (checked on erddap.ioos.us, 2026-10-07; #27).
-    assert (
-        client.get("/erddap/search/index.csv?searchFor=all+testgrid").status_code == 200
-    )
-    assert (
-        client.get("/erddap/search/index.csv?searchFor=all+zzznope").status_code == 404
-    )
+    assert client.get("/erddap/search/index.csv?searchFor=all+testgrid").status_code == 200
+    assert client.get("/erddap/search/index.csv?searchFor=all+zzznope").status_code == 404
 
 
 def test_search_needs_a_query(client):
@@ -157,9 +155,7 @@ def test_search_needs_a_query(client):
     assert client.get("/erddap/search/index.csv").status_code == 404
     assert client.get("/erddap/search/index.csv?searchFor=+").status_code == 404
     assert client.get("/erddap/search/advanced.csv").status_code == 400
-    any_ = (
-        "/erddap/search/advanced.csv?page=1&itemsPerPage=1000&protocol=(ANY)&minTime="
-    )
+    any_ = "/erddap/search/advanced.csv?page=1&itemsPerPage=1000&protocol=(ANY)&minTime="
     assert client.get(any_).status_code == 400
     # Any other criterion counts, e.g. erddapy's protocol=griddap.
     griddap = any_.replace("(ANY)", "griddap")
@@ -212,10 +208,6 @@ def test_check_axes_reports_the_break():
 
 def test_ncml_matches_what_erddapy_parses(client):
     """erddapy >=3.2 discovers a griddap dataset from .ncml alone."""
-    import xml.etree.ElementTree as ET
-
-    from xpublish_erddap.formats import NCML_NS
-
     resp = client.get("/erddap/griddap/testgrid.ncml")
     assert resp.status_code == 200
     root = ET.fromstring(resp.text)
@@ -267,9 +259,7 @@ def test_float32_values_print_as_written(client):
 def test_globals_sort_ignoring_case_and_hide_xpublish_id(client):
     body = client.get("/erddap/info/testgrid/index.csv").text
     names = [
-        line.split(",")[2]
-        for line in body.splitlines()
-        if line.startswith("attribute,NC_GLOBAL,")
+        line.split(",")[2] for line in body.splitlines() if line.startswith("attribute,NC_GLOBAL,")
     ]
     assert names == sorted(names, key=str.lower)
     assert "_xpublish_id" not in names
@@ -395,7 +385,7 @@ def test_default_deps_resolve_through_overrides(grid_dataset):
     app.include_router(ErddapPlugin().app_router(Dependencies()))
     app.dependency_overrides[get_dataset_ids] = lambda: ["overridden"]
     app.dependency_overrides[get_datatree] = lambda dataset_id: xr.DataTree(
-        grid_dataset
+        grid_dataset,
     )
     body = TestClient(app).get("/erddap/griddap/index.csv").text
     assert "overridden" in body
@@ -410,7 +400,7 @@ def tree_client(grid_dataset):
             "/": xr.Dataset(attrs={"title": "The whole store"}),
             "/regrid": tos.assign_attrs(title="Regridded"),
             "/native/monthly": tos,
-        }
+        },
     )
     rest = xpublish.Rest({"store": tree}, plugins={"erddap": ErddapPlugin()})
     return TestClient(rest.app)

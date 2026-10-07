@@ -87,9 +87,7 @@ def infer_ioos_category(name: str, attrs: dict) -> str:
         return "Location"
     if low in ("depth", "z", "lev", "level", "altitude"):
         return "Location"
-    haystack = " ".join(
-        str(attrs.get(k, "")) for k in ("standard_name", "long_name")
-    ).lower()
+    haystack = " ".join(str(attrs.get(k, "")) for k in ("standard_name", "long_name")).lower()
     haystack = f"{name.lower()} {haystack}"
     for pattern, category in _IOOS_BY_NAME:
         if re.search(pattern, haystack):
@@ -311,14 +309,10 @@ def coverage_globals(
             if subset:
                 lo, hi = values.dtype.type(lo), values.dtype.type(hi)
             elif values.size > 1:
-                out[f"geospatial_{axis}_resolution"] = abs(nice[-1] - nice[0]) / (
-                    values.size - 1
-                )
+                out[f"geospatial_{axis}_resolution"] = abs(nice[-1] - nice[0]) / (values.size - 1)
             out[f"geospatial_{axis}_min"] = lo
             out[f"geospatial_{axis}_max"] = hi
-            out[f"geospatial_{axis}_units"] = (
-                "degrees_north" if axis == "lat" else "degrees_east"
-            )
+            out[f"geospatial_{axis}_units"] = "degrees_north" if axis == "lat" else "degrees_east"
             out[_MOST[axis][0]] = lo
             out[_MOST[axis][1]] = hi
     return out

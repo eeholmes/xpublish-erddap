@@ -37,12 +37,22 @@ your own ERDDAP client code at its `/erddap` root; nothing else needs to change.
 
 ```python
 from erddapy import ERDDAP
+
 e = ERDDAP(server="https://18-119-42-78.sslip.io/erddap", protocol="griddap", response="nc")
 e.dataset_id = "gobai_o2_monthly"
 e.griddap_initialize()
-e.constraints.update({"time>=": "2020-01-15", "time<=": "2020-03-15",
-                      "pres>=": 10, "pres<=": 20,
-                      "lat>=": 0, "lat<=": 5, "lon>=": 180, "lon<=": 185})
+e.constraints.update(
+    {
+        "time>=": "2020-01-15",
+        "time<=": "2020-03-15",
+        "pres>=": 10,
+        "pres<=": 20,
+        "lat>=": 0,
+        "lat<=": 5,
+        "lon>=": 180,
+        "lon<=": 185,
+    }
+)
 e.variables = ["oxy"]
 ds = e.to_xarray()
 ```

@@ -218,9 +218,7 @@ def main(base: str) -> int:  # noqa: C901
         @check(f"{dataset_id}: csv response matches nc")
         def _(dataset_id=dataset_id, var=var, constraints=constraints, got=got):
             df = subset(dataset_id, var, constraints, "csv").to_pandas()
-            values = df[
-                [c for c in df.columns if c.startswith(f"{var} ")][0]
-            ].to_numpy()
+            values = df[[c for c in df.columns if c.startswith(f"{var} ")][0]].to_numpy()
             np.testing.assert_allclose(
                 values,
                 got["nc"].values.ravel(),
@@ -247,8 +245,7 @@ def main(base: str) -> int:  # noqa: C901
                 )
 
     print(
-        f"\n{len(failures)} unexpected failures"
-        + (f": {failures}" if failures else ""),
+        f"\n{len(failures)} unexpected failures" + (f": {failures}" if failures else ""),
     )
     return 1 if failures else 0
 

@@ -189,8 +189,7 @@ CASES = [
             ],
             ADVANCED.replace("protocol=griddap", "protocol=wcs"),
             # no tabledap here; the real server has some, so ask for etopo5
-            ADVANCED.replace("protocol=griddap", "protocol=tabledap")
-            + "&searchFor=etopo5",
+            ADVANCED.replace("protocol=griddap", "protocol=tabledap") + "&searchFor=etopo5",
         ],
     ),
 ]

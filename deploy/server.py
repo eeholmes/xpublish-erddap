@@ -68,8 +68,7 @@ CEFI: dict[str, tuple[str, str, str, str]] = {
         "cefi-nep-hindcast-daily",
         "regrid/main",
         "CEFI Northeast Pacific 10 km Hindcast, Daily, Regridded",
-        "hindcast for the Northeast Pacific, daily, regridded to a regular "
-        "latitude-longitude grid",
+        "hindcast for the Northeast Pacific, daily, regridded to a regular latitude-longitude grid",
     ),
     "cefi_nep_hindcast_monthly": (
         "cefi-nep-hindcast-monthly",
@@ -81,8 +80,7 @@ CEFI: dict[str, tuple[str, str, str, str]] = {
     "cefi_nwa_decadal_forecast_monthly_i196501": (
         "cefi-nwa-decadal-forecast-monthly",
         "regrid/i196501",
-        "CEFI Northwest Atlantic Decadal Forecast from January 1965, Monthly, "
-        "Regridded",
+        "CEFI Northwest Atlantic Decadal Forecast from January 1965, Monthly, Regridded",
         "10-member decadal forecast for the Northwest Atlantic, initialized "
         "January 1965, monthly means over a 10-year lead, regridded to a "
         "regular latitude-longitude grid",
@@ -90,8 +88,7 @@ CEFI: dict[str, tuple[str, str, str, str]] = {
     "cefi_nwa_decadal_forecast_yearly_i196501": (
         "cefi-nwa-decadal-forecast-yearly",
         "regrid/i196501",
-        "CEFI Northwest Atlantic Decadal Forecast from January 1965, Yearly, "
-        "Regridded",
+        "CEFI Northwest Atlantic Decadal Forecast from January 1965, Yearly, Regridded",
         "10-member decadal forecast for the Northwest Atlantic, initialized "
         "January 1965, yearly means over a 10-year lead, regridded to a "
         "regular latitude-longitude grid",
@@ -99,8 +96,7 @@ CEFI: dict[str, tuple[str, str, str, str]] = {
     "cefi_nwa_seasonal_reforecast_monthly_i199401": (
         "cefi-nwa-seasonal-reforecast-monthly",
         "regrid/i199401",
-        "CEFI Northwest Atlantic Seasonal Reforecast from January 1994, Monthly, "
-        "Regridded",
+        "CEFI Northwest Atlantic Seasonal Reforecast from January 1994, Monthly, Regridded",
         "10-member seasonal reforecast for the Northwest Atlantic, initialized "
         "January 1994, monthly means at leads of 0-11 months, regridded to a "
         "regular latitude-longitude grid",
@@ -240,7 +236,7 @@ def _open_ocean_icechunk(store_id: str) -> tuple[xr.DataTree, str]:
             if prefix.startswith("s3://")
             else icechunk.credentials.HttpAccess
             for prefix in repo.config.virtual_chunk_containers or {}
-        }
+        },
     )
     session = repo.reopen(authorize_virtual_chunk_access=auth).readonly_session(**ref)
     tree = xr.open_datatree(session.store, engine="zarr", consolidated=False, chunks={})
@@ -262,10 +258,7 @@ def _as_tree(opener: Callable[[], tuple[xr.Dataset, str]]) -> tuple[xr.DataTree,
 #: A store whose variables are all at the root is a one-node tree, served
 #: under the store id itself.
 STORES: dict[str, Callable[[], tuple[xr.DataTree, str]]] = {
-    **{
-        dataset_id: partial(_as_tree, partial(_open_cefi, dataset_id))
-        for dataset_id in CEFI
-    },
+    **{dataset_id: partial(_as_tree, partial(_open_cefi, dataset_id)) for dataset_id in CEFI},
     "gobai_o2_monthly": partial(_as_tree, _open_gobai),
     **{store_id: partial(_open_ocean_icechunk, store_id) for store_id in OCEAN_STORES},
 }

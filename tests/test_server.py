@@ -8,7 +8,9 @@ a real HTTP client -- content-type handling and percent-encoding among them.
 
 import sys
 
+import httpx
 import numpy as np
+import pandas as pd
 import pytest
 
 erddapy = pytest.importorskip("erddapy")
@@ -91,8 +93,6 @@ def test_to_pandas_csv(erddap):
 
 def test_mixed_dimensions_split_into_two_datasets(xpublish_server):
     """A source whose variables differ in dimensions becomes several datasets."""
-    import httpx
-
     body = httpx.get(f"{xpublish_server}/griddap/index.csv", timeout=30).text
     assert "mixed" in body
     assert "mixed_level" in body
@@ -111,8 +111,6 @@ def test_griddap_initialize_on_the_split_dataset(xpublish_server):
 @pytest.mark.parametrize("search_for", ["all", None])
 def test_erddapy_search_lists_every_dataset(xpublish_server, search_for):
     """erddapy's search for "all", or with no words, lists the whole catalog (#19)."""
-    import pandas as pd
-
     e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
     every = set(pd.read_csv(f"{xpublish_server}/griddap/index.csv")["Dataset ID"])
     found = pd.read_csv(e.get_search_url(search_for=search_for, response="csv"))

@@ -62,9 +62,7 @@ def test_float32_axes_are_rounded_to_seven_digits():
 def test_spacing_of_a_descending_float32_axis():
     """CRW_sst_v3_1_monthly's latitude, as its real info table gives it."""
     lat = (89.975 - 0.05 * np.arange(3600)).astype("float32")
-    assert _spacing(lat) == (
-        ", evenlySpaced=true, averageSpacing=-0.049999999999999996"
-    )
+    assert _spacing(lat) == (", evenlySpaced=true, averageSpacing=-0.049999999999999996")
 
 
 def test_spacing_of_uneven_times():

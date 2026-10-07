@@ -62,9 +62,7 @@ def data_blocks(case: Case, ds: xr.Dataset) -> list:
         wanted = [v for v in parsed.variables if v in ds.data_vars]
         for name in wanted:
             dims = ds[name].dims
-            bounds = {
-                d: (parsed.selections[d].start, parsed.selections[d].stop) for d in dims
-            }
+            bounds = {d: (parsed.selections[d].start, parsed.selections[d].stop) for d in dims}
             block = (name, block_bounds(bounds, ds.sizes))
             if block not in blocks:
                 blocks.append(block)
@@ -170,11 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--compare-to", type=Path, default=None)
     args = parser.parse_args(argv)
 
-    cases = [
-        c
-        for c in CASES
-        if not args.patterns or any(p in c.dataset_id for p in args.patterns)
-    ]
+    cases = [c for c in CASES if not args.patterns or any(p in c.dataset_id for p in args.patterns)]
     with httpx.Client(timeout=120, follow_redirects=True) as client:
         for case in cases:
             capture(case, client, args.out)

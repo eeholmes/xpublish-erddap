@@ -55,11 +55,7 @@ def _params(*, media: bool = False):
         for entry in manifest["requests"]:
             key = f"{manifest['dataset_id']} {entry['path']}"
             reasons = [why for pattern, why in known if re.search(pattern, key)]
-            marks = (
-                [pytest.mark.xfail(reason="; ".join(reasons), strict=True)]
-                if reasons
-                else []
-            )
+            marks = [pytest.mark.xfail(reason="; ".join(reasons), strict=True)] if reasons else []
             params.append(
                 pytest.param(
                     slug,

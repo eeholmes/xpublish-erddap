@@ -64,7 +64,8 @@ the group path (`""` for a store's root), and returns a name:
 def by_repo(params: dict[str, str], group: str) -> str:
     return f"{params['repo']}/{group}" if group else params["repo"]
 
-ErddapPlugin(name_dataset=by_repo)   # -> cefi_nep_hindcast_daily_regrid_main
+
+ErddapPlugin(name_dataset=by_repo)  # -> cefi_nep_hindcast_daily_regrid_main
 ```
 
 `tests/test_dataset_router.py::test_flux_like_host_can_drop_org_and_ref`
@@ -143,7 +144,7 @@ or a provider that reopens a branch but keeps its id), either put a version in
 `_xpublish_id` (e.g. `f"{store}@{snapshot_id}"`), or set a maximum age:
 
 ```python
-ErddapPlugin(catalog_max_age_s=600)   # rebuild at least every 10 minutes
+ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
 ```
 
 **Costs to know:**
@@ -170,10 +171,10 @@ serves `/opendap` beside it (issue
 
 ```python
 ErddapPlugin(
-    name_dataset=...,        # (1) how a per-dataset root names its dataset
-    max_response_mb=500,     # refuse larger data requests with ERDDAP's 413
-    metadata={...},          # global attributes for every dataset (ERDDAP's addAttributes)
-    strict_axes=True,        # drop datasets with non-monotonic axes, as ERDDAP does
+    name_dataset=...,  # (1) how a per-dataset root names its dataset
+    max_response_mb=500,  # refuse larger data requests with ERDDAP's 413
+    metadata={...},  # global attributes for every dataset (ERDDAP's addAttributes)
+    strict_axes=True,  # drop datasets with non-monotonic axes, as ERDDAP does
     catalog_max_age_s=None,  # (5) also rebuild catalogs after this many seconds
 )
 ```
