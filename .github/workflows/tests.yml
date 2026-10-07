@@ -77,6 +77,10 @@ jobs:
     # too -- but only on Linux, since installing R across the full matrix is
     # disproportionate to the risk.
     runs-on: ubuntu-latest
+    # A normal run takes 2-10 minutes. Without a limit, a hang in setup-r's
+    # apt-get update (the runner's Ubuntu mirror not answering, #45) runs for
+    # GitHub's 6-hour default.
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
