@@ -1,4 +1,4 @@
-"""ERDDAP-compatible router for Xpublish.
+"""ERDDAP-compatible routers for Xpublish.
 
 Serves the subset of ERDDAP's griddap REST API that `erddapy` and `rerddap`
 actually call, so existing client code works unchanged against an Xpublish
@@ -10,14 +10,17 @@ flat datasetIDs -- so this is an ``app_router``, not a ``dataset_router``.
 
 from __future__ import annotations
 
+import inspect
 import io
 import json
+from collections.abc import Callable
 from urllib import parse
 
 import xarray as xr
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
+from xpublish.dependencies import get_group_path
 
 from xpublish_erddap import formats
 from xpublish_erddap.catalog import (
@@ -352,13 +355,166 @@ def griddap_response(
     raise AssertionError(ext)  # pragma: no cover
 
 
+# -- the ERDDAP routes, shared by both routers -------------------------------
+#: Route paths below an ERDDAP root. ``{erddap_id}`` is not ``{dataset_id}``,
+#: which xpublish's own dataset prefix (``/datasets/{dataset_id}``) uses.
+VERSION = "/version"
+GRIDDAP_INDEX = "/griddap/index.{ext}"
+INFO_INDEX = "/info/index.{ext}"
+TABLEDAP_INDEX = "/tabledap/index.{ext}"
+INFO = "/info/{erddap_id}/index.{ext}"
+SEARCH = "/search/index.{ext}"
+ADVANCED_SEARCH = "/search/advanced.{ext}"
+GRIDDAP = "/griddap/{target}"
+
+#: Path parameters of the routes above, plus the host's group path: any other
+#: path parameter names the dataset.
+ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path"}
+
+
+def root_of(request: Request, route_path: str) -> str:
+    """The public URL of the ERDDAP root that answered ``request``.
+
+    The root's path is the request path less the route's own part
+    (``route_path`` with this request's values): ``/erddap`` for the
+    server-wide router, ``/datasets/a/erddap`` or a host's own prefix (Flux:
+    ``.../{group path}/erddap``) for the per-dataset one. The matched route
+    cannot say: under a dataset prefix it reports only the router's path.
+    """
+    path = request.scope["path"]
+    root_path = request.scope.get("root_path", "")
+    # Starlette includes a mount's root_path in "path"; erddap_root adds it.
+    if root_path and path.startswith(root_path):
+        path = path[len(root_path) :]
+    own = route_path.format(**request.path_params)
+    return erddap_root(request, path.removesuffix(own))
+
+
+def add_erddap_routes(
+    router: APIRouter,
+    catalog: Callable[..., dict[str, ErddapDataset]],
+    max_response_mb: float | None,
+) -> APIRouter:
+    """Declare the ERDDAP API on ``router``, serving ``catalog``.
+
+    ``catalog`` is a FastAPI dependency returning the datasets this root
+    serves, by datasetID.
+    """
+    Catalog = dict[str, ErddapDataset]  # noqa: N806
+
+    @router.get(VERSION, response_class=PlainTextResponse)
+    def version() -> str:
+        """ERDDAP version banner."""
+        return "ERDDAP_version=2.23\n"
+
+    @router.get(GRIDDAP_INDEX)
+    def griddap_index(
+        request: Request, ext: str, cat: Catalog = Depends(catalog)
+    ) -> Response:
+        """List every griddap dataset under this root."""
+        return index_response(cat, root_of(request, GRIDDAP_INDEX), ext)
+
+    @router.get(INFO_INDEX)
+    def info_index(
+        request: Request, ext: str, cat: Catalog = Depends(catalog)
+    ) -> Response:
+        """The same list, as ERDDAP serves it under ``info``."""
+        return index_response(cat, root_of(request, INFO_INDEX), ext)
+
+    @router.get(TABLEDAP_INDEX)
+    def tabledap_index(ext: str) -> Response:
+        """Empty tabledap catalog.
+
+        rerddap calls this to decide whether a datasetID is tabledap or
+        griddap, so it must answer with a well-formed (if empty) table
+        rather than a 404.
+        """
+        return table_response(CATALOG_COLUMNS, [], ext)
+
+    @router.get(INFO)
+    def dataset_info(
+        erddap_id: str, ext: str, cat: Catalog = Depends(catalog)
+    ) -> Response:
+        """Variable and attribute table for one dataset."""
+        return table_response(*formats.info_table(lookup(cat, erddap_id)), ext)
+
+    @router.get(SEARCH)
+    def search(
+        request: Request,
+        ext: str,
+        searchFor: str = "",  # noqa: N803
+        cat: Catalog = Depends(catalog),
+    ) -> Response:
+        """Free-text search across dataset metadata."""
+        if not searchFor.split():
+            raise HTTPException(
+                404,
+                f"A .{ext} search request must include a query, for "
+                'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
+            )
+        return search_response(cat, root_of(request, SEARCH), ext, searchFor)
+
+    @router.get(ADVANCED_SEARCH)
+    def advanced_search(
+        request: Request,
+        ext: str,
+        searchFor: str = "",  # noqa: N803
+        cat: Catalog = Depends(catalog),
+    ) -> Response:
+        """Advanced search. Only ``searchFor`` filters so far (#4)."""
+        advanced_search_criteria(request, ext)
+        return search_response(cat, root_of(request, ADVANCED_SEARCH), ext, searchFor)
+
+    @router.get(GRIDDAP)
+    def griddap(
+        request: Request, target: str, cat: Catalog = Depends(catalog)
+    ) -> Response:
+        """Serve a griddap request: ``{datasetID}.{fileType}?{query}``."""
+        dataset_id, ext = split_target(target)
+        return griddap_response(
+            lookup(cat, dataset_id),
+            ext,
+            raw_query(request),
+            root_of(request, GRIDDAP),
+            max_response_mb,
+        )
+
+    return router
+
+
+def has_server_root(deps: Dependencies) -> bool:
+    """Whether a server-wide root can work: ``deps.datatree`` takes one dataset id.
+
+    Under ``xpublish.SingleDatasetRest`` it takes none, and dataset routers are
+    mounted at the app root, where they would collide with the app router. A
+    host that names a dataset with several path parameters (Flux:
+    ``{org}/{repo}/{ref}``) cannot be asked for a dataset by one id either.
+    """
+    params = inspect.signature(deps.datatree).parameters.values()
+    return sum(p.default is inspect.Parameter.empty for p in params) == 1
+
+
 class ErddapPlugin(Plugin):
-    """ERDDAP griddap API plugin for Xpublish."""
+    """ERDDAP griddap API plugin for Xpublish.
+
+    It adds two ERDDAP roots, which serve the same API:
+
+    - ``/erddap`` (``app_router``): one root for the whole server, listing
+      every group of every dataset, the way clients expect an ERDDAP server.
+    - ``.../{dataset}/erddap`` (``dataset_router``): one root per dataset, or
+      per group when the host puts a ``{group_path}`` in the path, as
+      Earthmover Flux does beside each group's ``/opendap``. Under
+      ``xpublish.SingleDatasetRest`` this one is at ``/erddap``, and the
+      server-wide root steps aside (see ``has_server_root``).
+    """
 
     name: str = "erddap"
 
     app_router_prefix: str = "/erddap"
     app_router_tags: list[str] = ["erddap"]
+
+    dataset_router_prefix: str = "/erddap"
+    dataset_router_tags: list[str] = ["erddap"]
 
     #: Global attributes merged into every dataset (ERDDAP's ``addAttributes``).
     metadata: dict = {}
@@ -372,6 +528,24 @@ class ErddapPlugin(Plugin):
     #: built in memory, so a public server should set this.
     max_response_mb: float | None = None
 
+    #: The datasetID base in a per-dataset root whose URL names no dataset
+    #: (``SingleDatasetRest``). Otherwise the base is the URL's own dataset
+    #: path parameters: ``{dataset_id}`` under ``xpublish.Rest``,
+    #: ``{org}/{repo}/{ref}`` in a Flux-like host. A group path is appended.
+    default_dataset_id: str = "dataset"
+
+    def build(self, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
+        """ERDDAP datasets for every group with variables in ``tree``."""
+        entries: list[ErddapDataset] = []
+        for group_id, ds in tree_datasets(source_id, tree):
+            entries += build_catalog(
+                group_id,
+                ds,
+                metadata=self.metadata,
+                strict_axes=self.strict_axes,
+            )
+        return entries
+
     def server_catalog(
         self, request: Request, deps: Dependencies
     ) -> dict[str, ErddapDataset]:
@@ -383,14 +557,9 @@ class ErddapPlugin(Plugin):
             return found
         entries: list[ErddapDataset] = []
         for xpublish_id in _resolve(request, deps.dataset_ids):
-            tree = _resolve(request, deps.datatree, xpublish_id)
-            for source_id, ds in tree_datasets(xpublish_id, tree):
-                entries += build_catalog(
-                    source_id,
-                    ds,
-                    metadata=self.metadata,
-                    strict_axes=self.strict_axes,
-                )
+            entries += self.build(
+                xpublish_id, _resolve(request, deps.datatree, xpublish_id)
+            )
         out = unique_ids(entries)
         if cache is not None:
             cache.put(key, out, 99999)
@@ -398,74 +567,46 @@ class ErddapPlugin(Plugin):
 
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:
-        """Create the server-wide ERDDAP router: one root, every dataset."""
+        """The server-wide ERDDAP root: one catalog of every dataset."""
         router = APIRouter(prefix=self.app_router_prefix, tags=self.app_router_tags)
+        if not has_server_root(deps):
+            # The dataset router answers at the same paths; see the class doc.
+            return router
 
         def catalog(request: Request) -> dict[str, ErddapDataset]:
             return self.server_catalog(request, deps)
 
-        def base(request: Request) -> str:
-            return erddap_root(request, self.app_router_prefix)
+        return add_erddap_routes(router, catalog, self.max_response_mb)
 
-        @router.get("/version", response_class=PlainTextResponse)
-        def version() -> str:
-            """ERDDAP version banner."""
-            return "ERDDAP_version=2.23\n"
+    @hookimpl
+    def dataset_router(self, deps: Dependencies) -> APIRouter:
+        """A per-dataset ERDDAP root, listing that dataset or group only."""
+        router = APIRouter(
+            prefix=self.dataset_router_prefix, tags=self.dataset_router_tags
+        )
 
-        @router.get("/griddap/index.{ext}")
-        @router.get("/info/index.{ext}")
-        def dataset_index(request: Request, ext: str) -> Response:
-            """List every griddap dataset on the server."""
-            return index_response(catalog(request), base(request), ext)
-
-        @router.get("/tabledap/index.{ext}")
-        def tabledap_index(ext: str) -> Response:
-            """Empty tabledap catalog.
-
-            rerddap calls this to decide whether a datasetID is tabledap or
-            griddap, so it must answer with a well-formed (if empty) table
-            rather than a 404.
-            """
-            return table_response(CATALOG_COLUMNS, [], ext)
-
-        @router.get("/info/{dataset_id}/index.{ext}")
-        def dataset_info(request: Request, dataset_id: str, ext: str) -> Response:
-            """Variable and attribute table for one dataset."""
-            ed = lookup(catalog(request), dataset_id)
-            return table_response(*formats.info_table(ed), ext)
-
-        @router.get("/search/index.{ext}")
-        def search(request: Request, ext: str, searchFor: str = "") -> Response:  # noqa: N803
-            """Free-text search across dataset metadata."""
-            if not searchFor.split():
-                raise HTTPException(
-                    404,
-                    f"A .{ext} search request must include a query, for "
-                    'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
-                )
-            return search_response(catalog(request), base(request), ext, searchFor)
-
-        @router.get("/search/advanced.{ext}")
-        def advanced_search(
+        def catalog(
             request: Request,
-            ext: str,
-            searchFor: str = "",  # noqa: N803
-        ) -> Response:
-            """Advanced search. Only ``searchFor`` filters so far (#4)."""
-            advanced_search_criteria(request, ext)
-            return search_response(catalog(request), base(request), ext, searchFor)
+            tree: xr.DataTree = Depends(deps.datatree),
+            cache=Depends(deps.cache),
+        ) -> dict[str, ErddapDataset]:
+            # Same naming as the server-wide root: dataset id + group path.
+            names = [
+                str(value)
+                for key, value in request.path_params.items()
+                if key not in ROUTE_PARAMS
+            ]
+            source_id = "/".join(names) or self.default_dataset_id
+            group = get_group_path(request)
+            if group:
+                source_id = f"{source_id}/{group}"
+            key = f"erddap_catalog/{source_id}"
+            found = cache.get(key) if cache is not None else None
+            if found is not None:
+                return found
+            out = unique_ids(self.build(source_id, tree))
+            if cache is not None:
+                cache.put(key, out, 99999)
+            return out
 
-        @router.get("/griddap/{target}")
-        def griddap(request: Request, target: str) -> Response:
-            """Serve a griddap request: ``{datasetID}.{fileType}?{query}``."""
-            dataset_id, ext = split_target(target)
-            ed = lookup(catalog(request), dataset_id)
-            return griddap_response(
-                ed,
-                ext,
-                raw_query(request),
-                base(request),
-                self.max_response_mb,
-            )
-
-        return router
+        return add_erddap_routes(router, catalog, self.max_response_mb)

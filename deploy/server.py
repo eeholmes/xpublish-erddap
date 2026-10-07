@@ -21,9 +21,11 @@ Routes::
     /datasets/{id}/opendap.dds     stock xpublish-opendap, per dataset
 
 Flux is one app too, but routes by store and group:
-``.../{org}/{repo}/{ref}/{group path}/opendap``. ErddapPlugin cannot sit beside
-each group yet (#18), so this server has a single ``/erddap`` root instead.
-For a grouped store, ``/datasets/{id}/opendap`` shows only its (empty) root.
+``.../{org}/{repo}/{ref}/{group path}/opendap``. This server uses xpublish's
+plain ``/datasets/{id}`` routing, so it has the server-wide ``/erddap`` plus one
+ERDDAP root per store (``/datasets/{id}/erddap``), not per group; the plugin
+does that under a Flux-like host (``tests/flux_host.py``, #18). For a grouped
+store, ``/datasets/{id}/opendap`` shows only its (empty) root.
 Stock xpublish-opendap also mis-reads DAP strides (see #2); Flux does not.
 
 Stores are opened in the background at startup (or on first request, if that
