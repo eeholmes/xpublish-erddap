@@ -62,6 +62,14 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   green"; merged branches are deleted on GitHub and on the hub.
 - #13 is the hackweek proposal; #14 (the Zarr/Icechunk validator) is its
   second project.
+- **Audit done 2026-10-07 (#50, #52); its findings are issues #55–#72**, in
+  the order to do them. Each says its order, dependencies, definition of done
+  and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
+  #55–#67, with **#56, #57, #58 blocking** (one bad store breaks the
+  server-wide root; values off an axis and a raw `+` in a time offset both
+  return wrong data with 200). After release: #68–#72. The ordered table is
+  the last-but-one comment on #50; method and what was found fine:
+  `notes/audit-2026-10.md`.
 
 ## ⚠ Check the environment first
 
@@ -105,6 +113,8 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/plugin-comparison.md` — #29: us against the community plugins and
   norms; its plan (#32–#37) is done except #37.
 - `docs/hosting.md` (not a note: public) — for Earthmover and other hosts.
+- `notes/audit-2026-10.md` — #50/#52: how the audit ran, what was checked
+  and found fine (so the next audit does not redo it), and the issues it made.
 - `tools/fluxlint.py` — rough readiness linter; a start for #14.
 
 ## Open threads (a record, not a task list)
@@ -115,17 +125,24 @@ run the R tests: `notes/dev-environment.md`.
   `xpublish-erddap` is free on PyPI and conda-forge (checked 2026-10-07).
   Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
   xpublish ecosystem PR) each need EH's yes.
-- **#50, whole-repo audit** written as a task for an agent: a report of
-  proposed work, no fixes, no issues opened; EH picks what becomes issues.
+- **#50 and #52 met their definition of done** (report posted, EH chose to
+  open every finding as an issue). Suggest closing both; EH closes issues.
+- **EH's decision (2026-10-07), not yet built:** serve latitude, longitude
+  **and time** axes under ERDDAP's names by default, with an option to turn it
+  off (#59).
+- **#53, #54** (EH's): research ERDDAP proxying us via `EDD*FromErddap`, and
+  direct Icechunk support in ERDDAP itself.
 - **Earthmover:** send `docs/hosting.md`; ask how Flux registers a service,
   names its path parameters, and sets `_xpublish_id`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
   `_xpublish_id` and reopen stores now and then, so new commits show up
   without a restart (a live demo of #3).
 - **Known differences kept on purpose:** constraint-error wording; 400 where
-  ERDDAP gives 404 (value off an axis) or 500 (unknown variable); `/erddap/nope`
-  paths get FastAPI's 404. See `design-and-history.md`.
-- **Other open issues:** #8 (auth), #2 (`.dods`), #5 (`categorize`, now cheap:
-  `search.categories` exists), #6, #7, #10, #14.
+  ERDDAP gives 404 for an **index** off an axis, or 500 (unknown variable);
+  `/erddap/nope` paths get FastAPI's 404. See `design-and-history.md`. (A
+  **value** off an axis is snapped to the end with 200: a bug, #57.)
+- **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
+  CoastWatch Python tutorials need it, see its latest comment), #5
+  (`categorize`, now cheap: `search.categories` exists), #6, #7, #10, #14.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
