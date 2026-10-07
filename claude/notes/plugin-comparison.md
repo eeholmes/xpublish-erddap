@@ -65,7 +65,7 @@ issue. Nothing to do here unless the plan for the 2022 repo changes.
 | | opendap | zarr | wms | edr | **erddap** |
 |---|---|---|---|---|---|
 | hook | dataset_router | dataset_router | dataset_router | app + dataset + ogc-core hooks | **app_router** |
-| dataset access | `Depends(deps.dataset)` | same | same | same | **`app.dependency_overrides`** |
+| dataset access | `Depends(deps.dataset)` | same | same | same | **calls `deps.datatree` itself** (was `app.dependency_overrides`; #32, #33) |
 | cache | cachey, cost 99999 | cachey, CostTimer | cachey | none | cachey, cost 99999 |
 | query parsing | opendap-protocol | path only | pydantic model, discriminated union | pydantic models, `Field(description=)` | hand-written parser (`constraints.py`) |
 | formats | fixed | fixed | fixed per operation | **entry-point groups** | fixed dispatch in `griddap()` |
@@ -74,7 +74,7 @@ issue. Nothing to do here unless the plan for the 2022 repo changes.
 
 Findings:
 
-- **We ignore `deps`.** `app_router(self, deps)` carries `# noqa: ARG002` and
+- **We ignore `deps`** (fixed in #32, PR #38). `app_router(self, deps)` carried `# noqa: ARG002` and
   calls `xpublish.dependencies.get_dataset` and friends through
   `request.app.dependency_overrides` (`plugin.py`, `_resolve`). xpublish's
   plugin guide says plugins "should use `xpublish.Dependencies.dataset` rather
@@ -85,7 +85,7 @@ Findings:
   reason. But the fix is small and keeps the reason: resolve `deps.dataset`,
   `deps.dataset_ids` and `deps.cache` through the overrides instead of the
   module-level functions.
-- **xpublish 0.5 changed the data model under us.** Since 0.5.0 (2026-05)
+- **xpublish 0.5 changed the data model under us** (done in #33, PR #39). Since 0.5.0 (2026-05)
   everything published is an `xarray.DataTree`, and routes opt in to groups
   with a `{group_path:path}` segment; `deps.dataset` then returns that node.
   This is directly relevant to #18 (a per-group `/erddap`), and possibly to how
@@ -178,11 +178,11 @@ function that collected everything.
 Ordered by what blocks a donation first.
 
 1. ~~Settle the name with Alex Kerney.~~ Resolved; see section 1.
-2. **Use `deps` as xpublish documents** (#32) (small; code issue). Resolve
+2. **Done (PR #38).** **Use `deps` as xpublish documents** (#32) (small; code issue). Resolve
    `deps.dataset`, `deps.dataset_ids`, `deps.cache` through the overrides,
    drop the `ARG002` noqa, add a test that a custom `Dependencies` is
    honoured.
-3. **Move to xpublish ≥0.5 and design for DataTree** (#33; medium; related to #18).
+3. **Done (PRs #39, #40).** **Move to xpublish ≥0.5 and design for DataTree** (#33; medium; related to #18).
    Decide how Zarr groups map to ERDDAP datasetIDs now that xpublish models
    groups itself; set the floor to `>=0.5` and add a min-deps CI job so it is
    tested.

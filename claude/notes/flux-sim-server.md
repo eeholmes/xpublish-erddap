@@ -1,9 +1,10 @@
 # Flux-like test server (#17)
 
 `deploy/server.py` simulates Earthmover Flux: one xpublish app with a dataset
-provider plugin, stock xpublish-opendap, and xpublish-erddap, serving two public
-Icechunk stores. It will run on AWS for the hackweek collaborators (Phase B,
-teardown 2026-11-13).
+provider plugin, stock xpublish-opendap, and xpublish-erddap, serving public
+Icechunk stores. It runs on AWS for the hackweek collaborators (Phase B,
+teardown 2026-11-13). The stores below were the first two; the rest are in
+"More datasets" and "Whole stores by group".
 
 ## The two data pathways
 
@@ -130,6 +131,38 @@ plugin does not serve, so those datasets had no positions.
 - Stores open in a background thread at startup: first request 0.3 s
   instead of ~18 s. On AWS all six open in about 6 s; memory ~220 MB.
 
+## Whole stores by group (#33, PR #40, 2026-10-06)
+
+EH listed her `ocean-icechunks` stores on Source Cooperative on #33 as
+"fairly typical": `hycom/hycom-gofs-3pt1-reanalysis` (tag `v1`, root only),
+`noaa-ohc/{na,np,sp}` (groups `daily`, `14day_v1`, `14day`),
+`noaa-oisst/oisst.icechunk` (groups `daily`, `monthly`) and
+`oa-indicators/climatology` (root only, 72 variables). All six are on the
+server, published **whole** as DataTrees: 14 datasets, 22 in all.
+
+- The provider now implements xpublish 0.5's `get_datatree` hook. The older
+  stores are one-node trees, so their datasetIDs did not change.
+- Opened with `icechunk.http_storage("https://data.source.coop/ocean-icechunks/...")`.
+  They are virtual, so each chunk host must be authorized:
+  `icechunk.containers_credentials({prefix: HttpAccess or
+  s3_anonymous_credentials()})`. OISST's chunks are `s3://` URLs (NOAA CDR
+  bucket, us-east-1); the others are HTTPS (HYCOM's AWS bucket, coastwatch,
+  NCEI). `noaa-oisst` does not show in an S3 listing of the bucket, but opens
+  over HTTPS.
+- **Store metadata, as found:** the root group of every grouped store is
+  empty (no attributes), so groups inheriting root attributes would not help.
+  OHC `daily` titles are all "Ocean Heat Content Product Suite", `14day*`
+  are `OHC_NAQG3` etc., OISST `monthly` has no attributes. `server.py` sets
+  titles, and summaries where missing, per group (`OCEAN_STORES`). Only OA
+  indicators has a `license`.
+- For a grouped store, `/datasets/{id}/opendap` shows the empty root; per
+  group needs #18.
+- Measured on AWS after the redeploy: all 12 stores open in ~30 s, server
+  ~300 MB; `check_clients.py` 0 unexpected failures (now also compares
+  `oisst_monthly`, a group, with a direct read); collaborator kit 10/10
+  Python, 7/7 R; one cell from each of the 14 new datasets returned on the
+  first try in 0.3–3.3 s, including the nine OHC ones read from coastwatch.
+
 ## Updating the running server without a shell session
 
 `aws ssm send-command` runs the README's update steps non-interactively
@@ -142,5 +175,9 @@ ssm send-command --instance-ids i-0e80a89b8eb8b2fcd --document-name AWS-RunShell
 ssm get-command-invocation --command-id <id> --instance-id i-0e80a89b8eb8b2fcd
 ```
 
-The package is installed editable, so a restart picks up new code. Then run
+The package is installed editable in `/opt/venv`, so a restart picks up new
+code; check `pip list` there when `requirements.txt` floors change (on
+2026-10-06 it already had xpublish 0.5.2, xarray 2026.9.0). Do not stop a
+local `deploy/server.py` with `pkill -f deploy/server.py` from a Bash tool
+call: the pattern matches the calling shell and kills it. Then run
 `deploy/check_clients.py https://18-119-42-78.sslip.io` from the hub.
