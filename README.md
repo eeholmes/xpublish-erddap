@@ -89,6 +89,23 @@ d <- griddap("my_dataset", url = "http://localhost:9000/erddap/",
              time = c("2024-07-01", "2024-07-05"), fields = "tos")
 ```
 
+### One ERDDAP root per dataset, or per group
+
+Besides the server-wide `/erddap`, every dataset gets its own ERDDAP root
+listing only that dataset: `http://localhost:9000/datasets/my_dataset/erddap`
+under `xpublish.Rest`. A host that puts a group path in its dataset routes, as
+Earthmover Flux does beside each group's `/opendap`, gets one root per group,
+because the plugin reads its data only through the dependencies xpublish passes
+it. Under `xpublish.SingleDatasetRest` the dataset's root is `/erddap` itself.
+DatasetIDs follow the same rule everywhere: the dataset's id, then the group
+path (`my_dataset` + `regrid/main` gives `my_dataset_regrid_main`). Where the URL
+names no dataset (`SingleDatasetRest`), the id is `dataset`; pass
+`ErddapPlugin(name_dataset=lambda params, group: "my_dataset")` to change it.
+
+**Running the plugin in a host such as Earthmover Flux?** See
+[docs/hosting.md](docs/hosting.md) for the choices it makes about routing,
+naming and URLs, and what to change if yours differs.
+
 ### Limiting response size
 
 Responses are built in memory, so a request for a whole variable can be

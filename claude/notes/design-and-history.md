@@ -27,12 +27,12 @@ ERDDAP.
 ## Structure, and the reasons for it
 
     xpublish_erddap/
-      plugin.py       ErddapPlugin: an app_router, not a dataset_router
+      plugin.py       ErddapPlugin: a server-wide app_router and a per-dataset dataset_router
       catalog.py      one Dataset -> N ERDDAP datasets; metadata inference; check_axes
       constraints.py  ERDDAP griddap query -> integer (start, stop, stride)
       formats.py      nc csv csvp csv0 json das dds ncml
 
-- **`app_router`, not `dataset_router`.** ERDDAP is organized around a catalog:
+- **`app_router` first (and now a `dataset_router` too, #18).** ERDDAP is organized around a catalog:
   clients point at one server root and address many flat datasetIDs. The
   datasetIDs do not map one-to-one onto xpublish dataset ids (see the split
   below), and with no `{dataset_id}` in the path `Depends(deps.dataset)`
@@ -54,6 +54,34 @@ ERDDAP.
   logged error (`catalog.unique_ids`); before, the later one silently
   replaced the earlier. The per-group router beside Flux's `/opendap` is a
   separate piece of work (#18), at EH's request.
+- **The per-dataset root (#18, 2026-10-07).** `dataset_router` serves the same
+  routes (`add_erddap_routes`) with a catalog of one dataset's subtree, got
+  through `Depends(deps.datatree)`, so a host's group routing reaches it
+  untouched (xpublish-tiles does the same). Decisions, each reversible:
+  - **DatasetIDs keep the server-wide rule:** the URL's dataset path
+    parameters joined, then the group path. Under `Rest` that is
+    `{dataset_id}`; in a Flux-like host every non-route path parameter, so
+    `{org}/{repo}/{ref}` + group (`NOAA_PMEL_cefi_store_main_regrid_main`):
+    long, and it carries the ref. Flux's real parameter names are unknown;
+    revisit with Earthmover. No dataset in the URL (`SingleDatasetRest`):
+    `"dataset"`. The rule is the default of `ErddapPlugin(name_dataset=...)`
+    (`name_from_path`), so a host changes it with an argument, not a fork
+    (EH, 2026-10-07). `docs/hosting.md` is the note for Earthmover listing
+    every such choice.
+  - **The server-wide root steps aside** unless `deps.datatree` takes exactly
+    one required argument (`has_server_root`). Under `SingleDatasetRest` both
+    routers would be at `/erddap`, and xpublish's `check_route_conflicts`
+    refuses to build the app. In a host that names datasets with several
+    parameters, the server-wide catalog cannot look a dataset up by one id.
+  - **Cache key per root:** `erddap_catalog/{source id}`; the server-wide one
+    stays `erddap_catalog`.
+  - **Public URLs** come from the request path less the route's own part
+    (`root_of`). The matched route's template cannot be used: under a dataset
+    prefix FastAPI reports only the router's own path.
+  - The route parameter for a datasetID in `/info/.../index.{ext}` is
+    `{erddap_id}`, because `{dataset_id}` is xpublish's own.
+  - `tests/flux_host.py` stands in for Flux's routing; a store's root group
+    would need `.../{ref}//erddap` there, so only groups below it are tested.
 - **Route handlers are module-level functions (#34).** `plugin.py`'s helpers
   (`lookup`, `table_response`, `index_response`, `search_response`,
   `split_target`, `griddap_response`, ...) take the catalog and the public
