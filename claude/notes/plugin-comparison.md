@@ -189,7 +189,7 @@ Ordered by what blocks a donation first.
 4. **Done (#34).** **Split `app_router`** (#34) (small refactor; parity tests guard it). Helpers to
    module level, remove the unused logger and argument, make `_dtype_of`
    public, type `ed`.
-5. **Tooling refresh** (#35) (small, mechanical): ruff line length 100, bump hook
+5. **Done (#35).** **Tooling refresh** (#35) (small, mechanical): ruff line length 100, bump hook
    revs, add pre-commit.ci (`ci:` block) and zizmor, pin actions by SHA with
    `permissions: {}`, run build + `check-manifest` on PRs, align the CI matrix
    with `requires-python`. Leave packaging (setuptools_scm,

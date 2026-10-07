@@ -9,17 +9,22 @@ on:
     - cron: "17 6 * * 1"  # Mondays 06:17 UTC
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   parity:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup Micromamba
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@4b9113af4fba0e9e1124b252dd6497a419e7396d  # v1.11.0
         with:
           environment-name: TEST
           init-shell: bash
@@ -59,7 +64,7 @@ jobs:
 
       - name: Keep the fresh capture
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: parity-golden
           path: ${{ runner.temp }}/golden
