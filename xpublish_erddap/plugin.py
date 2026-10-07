@@ -482,6 +482,21 @@ def add_erddap_routes(
     return router
 
 
+def name_from_path(params: dict[str, str], group: str) -> str:
+    """The default ``ErddapPlugin.name_dataset``: dataset path parameters, then group.
+
+    ``params`` are the URL's path parameters that name the dataset, in path
+    order: ``{"dataset_id": "sst"}`` under ``xpublish.Rest``, ``{}`` under
+    ``SingleDatasetRest``, ``{"org": ..., "repo": ..., "ref": ...}`` in a
+    Flux-like host. They are joined with ``/``, or ``dataset`` if there are
+    none, and the group path is appended. Under ``Rest`` this gives the same
+    datasetIDs as the server-wide root. The result goes through the usual
+    datasetID rule (``sanitize_id``, a suffix per dimension split).
+    """
+    name = "/".join(params.values()) or "dataset"
+    return f"{name}/{group}" if group else name
+
+
 def has_server_root(deps: Dependencies) -> bool:
     """Whether a server-wide root can work: ``deps.datatree`` takes one dataset id.
 
@@ -528,11 +543,14 @@ class ErddapPlugin(Plugin):
     #: built in memory, so a public server should set this.
     max_response_mb: float | None = None
 
-    #: The datasetID base in a per-dataset root whose URL names no dataset
-    #: (``SingleDatasetRest``). Otherwise the base is the URL's own dataset
-    #: path parameters: ``{dataset_id}`` under ``xpublish.Rest``,
-    #: ``{org}/{repo}/{ref}`` in a Flux-like host. A group path is appended.
-    default_dataset_id: str = "dataset"
+    #: How a per-dataset root names its dataset, before the datasetID rule:
+    #: ``name_dataset(params, group) -> str``, where ``params`` are the URL's
+    #: path parameters that name the dataset and ``group`` the group path
+    #: (``""`` for none). The default is ``name_from_path``. A host whose
+    #: path does not suit it (see ``docs/hosting.md``) passes its own; under
+    #: ``SingleDatasetRest``, e.g. ``lambda params, group: "sst"``. The
+    #: server-wide root is not affected: it names by xpublish dataset id.
+    name_dataset: Callable[[dict[str, str], str], str] = name_from_path
 
     def build(self, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
         """ERDDAP datasets for every group with variables in ``tree``."""
@@ -590,16 +608,12 @@ class ErddapPlugin(Plugin):
             tree: xr.DataTree = Depends(deps.datatree),
             cache=Depends(deps.cache),
         ) -> dict[str, ErddapDataset]:
-            # Same naming as the server-wide root: dataset id + group path.
-            names = [
-                str(value)
+            params = {
+                key: str(value)
                 for key, value in request.path_params.items()
                 if key not in ROUTE_PARAMS
-            ]
-            source_id = "/".join(names) or self.default_dataset_id
-            group = get_group_path(request)
-            if group:
-                source_id = f"{source_id}/{group}"
+            }
+            source_id = self.name_dataset(params, get_group_path(request))
             key = f"erddap_catalog/{source_id}"
             found = cache.get(key) if cache is not None else None
             if found is not None:

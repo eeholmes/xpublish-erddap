@@ -64,7 +64,10 @@ ERDDAP.
     `{org}/{repo}/{ref}` + group (`NOAA_PMEL_cefi_store_main_regrid_main`):
     long, and it carries the ref. Flux's real parameter names are unknown;
     revisit with Earthmover. No dataset in the URL (`SingleDatasetRest`):
-    `default_dataset_id`, `"dataset"` by default.
+    `"dataset"`. The rule is the default of `ErddapPlugin(name_dataset=...)`
+    (`name_from_path`), so a host changes it with an argument, not a fork
+    (EH, 2026-10-07). `docs/hosting.md` is the note for Earthmover listing
+    every such choice.
   - **The server-wide root steps aside** unless `deps.datatree` takes exactly
     one required argument (`has_server_root`). Under `SingleDatasetRest` both
     routers would be at `/erddap`, and xpublish's `check_route_conflicts`

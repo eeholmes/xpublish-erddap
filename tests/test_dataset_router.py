@@ -57,8 +57,9 @@ def test_single_dataset_rest_serves_its_dataset(grid_dataset):
     assert client.get(f"/erddap/griddap/dataset.csv?{TOS}").status_code == 200
 
 
-def test_single_dataset_id_is_configurable(grid_dataset):
-    plugin = ErddapPlugin(default_dataset_id="sst_analysis")
+def test_dataset_naming_is_configurable(grid_dataset):
+    """A host can name datasets its own way (docs/hosting.md)."""
+    plugin = ErddapPlugin(name_dataset=lambda params, group: "sst_analysis")
     client = TestClient(
         xpublish.SingleDatasetRest(grid_dataset, plugins={"erddap": plugin}).app
     )
@@ -114,3 +115,20 @@ def test_erddapy_against_a_flux_like_group_root(xpublish_server):
     assert e.variables == ["tos"]
     ds = e.to_xarray()
     assert ds["tos"].size > 0
+
+
+def test_flux_like_host_can_drop_org_and_ref(tos_only):
+    """The likeliest change for Flux: name by repo and group only."""
+
+    def by_repo(params: dict[str, str], group: str) -> str:
+        return f"{params['repo']}/{group}" if group else params["repo"]
+
+    tree = xr.DataTree.from_dict({"/regrid/main": tos_only})
+    host = FluxLikeRest(
+        {"NOAA-PMEL/cefi-store": tree},
+        plugins={"erddap": ErddapPlugin(name_dataset=by_repo)},
+    )
+    client = TestClient(host.app)
+    assert ids(client, "/NOAA-PMEL/cefi-store/main/regrid/main/erddap") == [
+        "cefi_store_regrid_main"
+    ]

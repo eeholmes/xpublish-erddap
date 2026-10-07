@@ -99,8 +99,12 @@ because the plugin reads its data only through the dependencies xpublish passes
 it. Under `xpublish.SingleDatasetRest` the dataset's root is `/erddap` itself.
 DatasetIDs follow the same rule everywhere: the dataset's id, then the group
 path (`my_dataset` + `regrid/main` gives `my_dataset_regrid_main`). Where the URL
-names no dataset (`SingleDatasetRest`), the id is `ErddapPlugin(default_dataset_id=...)`,
-`dataset` by default.
+names no dataset (`SingleDatasetRest`), the id is `dataset`; pass
+`ErddapPlugin(name_dataset=lambda params, group: "my_dataset")` to change it.
+
+**Running the plugin in a host such as Earthmover Flux?** See
+[docs/hosting.md](docs/hosting.md) for the choices it makes about routing,
+naming and URLs, and what to change if yours differs.
 
 ### Limiting response size
 
