@@ -141,6 +141,8 @@ set its own, lower limit.
 | `/erddap/search/index.{csv,json}`, `/erddap/search/advanced.{csv,json}` | search, as ERDDAP's default ("original") engine: every word must appear, `"quoted phrases"`, `-word` to exclude, ranked by where the words appear; `searchFor=all` lists every dataset. Advanced search also filters by `protocol`, the category attributes (`institution`, `keywords`, `ioos_category`, `long_name`, `standard_name`, `variableName`, `cdm_data_type`) and lon/lat/time bounds; `page` and `itemsPerPage` work |
 | `/erddap/version` | version banner |
 
+Errors come back as ERDDAP's plain-text body (`Error { code=404; message="Not Found: ..."; }`), which is what erddapy and rerddap show their users.
+
 Constraint syntax: coordinate values `[(2024-07-01):1:(2024-07-05)]`, integer
 indices `[0:1:10]`, strides, `last` / `last-N` / `(last)` / `(last-N)`, and the
 `[start:stop]` / `[start]` / `[]` shorthands.

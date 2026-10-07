@@ -8,11 +8,13 @@ import pandas as pd
 import pytest
 import xarray as xr
 import xpublish
+from error_body import message
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from xpublish import Dependencies
 from xpublish.dependencies import get_dataset_ids, get_datatree
 
+import xpublish_erddap.plugin as plugin_module
 from xpublish_erddap import ErddapPlugin
 from xpublish_erddap.catalog import check_axes
 from xpublish_erddap.formats import NCML_NS
@@ -169,7 +171,9 @@ def test_unknown_dataset_is_404(client):
 def test_unsupported_filetype_is_400(client):
     resp = client.get("/erddap/griddap/testgrid.mat")
     assert resp.status_code == 400
-    assert "unsupported fileType" in resp.text
+    assert (
+        message(resp) == "Bad Request: Query error: fileType=.mat isn't supported by this dataset."
+    )
 
 
 def test_bad_constraint_is_400(client):
@@ -234,10 +238,10 @@ def test_dods_is_planned_not_advertised(client):
     """Issue #2: .dods answers 501 with a pointer, and no error lists it."""
     resp = client.get("/erddap/griddap/testgrid.dods")
     assert resp.status_code == 501
-    assert "issues/2" in resp.json()["detail"]
+    assert "issues/2" in message(resp)
     other = client.get("/erddap/griddap/testgrid.htmlTable")
     assert other.status_code == 400
-    assert "dods" not in other.json()["detail"]
+    assert "dods" not in message(other)
 
 
 def test_float32_values_print_as_written(client):
@@ -344,7 +348,7 @@ def test_unknown_table_filetypes_are_404(client):
 
 
 def test_missing_filetype_message_lists_every_type(client):
-    detail = client.get("/erddap/griddap/testgrid").json()["detail"]
+    detail = message(client.get("/erddap/griddap/testgrid"))
     assert "ncml" in detail
     assert "dods" not in detail
 
@@ -437,3 +441,33 @@ def test_duplicate_dataset_ids_are_both_refused(grid_dataset, caplog):
     assert list(table["Dataset ID"]) == ["c"]
     assert "'a_b'" in caplog.text
     assert "'a/b'" in caplog.text
+
+
+def test_errors_have_erddaps_body(client):
+    """Errors are ERDDAP's plain-text body, which erddapy and rerddap show users (#36)."""
+    resp = client.get("/erddap/griddap/nope.csv")
+    assert resp.status_code == 404
+    assert resp.text == (
+        'Error {\n    code=404;\n    message="Not Found: Currently unknown datasetID=nope";\n}\n'
+    )
+    assert message(client.get("/erddap/info/testgrid/index.foo")) == (
+        "Not Found: Unsupported fileType=.foo"
+    )
+    # quotes are escaped, and a status ERDDAP has no prefix for gets none
+    assert message(client.get("/erddap/search/index.csv")).startswith(
+        'Not Found: A .csv search request must include a query, for example, "?page=1',
+    )
+    assert message(client.get("/erddap/griddap/testgrid.dods")).startswith("OPeNDAP binary")
+
+
+def test_unexpected_errors_are_erddap_500s(grid_dataset, monkeypatch):
+    """A bug is logged and answered as ERDDAP would, not as a bare traceback."""
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("something broke")
+
+    monkeypatch.setattr(plugin_module.formats, "das_response", boom)
+    rest = xpublish.Rest({"g": grid_dataset}, plugins={"erddap": ErddapPlugin()})
+    resp = TestClient(rest.app, raise_server_exceptions=False).get("/erddap/griddap/g.das")
+    assert resp.status_code == 500
+    assert message(resp) == "Internal Server Error: RuntimeError: something broke"

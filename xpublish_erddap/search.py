@@ -72,8 +72,23 @@ _TIME_UNITS = {
 
 
 def no_matches(detail: str = "nRows = 0") -> HTTPException:
-    """ERDDAP's 404 for a search with no results."""
+    """ERDDAP's 404 for an advanced search with no results."""
     return HTTPException(404, f"Your query produced no matching results. ({detail})")
+
+
+def no_search_matches(search_for: str) -> HTTPException:
+    """ERDDAP's 404 for a plain search with no results (``EDStatic.noSearchMatch``).
+
+    It suggests fewer words when the search has a space in it.
+    """
+    search_for = search_for.strip()
+    hint = "Check the spelling of the word(s) you searched for." if search_for else ""
+    if " " in search_for:
+        hint += " Try using fewer search words."
+    return HTTPException(
+        404,
+        f"Resource not found: Your query produced no matching results. {hint}".strip(),
+    )
 
 
 # -- the table ----------------------------------------------------------------

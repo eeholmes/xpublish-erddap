@@ -82,6 +82,22 @@ ERDDAP.
     `{erddap_id}`, because `{dataset_id}` is xpublish's own.
   - `tests/flux_host.py` stands in for Flux's routing; a store's root group
     would need `.../{ref}//erddap` there, so only groups below it are tested.
+- **Errors are ERDDAP's plain-text body (#36, 2026-10-07).** erddapy raises
+  `HTTPError` with the whole body as its message and rerddap prints it, so
+  users saw FastAPI's `{"detail": ...}`. `errors.py` ports
+  `EDStatic.lowSendError` (status prefix, JSON-quoted message, newlines kept,
+  `text/plain;charset=UTF-8`); `ErddapRoute` (route class on both routers, as
+  ogc-core does; a plugin cannot add app-wide handlers) turns `HTTPException`,
+  validation errors (400) and unexpected exceptions (logged, 500) into it.
+  Fixed messages use ERDDAP's wording: `Currently unknown datasetID=x`,
+  `Unsupported fileType=.x` (tables, 404), `Query error: fileType=.x isn't
+  supported by this dataset.` (griddap, 400), search's no-match text with
+  "Try using fewer search words." when the search has a space. Kept on
+  purpose: our constraint-error wording, and 400 where ERDDAP says 404 for an
+  out-of-range value or 500 for an unknown variable. Parity compares the full
+  error text wherever the golden is ERDDAP's own body (all IOOS cases;
+  OceanWatch's are proxy pages). Paths outside our routes (`/erddap/nope`)
+  still get FastAPI's 404.
 - **The dataset table and searches copy ERDDAP's source (#27, #4, 2026-10-07).**
   `search.py` ports, from github.com/ERDDAP/erddap `main`:
   `Erddap.makePlainDatasetTable` (columns), `EDD.extendedSummary` (the

@@ -194,7 +194,7 @@ Ordered by what blocks a donation first.
    `permissions: {}`, run build + `check-manifest` on PRs, align the CI matrix
    with `requires-python`. Leave packaging (setuptools_scm,
    `requirements.txt`) as is; it matches opendap and wms.
-6. **ERDDAP-shaped error bodies** (#36) (investigate first): check whether erddapy
+6. **Done (#36).** **ERDDAP-shaped error bodies** (#36) (investigate first): check whether erddapy
    or rerddap surface the body; if so, copy ogc-core's `APIRoute` pattern and
    make parity tests compare error text.
 7. **After a PyPI release** (#37): conda-forge recipe, PyPI/conda badges, PR to

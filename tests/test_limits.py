@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 import xarray as xr
 import xpublish
+from error_body import message
 from fastapi.testclient import TestClient
 from tutorial_data import _lazy
 
@@ -66,7 +67,7 @@ def client(formula=unreadable, **options) -> TestClient:
 
 
 def detail(response) -> str:
-    return response.json()["detail"]
+    return message(response)
 
 
 @pytest.mark.parametrize("ext", ["nc", "csv", "csvp", "csv0", "json"])

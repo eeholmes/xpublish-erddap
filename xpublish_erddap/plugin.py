@@ -32,6 +32,7 @@ from xpublish_erddap.catalog import (
     unique_ids,
 )
 from xpublish_erddap.constraints import ConstraintError, parse_griddap_query
+from xpublish_erddap.errors import ErddapRoute
 
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
@@ -105,10 +106,13 @@ def estimated_bytes(ds: xr.Dataset, variables: list[str], selections) -> int:
 
 
 def too_much_data(size_mb: int, limit: str) -> HTTPException:
-    """ERDDAP's 413, with its message wording (captured from coastwatch.pfeg)."""
+    """ERDDAP's 413, with its message wording (captured from coastwatch.pfeg).
+
+    The "Payload Too Large: " prefix is added with the rest of the error body.
+    """
     return HTTPException(
         413,
-        "Payload Too Large: Your query produced too much data.  "
+        "Your query produced too much data.  "
         f"Try to request less data. [memory]  {size_mb} MB is more than {limit}.",
     )
 
@@ -132,11 +136,8 @@ def check_size(ds: xr.Dataset, parsed, ext: str, limit_mb: float | None) -> None
 def lookup(catalog: dict[str, ErddapDataset], dataset_id: str) -> ErddapDataset:
     """One dataset from the catalog, or ERDDAP's 404."""
     if dataset_id not in catalog:
-        raise HTTPException(
-            404,
-            f"datasetID {dataset_id!r} not found. "
-            f"Available: {', '.join(sorted(catalog)) or '(none)'}",
-        )
+        # ERDDAP's wording (coastwatch.noaa.gov, 2026-10-07)
+        raise HTTPException(404, f"Currently unknown datasetID={dataset_id}")
     return catalog[dataset_id]
 
 
@@ -161,12 +162,8 @@ def csv_cell(value: object) -> str:
 def table_response(columns: list[str], rows: list[list], ext: str) -> Response:
     """A catalog, info or search table as ``.csv`` or ``.json``."""
     if ext not in TABLE_EXTENSIONS:
-        # ERDDAP answers 404 for an unknown table fileType
-        raise HTTPException(
-            404,
-            f"Unsupported fileType=.{ext}; use "
-            f"{', '.join('.' + e for e in sorted(TABLE_EXTENSIONS))}",
-        )
+        # ERDDAP answers 404 for an unknown table fileType, in these words
+        raise HTTPException(404, f"Unsupported fileType=.{ext}")
     if ext == "json":
         # rerddap asserts this exact content-type string
         return Response(
@@ -228,16 +225,17 @@ def advanced_search_criteria(request: Request, ext: str) -> None:
 
 
 def search_response(
-    datasets: list[ErddapDataset],
+    found: list[ErddapDataset],
     base: str,
     ext: str,
-    search_for: str,
-    params: dict[str, str],
+    no_match: HTTPException,
 ) -> Response:
-    """ERDDAP's dataset table for the datasets matching ``search_for``, ranked."""
-    found = search.page_of(search.text_search(datasets, search_for), params)
+    """ERDDAP's dataset table for search results, or ``no_match`` if there are none.
+
+    ERDDAP words "no matches" differently for a plain and an advanced search.
+    """
     if not found:
-        raise search.no_matches()
+        raise no_match
     rows = [search.dataset_row(d, base, ext) for d in found]
     return table_response(search.DATASET_COLUMNS, rows, ext)
 
@@ -253,11 +251,8 @@ def split_target(target: str) -> tuple[str, str]:
     if ext in PLANNED_EXTENSIONS:
         raise HTTPException(501, PLANNED_EXTENSIONS[ext])
     if ext not in ALL_EXTENSIONS:
-        raise HTTPException(
-            400,
-            f"unsupported fileType {ext!r}; "
-            f"this server supports {', '.join(sorted(ALL_EXTENSIONS))}",
-        )
+        # ERDDAP's wording (coastwatch.noaa.gov, 2026-10-07)
+        raise HTTPException(400, f"Query error: fileType=.{ext} isn't supported by this dataset.")
     return dataset_id, ext
 
 
@@ -438,12 +433,13 @@ def add_erddap_routes(
                 f"A .{ext} search request must include a query, for "
                 'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
             )
+        params = query_params(request)
+        found = search.page_of(search.text_search(list(cat.values()), searchFor), params)
         return search_response(
-            list(cat.values()),
+            found,
             root_of(request, SEARCH),
             ext,
-            searchFor,
-            query_params(request),
+            search.no_search_matches(searchFor),
         )
 
     @router.get(ADVANCED_SEARCH)
@@ -456,13 +452,9 @@ def add_erddap_routes(
         """Advanced search: protocol, categories, bounds, then ``searchFor`` (#4)."""
         advanced_search_criteria(request, ext)
         params = query_params(request)
-        return search_response(
-            search.advanced_filter(list(cat.values()), params),
-            root_of(request, ADVANCED_SEARCH),
-            ext,
-            searchFor,
-            params,
-        )
+        matching = search.advanced_filter(list(cat.values()), params)
+        found = search.page_of(search.text_search(matching, searchFor), params)
+        return search_response(found, root_of(request, ADVANCED_SEARCH), ext, search.no_matches())
 
     @router.get(GRIDDAP)
     def griddap(
@@ -649,7 +641,11 @@ class ErddapPlugin(Plugin):
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:
         """The server-wide ERDDAP root: one catalog of every dataset."""
-        router = APIRouter(prefix=self.app_router_prefix, tags=self.app_router_tags)
+        router = APIRouter(
+            prefix=self.app_router_prefix,
+            tags=self.app_router_tags,
+            route_class=ErddapRoute,
+        )
         if not has_server_root(deps):
             # The dataset router answers at the same paths; see the class doc.
             return router
@@ -665,6 +661,7 @@ class ErddapPlugin(Plugin):
         router = APIRouter(
             prefix=self.dataset_router_prefix,
             tags=self.dataset_router_tags,
+            route_class=ErddapRoute,
         )
 
         def catalog(

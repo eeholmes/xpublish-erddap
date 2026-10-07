@@ -182,7 +182,8 @@ CASES = [
                     "&long_name=relief_of_the_surface_of_the_earth",
                     "&standard_name=altitude",
                     "&ioos_category=bathymetry",
-                    "&ioos_category=temperature",
+                    # a value that exists, filtered out by a bound: nRows = 0
+                    "&ioos_category=bathymetry&minLat=95&maxLat=100",
                     "&cdm_data_type=grid",
                     "&keywords=topography",
                 ]

@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 import xpublish
 from fastapi.testclient import TestClient
-from parity.compare import comparable, dataset_table, ext_of, lists, media_type
+from parity.compare import comparable, dataset_table, ext_of, lists, media_type, normalise_text
 from parity.snapshot import load_snapshot
 
 from xpublish_erddap import ErddapPlugin
@@ -86,6 +86,12 @@ def test_matches_real_erddap(slug, manifest, entry):
         # compared: oceanwatch's proxy turns ERDDAP's query errors into a bare
         # 500, and a bad request should not get a 500 from us.
         assert ours.status_code >= HTTP_ERROR, ours.text[:500]
+        # Where the golden is ERDDAP's own error body (not a proxy's page), our
+        # body must be the same text (#36).
+        real = (GOLDEN / slug / entry["file"]).read_bytes() if "file" in entry else b""
+        if real.startswith(b"Error {"):
+            server = manifest["server"]
+            assert normalise_text(ours.text, OUR_SERVER) == normalise_text(real.decode(), server)
         return
 
     assert ours.status_code == HTTP_OK, ours.text[:500]
