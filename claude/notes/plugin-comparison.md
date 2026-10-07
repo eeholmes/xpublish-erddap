@@ -152,7 +152,7 @@ edr):**
 
 **What a community reviewer would likely flag:**
 
-- **`ErddapPlugin.app_router` is one ~300-line function** holding every
+- **`ErddapPlugin.app_router` was one ~300-line function** (split in #34) holding every
   route plus helpers (`catalog`, `lookup`, `_table`, `_csv_cell`, `_search`)
   as closures; it needs `# noqa: PLR0915`. opendap's and zarr's
   whole `plugin.py` files are 101 and 135 lines, and wms keeps its hook to one
@@ -186,7 +186,7 @@ Ordered by what blocks a donation first.
    Decide how Zarr groups map to ERDDAP datasetIDs now that xpublish models
    groups itself; set the floor to `>=0.5` and add a min-deps CI job so it is
    tested.
-4. **Split `app_router`** (#34) (small refactor; parity tests guard it). Helpers to
+4. **Done (#34).** **Split `app_router`** (#34) (small refactor; parity tests guard it). Helpers to
    module level, remove the unused logger and argument, make `_dtype_of`
    public, type `ed`.
 5. **Tooling refresh** (#35) (small, mechanical): ruff line length 100, bump hook

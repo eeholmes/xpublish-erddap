@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 from urllib import parse
 
 import xarray as xr
@@ -28,8 +27,6 @@ from xpublish_erddap.catalog import (
     unique_ids,
 )
 from xpublish_erddap.constraints import ConstraintError, parse_griddap_query
-
-logger = logging.getLogger("uvicorn")
 
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
@@ -98,7 +95,7 @@ def estimated_bytes(ds: xr.Dataset, variables: list[str], selections) -> int:
         cells = 1
         for dim in var.dims:
             cells *= selections[dim].size if dim in selections else var.sizes[dim]
-        total += cells * formats._dtype_of(var).itemsize  # noqa: SLF001
+        total += cells * formats.dtype_of(var).itemsize
     return total
 
 
@@ -121,6 +118,240 @@ def check_size(ds: xr.Dataset, parsed, ext: str, limit_mb: float | None) -> None
         raise too_much_data(size_mb, "the .nc 2 GB limit")
 
 
+#: Columns of the griddap/info catalog tables (and the empty tabledap one).
+CATALOG_COLUMNS = ["griddap", "Info", "Institution", "Title", "Summary", "Dataset ID"]
+
+#: Columns of the search results table.
+SEARCH_COLUMNS = ["protocol", "griddap", "Info", "Title", "Summary", "Dataset ID"]
+
+
+# -- helpers the routes share ------------------------------------------------
+# They take the catalog and the public base URL instead of a request, so any
+# router that can produce those (the server-wide one, a per-dataset one) can
+# use them.
+
+
+def lookup(catalog: dict[str, ErddapDataset], dataset_id: str) -> ErddapDataset:
+    """One dataset from the catalog, or ERDDAP's 404."""
+    if dataset_id not in catalog:
+        raise HTTPException(
+            404,
+            f"datasetID {dataset_id!r} not found. "
+            f"Available: {', '.join(sorted(catalog)) or '(none)'}",
+        )
+    return catalog[dataset_id]
+
+
+def raw_query(request: Request) -> str:
+    """ERDDAP queries are raw expressions, not key=value pairs.
+
+    erddapy percent-encodes with ``quote_plus``, so decode with
+    ``unquote_plus``.
+    """
+    return parse.unquote_plus(request.url.components[3])
+
+
+def csv_cell(value: object) -> str:
+    """One csv field, quoted the way ERDDAP quotes it."""
+    # ERDDAP writes a newline inside a value as the two characters \n
+    text = "" if value is None else str(value).replace("\n", "\\n")
+    if any(c in text for c in ',"'):
+        return '"' + text.replace('"', '""') + '"'
+    return text
+
+
+def table_response(columns: list[str], rows: list[list], ext: str) -> Response:
+    """A catalog, info or search table as ``.csv`` or ``.json``."""
+    if ext not in TABLE_EXTENSIONS:
+        # ERDDAP answers 404 for an unknown table fileType
+        raise HTTPException(
+            404,
+            f"Unsupported fileType=.{ext}; use "
+            f"{', '.join('.' + e for e in sorted(TABLE_EXTENSIONS))}",
+        )
+    if ext == "json":
+        # rerddap asserts this exact content-type string
+        return Response(
+            json.dumps(
+                {
+                    "table": {
+                        "columnNames": columns,
+                        "columnTypes": ["String"] * len(columns),
+                        "rows": rows,
+                    },
+                },
+                indent=2,
+                default=str,
+            ),
+            media_type=ERDDAP_JSON,
+        )
+    buf = io.StringIO()
+    buf.write(",".join(columns) + "\n")
+    for row in rows:
+        buf.write(",".join(csv_cell(v) for v in row) + "\n")
+    return PlainTextResponse(buf.getvalue(), media_type="text/csv")
+
+
+def index_response(catalog: dict[str, ErddapDataset], base: str, ext: str) -> Response:
+    """The table of every griddap dataset."""
+    rows = [
+        [
+            f"{base}/griddap/{d.dataset_id}",
+            f"{base}/info/{d.dataset_id}/index.json",
+            str(d.globals_.get("institution", "")),
+            str(d.globals_.get("title", d.dataset_id)),
+            str(d.globals_.get("summary", "")),
+            d.dataset_id,
+        ]
+        for d in catalog.values()
+    ]
+    return table_response(CATALOG_COLUMNS, rows, ext)
+
+
+def advanced_search_criteria(request: Request, ext: str) -> None:
+    """Refuse an advanced search with no criteria, as ERDDAP does.
+
+    erddapy sends every field, with ``(ANY)`` or an empty value for those not
+    in use, and ``protocol=griddap`` counts as one.
+    """
+    criteria = [
+        value
+        for key, value in request.query_params.items()
+        if key not in {"page", "itemsPerPage"} and value.strip() not in {"", "(ANY)"}
+    ]
+    if not criteria:
+        raise HTTPException(
+            400,
+            f"Query error: A .{ext} Advanced Search request must include "
+            "one or more criteria, for example, "
+            '"?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
+        )
+
+
+def search_response(
+    catalog: dict[str, ErddapDataset],
+    base: str,
+    ext: str,
+    search_for: str,
+) -> Response:
+    """Datasets whose id, global attributes or variable names hold every term."""
+    terms = search_for.lower().split()
+    # ERDDAP's special case: "all" on its own lists every dataset.
+    if terms == ["all"]:
+        terms = []
+    rows = []
+    for d in catalog.values():
+        blob = " ".join(
+            [
+                d.dataset_id,
+                *[f"{k} {v}" for k, v in d.globals_.items()],
+                *d.data_vars,
+            ],
+        ).lower()
+        if terms and not all(t in blob for t in terms):
+            continue
+        rows.append(
+            [
+                "griddap",
+                f"{base}/griddap/{d.dataset_id}",
+                f"{base}/info/{d.dataset_id}/index.json",
+                str(d.globals_.get("title", d.dataset_id)),
+                str(d.globals_.get("summary", "")),
+                d.dataset_id,
+            ],
+        )
+    if not rows:
+        raise HTTPException(
+            404,
+            f"Your query produced no matching results: {search_for!r}",
+        )
+    return table_response(SEARCH_COLUMNS, rows, ext)
+
+
+def split_target(target: str) -> tuple[str, str]:
+    """``{datasetID}.{fileType}`` -> (datasetID, fileType), refusing bad types."""
+    if "." not in target:
+        raise HTTPException(
+            400,
+            f"missing fileType: use {target}.<type>, one of "
+            f"{', '.join(sorted(ALL_EXTENSIONS))}",
+        )
+    dataset_id, _, ext = target.rpartition(".")
+    if ext in PLANNED_EXTENSIONS:
+        raise HTTPException(501, PLANNED_EXTENSIONS[ext])
+    if ext not in ALL_EXTENSIONS:
+        raise HTTPException(
+            400,
+            f"unsupported fileType {ext!r}; "
+            f"this server supports {', '.join(sorted(ALL_EXTENSIONS))}",
+        )
+    return dataset_id, ext
+
+
+def griddap_response(
+    ed: ErddapDataset,
+    ext: str,
+    query: str,
+    base: str,
+    max_response_mb: float | None,
+) -> Response:
+    """Answer a griddap request for one dataset in one file type."""
+    if ext == "das":
+        return PlainTextResponse(formats.das_response(ed, ed.ds))
+    if ext == "ncml":
+        return Response(
+            formats.ncml_response(ed, f"{base}/griddap/{ed.dataset_id}"),
+            media_type="application/xml",
+        )
+
+    try:
+        parsed = parse_griddap_query(
+            query,
+            ed.axes,
+            list(ed.dims),
+            list(ed.data_vars),
+        )
+    except ConstraintError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    if ext != "dds":
+        check_size(ed.ds, parsed, ext, max_response_mb)
+
+    indexers = {d: sel.as_slice() for d, sel in parsed.selections.items()}
+    sub: xr.Dataset = ed.ds.isel(indexers)
+
+    if ext == "dds":
+        return PlainTextResponse(
+            formats.dds_response(
+                ed,
+                sub,
+                parsed.variables,
+                all_axes=not query.strip(),
+            ),
+        )
+    if ext == "nc":
+        data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
+        return Response(
+            data,
+            media_type="application/x-netcdf",
+            headers={
+                "Content-Disposition": (f'attachment; filename="{ed.dataset_id}.nc"'),
+            },
+        )
+    if ext == "json":
+        return Response(
+            formats.to_erddap_json(ed, sub, parsed.variables),
+            media_type=ERDDAP_JSON,
+        )
+    if ext in {"csv", "csvp", "csv0"}:
+        return PlainTextResponse(
+            formats.to_csv(ed, sub, parsed.variables, style=ext),
+            media_type="text/csv",
+        )
+    # every ALL_EXTENSIONS member is handled above
+    raise AssertionError(ext)  # pragma: no cover
+
+
 class ErddapPlugin(Plugin):
     """ERDDAP griddap API plugin for Xpublish."""
 
@@ -141,94 +372,41 @@ class ErddapPlugin(Plugin):
     #: built in memory, so a public server should set this.
     max_response_mb: float | None = None
 
+    def server_catalog(
+        self, request: Request, deps: Dependencies
+    ) -> dict[str, ErddapDataset]:
+        """Every group of every published dataset, by ERDDAP datasetID (cached)."""
+        cache = _resolve(request, deps.cache)
+        key = "erddap_catalog"
+        found = cache.get(key) if cache is not None else None
+        if found is not None:
+            return found
+        entries: list[ErddapDataset] = []
+        for xpublish_id in _resolve(request, deps.dataset_ids):
+            tree = _resolve(request, deps.datatree, xpublish_id)
+            for source_id, ds in tree_datasets(xpublish_id, tree):
+                entries += build_catalog(
+                    source_id,
+                    ds,
+                    metadata=self.metadata,
+                    strict_axes=self.strict_axes,
+                )
+        out = unique_ids(entries)
+        if cache is not None:
+            cache.put(key, out, 99999)
+        return out
+
     @hookimpl
-    def app_router(self, deps: Dependencies) -> APIRouter:  # noqa: PLR0915
-        """Create the ERDDAP router.
-
-        All routes live on one router because ERDDAP's catalog endpoints and
-        its data endpoints share the catalog/lookup closures.
-        """
+    def app_router(self, deps: Dependencies) -> APIRouter:
+        """Create the server-wide ERDDAP router: one root, every dataset."""
         router = APIRouter(prefix=self.app_router_prefix, tags=self.app_router_tags)
-        plugin = self
 
-        # -- catalog ----------------------------------------------------
         def catalog(request: Request) -> dict[str, ErddapDataset]:
-            cache = _resolve(request, deps.cache)
-            key = "erddap_catalog"
-            found = cache.get(key) if cache is not None else None
-            if found is not None:
-                return found
-            entries: list[ErddapDataset] = []
-            for xpublish_id in _resolve(request, deps.dataset_ids):
-                tree = _resolve(request, deps.datatree, xpublish_id)
-                for source_id, ds in tree_datasets(xpublish_id, tree):
-                    entries += build_catalog(
-                        source_id,
-                        ds,
-                        metadata=plugin.metadata,
-                        strict_axes=plugin.strict_axes,
-                    )
-            out = unique_ids(entries)
-            if cache is not None:
-                cache.put(key, out, 99999)
-            return out
+            return self.server_catalog(request, deps)
 
-        def lookup(request: Request, dataset_id: str) -> ErddapDataset:
-            cat = catalog(request)
-            if dataset_id not in cat:
-                raise HTTPException(
-                    404,
-                    f"datasetID {dataset_id!r} not found. "
-                    f"Available: {', '.join(sorted(cat)) or '(none)'}",
-                )
-            return cat[dataset_id]
+        def base(request: Request) -> str:
+            return erddap_root(request, self.app_router_prefix)
 
-        def raw_query(request: Request) -> str:
-            """ERDDAP queries are raw expressions, not key=value pairs.
-
-            erddapy percent-encodes with ``quote_plus``, so decode with
-            ``unquote_plus``.
-            """
-            return parse.unquote_plus(request.url.components[3])
-
-        def _table(columns, rows, ext: str, name: str) -> Response:
-            if ext not in TABLE_EXTENSIONS:
-                # ERDDAP answers 404 for an unknown table fileType
-                raise HTTPException(
-                    404,
-                    f"Unsupported fileType=.{ext}; use "
-                    f"{', '.join('.' + e for e in sorted(TABLE_EXTENSIONS))}",
-                )
-            if ext == "json":
-                # rerddap asserts this exact content-type string
-                return Response(
-                    json.dumps(
-                        {
-                            "table": {
-                                "columnNames": columns,
-                                "columnTypes": ["String"] * len(columns),
-                                "rows": rows,
-                            },
-                        },
-                        indent=2,
-                        default=str,
-                    ),
-                    media_type=ERDDAP_JSON,
-                )
-            buf = io.StringIO()
-            buf.write(",".join(columns) + "\n")
-            for row in rows:
-                buf.write(",".join(_csv_cell(v) for v in row) + "\n")
-            return PlainTextResponse(buf.getvalue(), media_type="text/csv")
-
-        def _csv_cell(value) -> str:
-            # ERDDAP writes a newline inside a value as the two characters \n
-            text = "" if value is None else str(value).replace("\n", "\\n")
-            if any(c in text for c in ',"'):
-                return '"' + text.replace('"', '""') + '"'
-            return text
-
-        # -- server metadata --------------------------------------------
         @router.get("/version", response_class=PlainTextResponse)
         def version() -> str:
             """ERDDAP version banner."""
@@ -238,50 +416,23 @@ class ErddapPlugin(Plugin):
         @router.get("/info/index.{ext}")
         def dataset_index(request: Request, ext: str) -> Response:
             """List every griddap dataset on the server."""
-            cat = catalog(request)
-            columns = [
-                "griddap",
-                "Info",
-                "Institution",
-                "Title",
-                "Summary",
-                "Dataset ID",
-            ]
-            base = erddap_root(request, plugin.app_router_prefix)
-            rows = [
-                [
-                    f"{base}/griddap/{d.dataset_id}",
-                    f"{base}/info/{d.dataset_id}/index.json",
-                    str(d.globals_.get("institution", "")),
-                    str(d.globals_.get("title", d.dataset_id)),
-                    str(d.globals_.get("summary", "")),
-                    d.dataset_id,
-                ]
-                for d in cat.values()
-            ]
-            return _table(columns, rows, ext, "datasets")
+            return index_response(catalog(request), base(request), ext)
 
         @router.get("/tabledap/index.{ext}")
-        def tabledap_index(request: Request, ext: str) -> Response:  # noqa: ARG001
+        def tabledap_index(ext: str) -> Response:
             """Empty tabledap catalog.
 
             rerddap calls this to decide whether a datasetID is tabledap or
             griddap, so it must answer with a well-formed (if empty) table
             rather than a 404.
             """
-            return _table(
-                ["griddap", "Info", "Institution", "Title", "Summary", "Dataset ID"],
-                [],
-                ext,
-                "tabledap",
-            )
+            return table_response(CATALOG_COLUMNS, [], ext)
 
         @router.get("/info/{dataset_id}/index.{ext}")
         def dataset_info(request: Request, dataset_id: str, ext: str) -> Response:
             """Variable and attribute table for one dataset."""
-            ed = lookup(request, dataset_id)
-            columns, rows = formats.info_table(ed)
-            return _table(columns, rows, ext, dataset_id)
+            ed = lookup(catalog(request), dataset_id)
+            return table_response(*formats.info_table(ed), ext)
 
         @router.get("/search/index.{ext}")
         def search(request: Request, ext: str, searchFor: str = "") -> Response:  # noqa: N803
@@ -292,7 +443,7 @@ class ErddapPlugin(Plugin):
                     f"A .{ext} search request must include a query, for "
                     'example, "?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
                 )
-            return _search(request, ext, searchFor)
+            return search_response(catalog(request), base(request), ext, searchFor)
 
         @router.get("/search/advanced.{ext}")
         def advanced_search(
@@ -300,148 +451,21 @@ class ErddapPlugin(Plugin):
             ext: str,
             searchFor: str = "",  # noqa: N803
         ) -> Response:
-            """Advanced search. Only ``searchFor`` filters so far (#4).
+            """Advanced search. Only ``searchFor`` filters so far (#4)."""
+            advanced_search_criteria(request, ext)
+            return search_response(catalog(request), base(request), ext, searchFor)
 
-            As in ERDDAP, the request needs at least one criterion: erddapy
-            sends every field, with ``(ANY)`` or an empty value for those
-            not in use, and ``protocol=griddap`` counts as one.
-            """
-            criteria = [
-                value
-                for key, value in request.query_params.items()
-                if key not in {"page", "itemsPerPage"}
-                and value.strip() not in {"", "(ANY)"}
-            ]
-            if not criteria:
-                raise HTTPException(
-                    400,
-                    f"Query error: A .{ext} Advanced Search request must include "
-                    "one or more criteria, for example, "
-                    '"?page=1&itemsPerPage=1000&searchFor=wind+temperature".',
-                )
-            return _search(request, ext, searchFor)
-
-        def _search(request: Request, ext: str, searchFor: str) -> Response:  # noqa: N803
-            cat = catalog(request)
-            terms = searchFor.lower().split()
-            # ERDDAP's special case: "all" on its own lists every dataset.
-            if terms == ["all"]:
-                terms = []
-            base = erddap_root(request, plugin.app_router_prefix)
-            rows = []
-            for d in cat.values():
-                blob = " ".join(
-                    [
-                        d.dataset_id,
-                        *[f"{k} {v}" for k, v in d.globals_.items()],
-                        *d.data_vars,
-                    ],
-                ).lower()
-                if terms and not all(t in blob for t in terms):
-                    continue
-                rows.append(
-                    [
-                        "griddap",
-                        f"{base}/griddap/{d.dataset_id}",
-                        f"{base}/info/{d.dataset_id}/index.json",
-                        str(d.globals_.get("title", d.dataset_id)),
-                        str(d.globals_.get("summary", "")),
-                        d.dataset_id,
-                    ],
-                )
-            if not rows:
-                raise HTTPException(
-                    404,
-                    f"Your query produced no matching results: {searchFor!r}",
-                )
-            columns = [
-                "protocol",
-                "griddap",
-                "Info",
-                "Title",
-                "Summary",
-                "Dataset ID",
-            ]
-            return _table(columns, rows, ext, "search")
-
-        # -- data --------------------------------------------------------
         @router.get("/griddap/{target}")
         def griddap(request: Request, target: str) -> Response:
             """Serve a griddap request: ``{datasetID}.{fileType}?{query}``."""
-            if "." not in target:
-                raise HTTPException(
-                    400,
-                    f"missing fileType: use {target}.<type>, one of "
-                    f"{', '.join(sorted(ALL_EXTENSIONS))}",
-                )
-            dataset_id, _, ext = target.rpartition(".")
-            if ext in PLANNED_EXTENSIONS:
-                raise HTTPException(501, PLANNED_EXTENSIONS[ext])
-            if ext not in ALL_EXTENSIONS:
-                raise HTTPException(
-                    400,
-                    f"unsupported fileType {ext!r}; "
-                    f"this server supports {', '.join(sorted(ALL_EXTENSIONS))}",
-                )
-            ed = lookup(request, dataset_id)
-            query = raw_query(request)
-
-            if ext == "das":
-                return PlainTextResponse(formats.das_response(ed, ed.ds))
-            if ext == "ncml":
-                base = erddap_root(request, plugin.app_router_prefix)
-                return Response(
-                    formats.ncml_response(ed, f"{base}/griddap/{dataset_id}"),
-                    media_type="application/xml",
-                )
-
-            try:
-                parsed = parse_griddap_query(
-                    query,
-                    ed.axes,
-                    list(ed.dims),
-                    list(ed.data_vars),
-                )
-            except ConstraintError as exc:
-                raise HTTPException(400, str(exc)) from exc
-
-            if ext != "dds":
-                check_size(ed.ds, parsed, ext, plugin.max_response_mb)
-
-            indexers = {d: sel.as_slice() for d, sel in parsed.selections.items()}
-            sub: xr.Dataset = ed.ds.isel(indexers)
-
-            if ext == "dds":
-                return PlainTextResponse(
-                    formats.dds_response(
-                        ed,
-                        sub,
-                        parsed.variables,
-                        all_axes=not query.strip(),
-                    ),
-                )
-            if ext == "nc":
-                data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
-                return Response(
-                    data,
-                    media_type="application/x-netcdf",
-                    headers={
-                        "Content-Disposition": (
-                            f'attachment; filename="{dataset_id}.nc"'
-                        ),
-                    },
-                )
-            if ext == "json":
-                return Response(
-                    formats.to_erddap_json(ed, sub, parsed.variables),
-                    media_type=ERDDAP_JSON,
-                )
-            if ext in {"csv", "csvp", "csv0"}:
-                return PlainTextResponse(
-                    formats.to_csv(ed, sub, parsed.variables, style=ext),
-                    media_type="text/csv",
-                )
-            # every ALL_EXTENSIONS member is handled above
-            raise AssertionError(ext)  # pragma: no cover
+            dataset_id, ext = split_target(target)
+            ed = lookup(catalog(request), dataset_id)
+            return griddap_response(
+                ed,
+                ext,
+                raw_query(request),
+                base(request),
+                self.max_response_mb,
+            )
 
         return router

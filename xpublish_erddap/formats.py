@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from xpublish_erddap.catalog import coverage_globals, nice_doubles
+from xpublish_erddap.catalog import ErddapDataset, coverage_globals, nice_doubles
 
 __all__ = [
     "CONTENT_TYPES",
@@ -68,7 +68,7 @@ _DAP_TYPES = {
 }
 
 
-def _dtype_of(obj) -> np.dtype:
+def dtype_of(obj) -> np.dtype:
     """Dtype of a DataArray/array *without* materializing it.
 
     Calling ``.values`` here would pull the whole variable from the backing
@@ -79,14 +79,14 @@ def _dtype_of(obj) -> np.dtype:
 
 
 def _is_time(obj) -> bool:
-    return np.issubdtype(_dtype_of(obj), np.datetime64)
+    return np.issubdtype(dtype_of(obj), np.datetime64)
 
 
 def dap_type(obj) -> str:
     """DAP2 type name (datetimes are exposed as Float64 epoch)."""
     if _is_time(obj):
         return "Float64"
-    return _DAP_TYPES.get(_dtype_of(obj), "String")
+    return _DAP_TYPES.get(dtype_of(obj), "String")
 
 
 _ERDDAP_TYPES = {
@@ -107,7 +107,7 @@ def erddap_type(obj) -> str:
     """ERDDAP ``.json``/``info`` type name of a variable."""
     if _is_time(obj):
         return "double"
-    return _ERDDAP_TYPES.get(_dtype_of(obj).name, "String")
+    return _ERDDAP_TYPES.get(dtype_of(obj).name, "String")
 
 
 def format_value(value, *, is_time: bool):
@@ -202,7 +202,7 @@ def attr_text(value, *, sep: str = ", ", das: bool = False) -> str:
     return sep.join(java_number(v, das=das) for v in arr)
 
 
-def units_of(ed, name: str) -> str:
+def units_of(ed: ErddapDataset, name: str) -> str:
     """Units string ERDDAP would show for a variable."""
     if _is_time(ed.ds[name]):
         return "UTC"
@@ -215,7 +215,7 @@ def units_of(ed, name: str) -> str:
 
 
 def dds_response(
-    ed,
+    ed: ErddapDataset,
     sub: xr.Dataset,
     variables: list[str],
     *,
@@ -264,7 +264,7 @@ def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
     return out
 
 
-def das_response(ed, sub: xr.Dataset) -> str:
+def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
     """ERDDAP-flavoured DAS."""
     lines = ["Attributes {"]
     for name in list(ed.dims) + [v for v in ed.data_vars if v in sub]:
@@ -291,7 +291,7 @@ def das_response(ed, sub: xr.Dataset) -> str:
 # --------------------------------------------------------------------------
 
 
-def _long_form(ed, sub: xr.Dataset, variables: list[str]):
+def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
     """Yield (column_names, units, types, row_iterator) in ERDDAP's long form."""
     axis_names = [d for d in ed.dims if d in sub.dims]
     value_names = [v for v in variables if v not in ed.dims]
@@ -335,7 +335,9 @@ def _long_form(ed, sub: xr.Dataset, variables: list[str]):
     return cols, units, types, rows()
 
 
-def to_csv(ed, sub: xr.Dataset, variables: list[str], style: str = "csv") -> str:
+def to_csv(
+    ed: ErddapDataset, sub: xr.Dataset, variables: list[str], style: str = "csv"
+) -> str:
     """ERDDAP ``.csv`` / ``.csvp`` / ``.csv0``.
 
     ``csv`` has a names row then a units row; ``csvp`` puts units in
@@ -362,7 +364,7 @@ def _csv_value(value) -> str:
     return str(value)
 
 
-def to_erddap_json(ed, sub: xr.Dataset, variables: list[str]) -> str:
+def to_erddap_json(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> str:
     """ERDDAP's ``.json`` table structure."""
     cols, units, types, rows = _long_form(ed, sub, variables)
     # ERDDAP's JSON gives times as ISO strings and types the column to match
@@ -378,7 +380,7 @@ def to_erddap_json(ed, sub: xr.Dataset, variables: list[str]) -> str:
     return json.dumps(payload, indent=2, default=str)
 
 
-def to_netcdf_bytes(ed, sub: xr.Dataset, variables: list[str]) -> bytes:
+def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> bytes:
     """Serialize a subset to netCDF-3, with ERDDAP's subset metadata.
 
     Like ERDDAP, the coverage globals and each axis's ``actual_range``
@@ -462,7 +464,7 @@ def _ncml_attr_lines(attrs: dict, indent: str) -> list[str]:
     return out
 
 
-def _axis_attrs(ed, name: str) -> dict:
+def _axis_attrs(ed: ErddapDataset, name: str) -> dict:
     """An axis's attributes as ERDDAP lists them (time in epoch seconds)."""
     attrs = dict(ed.variable_attrs(name))
     if _is_time(ed.ds[name]):
@@ -471,7 +473,7 @@ def _axis_attrs(ed, name: str) -> dict:
     return attrs
 
 
-def ncml_response(ed, location: str) -> str:
+def ncml_response(ed: ErddapDataset, location: str) -> str:
     """ERDDAP's ``.ncml`` metadata response.
 
     Global attributes sit directly under ``<netcdf>``, then the dimensions,
@@ -544,7 +546,7 @@ def _duration(seconds: float) -> str:
     return sign + hms
 
 
-def info_table(ed) -> tuple[list[str], list[list]]:
+def info_table(ed: ErddapDataset) -> tuple[list[str], list[list]]:
     """Rows for ``/info/{id}/index.csv``.
 
     Matches ERDDAP's five-column layout, which erddapy and rerddap both parse.
