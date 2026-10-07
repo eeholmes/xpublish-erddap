@@ -82,6 +82,19 @@ ERDDAP.
     `{erddap_id}`, because `{dataset_id}` is xpublish's own.
   - `tests/flux_host.py` stands in for Flux's routing; a store's root group
     would need `.../{ref}//erddap` there, so only groups below it are tested.
+- **Catalog caching (#3, EH's call 2026-10-07).** A cached catalog is valid
+  for one `_xpublish_id` (the tree's own, else its root's): both roots ask
+  the host for the current tree each request and rebuild when the id changes
+  (`ErddapPlugin.stamp`, `memo`). Why: it is xpublish's convention (core
+  `dataset_info`, xpublish-tiles key on it), and Flux's id carries the
+  snapshot, so commits show up with nothing Flux-specific. xpublish-opendap
+  keys on the URL's dataset id and is stale the same way we were. Fallback
+  for data changing under a fixed id: `catalog_max_age_s` (time buckets, off
+  by default). Rejected for now: a `setDatasetFlag`-style endpoint (no auth,
+  #8). One cache entry per key, replaced on change, so superseded catalogs and
+  their datasets are released. Cost: the server-wide root asks for every
+  dataset's tree each request. `deploy/server.py` pins stores at startup, so
+  the test server still needs a restart for new commits.
 - **Route handlers are module-level functions (#34).** `plugin.py`'s helpers
   (`lookup`, `table_response`, `index_response`, `search_response`,
   `split_target`, `griddap_response`, ...) take the catalog and the public

@@ -13,6 +13,7 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import time
 from collections.abc import Callable
 from urllib import parse
 
@@ -21,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
+from xpublish.utils.api import DATASET_ID_ATTR_KEY
 
 from xpublish_erddap import formats
 from xpublish_erddap.catalog import (
@@ -497,6 +499,39 @@ def name_from_path(params: dict[str, str], group: str) -> str:
     return f"{name}/{group}" if group else name
 
 
+#: cachey eviction cost for catalogs, as xpublish's own plugins use: high, so
+#: they are evicted last. It is not a lifetime.
+CACHE_COST = 99999
+
+
+def memo(cache, key: str, stamp: object, build: Callable[[], object]) -> object:
+    """``build()``, cached under ``key`` until ``stamp`` changes.
+
+    One entry per key, replaced when the stamp changes, so superseded catalogs
+    (and the datasets they hold) are not kept.
+    """
+    hit = cache.get(key) if cache is not None else None
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    value = build()
+    if cache is not None:
+        cache.put(key, (stamp, value), CACHE_COST)
+    return value
+
+
+def tree_version(tree: xr.DataTree) -> str | None:
+    """The ``_xpublish_id`` of ``tree``: its own, else its root's.
+
+    xpublish core and xpublish-tiles key their caches on it, and Earthmover
+    Flux sets it to ``{org}/{repo}/{snapshot}/{group}``, so it changes with
+    every commit. ``xpublish.Rest`` sets it to the dataset id when the
+    provider has not set it.
+    """
+    return tree.attrs.get(DATASET_ID_ATTR_KEY) or tree.root.attrs.get(
+        DATASET_ID_ATTR_KEY
+    )
+
+
 def has_server_root(deps: Dependencies) -> bool:
     """Whether a server-wide root can work: ``deps.datatree`` takes one dataset id.
 
@@ -552,6 +587,12 @@ class ErddapPlugin(Plugin):
     #: server-wide root is not affected: it names by xpublish dataset id.
     name_dataset: Callable[[dict[str, str], str], str] = name_from_path
 
+    #: Rebuild a catalog at least this often, in seconds, even if the data's
+    #: ``_xpublish_id`` has not changed. ``None`` (the default) rebuilds only
+    #: when it changes. For hosts whose data changes in place (a Zarr store
+    #: appended to under a fixed id); see ``docs/hosting.md``.
+    catalog_max_age_s: float | None = None
+
     def build(self, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
         """ERDDAP datasets for every group with variables in ``tree``."""
         entries: list[ErddapDataset] = []
@@ -564,24 +605,45 @@ class ErddapPlugin(Plugin):
             )
         return entries
 
+    def stamp(self, tree: xr.DataTree) -> tuple:
+        """What a cached catalog of ``tree`` is valid for (#3).
+
+        Its ``_xpublish_id``, and with ``catalog_max_age_s`` the current
+        period of that length, so a catalog is rebuilt when either changes.
+        """
+        period = 0
+        if self.catalog_max_age_s:
+            period = int(time.time() // self.catalog_max_age_s)
+        return (tree_version(tree), period)
+
+    def entries(self, cache, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
+        """``build(source_id, tree)``, cached while ``tree``'s stamp holds.
+
+        Shared by both roots: under ``xpublish.Rest`` a dataset has the same
+        source id in each.
+        """
+        return memo(
+            cache,
+            f"erddap_entries/{source_id}",
+            self.stamp(tree),
+            lambda: self.build(source_id, tree),
+        )
+
     def server_catalog(
         self, request: Request, deps: Dependencies
     ) -> dict[str, ErddapDataset]:
-        """Every group of every published dataset, by ERDDAP datasetID (cached)."""
+        """Every group of every published dataset, by ERDDAP datasetID (cached).
+
+        Each request asks the host for every dataset's current tree, to see
+        whether any has changed; only changed ones are rebuilt.
+        """
         cache = _resolve(request, deps.cache)
-        key = "erddap_catalog"
-        found = cache.get(key) if cache is not None else None
-        if found is not None:
-            return found
-        entries: list[ErddapDataset] = []
+        stamps, entries = [], []
         for xpublish_id in _resolve(request, deps.dataset_ids):
-            entries += self.build(
-                xpublish_id, _resolve(request, deps.datatree, xpublish_id)
-            )
-        out = unique_ids(entries)
-        if cache is not None:
-            cache.put(key, out, 99999)
-        return out
+            tree = _resolve(request, deps.datatree, xpublish_id)
+            stamps.append((xpublish_id, self.stamp(tree)))
+            entries += self.entries(cache, xpublish_id, tree)
+        return memo(cache, "erddap_catalog", tuple(stamps), lambda: unique_ids(entries))
 
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:
@@ -614,13 +676,12 @@ class ErddapPlugin(Plugin):
                 if key not in ROUTE_PARAMS
             }
             source_id = self.name_dataset(params, get_group_path(request))
-            key = f"erddap_catalog/{source_id}"
-            found = cache.get(key) if cache is not None else None
-            if found is not None:
-                return found
-            out = unique_ids(self.build(source_id, tree))
-            if cache is not None:
-                cache.put(key, out, 99999)
-            return out
+            entries = self.entries(cache, source_id, tree)
+            return memo(
+                cache,
+                f"erddap_catalog/{source_id}",
+                self.stamp(tree),
+                lambda: unique_ids(entries),
+            )
 
         return add_erddap_routes(router, catalog, self.max_response_mb)

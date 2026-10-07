@@ -117,17 +117,47 @@ server does this behind Caddy, and `deploy/check_clients.py` checks that every
 returned URL starts with the public base URL; it is a quick check to run
 against a deployment.
 
-### 5. Caching
+### 5. When a catalog is rebuilt (caching)
 
-**Our choice:** each root caches its catalog in `deps.cache` under
-`erddap_catalog/{name}` (per-dataset) or `erddap_catalog` (server-wide), with
-xpublish's usual cost of 99999, and **never invalidates it** (issue
-[#3](https://github.com/eeholmes/xpublish-erddap/issues/3)). A new commit on a
-branch is not seen until the cache entry is evicted or the process restarts.
-Building a catalog reads metadata only (coordinates, attributes), not data.
+A catalog is what the plugin builds from a dataset's metadata (axes, attributes,
+the split into ERDDAP datasets) and serves every request from. It holds the
+dataset as it was when built, so a stale catalog serves a stale time axis:
+clients see old data, not an error. Building one reads metadata only, no data.
 
-**If yours differs:** a host that pins sessions to a snapshot per request, or
-evicts per store, can drop the key; a fix belongs in #3.
+**Our choice:** a cached catalog is valid for one **`_xpublish_id`**. On every
+request the plugin asks the host for the dataset's current tree (through
+`deps.datatree`, as it must anyway), reads `_xpublish_id` from it (the node's
+own, else the tree root's), and rebuilds the catalog if it differs from the one
+the catalog was built from. This follows xpublish's conventions: xpublish's own
+`dataset_info` and Earthmover's xpublish-tiles key their caches on
+`_xpublish_id`, and xpublish-tiles asks hosts to make it unique.
+
+**What this needs from the host:** a new `_xpublish_id` whenever the data
+changes. Flux, from the outside, already does this: its `_xpublish_id` is
+`{org}/{repo}/{snapshot}/{group}`, and a commit makes a new snapshot, so new
+commits appear on the next request with nothing else to set up. Plain
+`xpublish.Rest` sets `_xpublish_id` to the dataset id, which never changes.
+
+**If your data changes under a fixed id** (a Zarr store appended to in place,
+or a provider that reopens a branch but keeps its id), either put a version in
+`_xpublish_id` (e.g. `f"{store}@{snapshot_id}"`), or set a maximum age:
+
+```python
+ErddapPlugin(catalog_max_age_s=600)   # rebuild at least every 10 minutes
+```
+
+**Costs to know:**
+- The server-wide `/erddap` asks for *every* dataset's tree on each request to
+  check its id (only changed ones are rebuilt). That is cheap when the host
+  keeps stores open, and slow if it reopens a store on every call; the
+  per-dataset root asks only for its own.
+- Catalogs live in xpublish's shared `cachey` cache (`deps.cache`) under
+  `erddap_entries/...` and `erddap_catalog/...` keys, one entry per dataset,
+  replaced when its id changes, so old catalogs are not kept. Under memory
+  pressure cachey may evict one; it is then rebuilt.
+- There is no invalidation endpoint (ERDDAP's `setDatasetFlag.txt`): without
+  auth (issue [#8](https://github.com/eeholmes/xpublish-erddap/issues/8)),
+  anyone could force rebuilds.
 
 ### 6. OPeNDAP binary (`.dods`)
 
@@ -144,6 +174,7 @@ ErddapPlugin(
     max_response_mb=500,     # refuse larger data requests with ERDDAP's 413
     metadata={...},          # global attributes for every dataset (ERDDAP's addAttributes)
     strict_axes=True,        # drop datasets with non-monotonic axes, as ERDDAP does
+    catalog_max_age_s=None,  # (5) also rebuild catalogs after this many seconds
 )
 ```
 
