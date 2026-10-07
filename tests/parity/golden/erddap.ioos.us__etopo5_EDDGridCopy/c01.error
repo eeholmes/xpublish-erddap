@@ -1,0 +1,4 @@
+Error {
+    code=404;
+    message="Not Found: Resource not found: Your query produced no matching results. Check the spelling of the word(s) you searched for.";
+}

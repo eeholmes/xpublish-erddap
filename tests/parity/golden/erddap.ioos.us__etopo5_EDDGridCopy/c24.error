@@ -1,0 +1,4 @@
+Error {
+    code=400;
+    message="Bad Request: Query error: minLon=10.0 > maxLon=0.0";
+}

@@ -38,7 +38,8 @@ def test_catalog_urls_keep_the_store_prefix(store_root):
     for path in ("info/index.csv", "search/index.csv?searchFor=cefi"):
         table = httpx.get(f"{store_root}/{path}", timeout=30).text
         assert f"{store_root}/griddap/{SURFACE}" in table
-        assert f"{store_root}/info/{DEPTH}/index.json" in table
+        # ERDDAP's Info link has the table's own file type
+        assert f"{store_root}/info/{DEPTH}/index.csv" in table
     for link in (
         f"{store_root}/griddap/{SURFACE}.das",
         f"{store_root}/info/{DEPTH}/index.csv",

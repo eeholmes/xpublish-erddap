@@ -100,12 +100,15 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
             },
         )
         print(f"   {resp.status_code} {path}")
-    for path in case.catalog:
+    for i, path in enumerate(case.catalog):
         resp = client.get(f"{case.server}/{path}")
         ok = resp.status_code == HTTP_OK
+        name = f"c{i:02d}.{ext_of(path)}" if ok else f"c{i:02d}.error"
+        (out / name).write_bytes(resp.content)
         entries.append(
             {
                 "path": path,
+                "file": name,
                 "catalog": True,
                 "status": resp.status_code,
                 "content_type": resp.headers.get("content-type", ""),

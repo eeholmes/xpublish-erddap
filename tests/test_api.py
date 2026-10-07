@@ -141,9 +141,15 @@ def test_search_for_all_lists_every_dataset(client):
             resp = client.get(f"/erddap/search/{page}.csv", params={"searchFor": query})
             assert resp.status_code == 200, (page, query)
             assert "testgrid" in resp.text
-    # With other words, "all" is an ordinary word, as in ERDDAP.
-    resp = client.get("/erddap/search/index.csv?searchFor=all+testgrid")
-    assert resp.status_code == 404
+    # With other words, "all" is an ordinary word. Every dataset's search text
+    # starts with "all" in ERDDAP (EDD.searchString), so it still matches
+    # (checked on erddap.ioos.us, 2026-10-07; #27).
+    assert (
+        client.get("/erddap/search/index.csv?searchFor=all+testgrid").status_code == 200
+    )
+    assert (
+        client.get("/erddap/search/index.csv?searchFor=all+zzznope").status_code == 404
+    )
 
 
 def test_search_needs_a_query(client):

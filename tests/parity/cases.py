@@ -64,6 +64,9 @@ ERDDAPY_SEARCH = (
 )
 
 
+#: An advanced search for griddap datasets, to add one constraint to.
+ADVANCED = "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap"
+
 OCEANWATCH = "https://oceanwatch.pifsc.noaa.gov/erddap"
 IOOS = "https://erddap.ioos.us/erddap"
 
@@ -147,6 +150,47 @@ CASES = [
             ERDDAPY_SEARCH,
             ERDDAPY_SEARCH + "&searchFor=all",
             ERDDAPY_SEARCH.replace("protocol=griddap", "protocol=(ANY)"),
+            # The dataset table itself (#27): columns and this dataset's row,
+            # in csv and json, from the catalog and from search.
+            "griddap/index.csv?page=1&itemsPerPage=1000",
+            "griddap/index.json?page=1&itemsPerPage=1000",
+            "info/index.csv?page=1&itemsPerPage=1000",
+            "search/index.json?searchFor=etopo5",
+            # searchFor as ERDDAP's original engine reads it: every line of a
+            # dataset's search text starts with "all", phrases are matched
+            # whole, and a leading "-" excludes.
+            "search/index.csv?searchFor=all+etopo5",
+            "search/index.csv?searchFor=all+zzznope",
+            'search/index.csv?searchFor="global+surface+relief"',
+            'search/index.csv?searchFor="surface+global"',
+            "search/index.csv?searchFor=etopo5+-relief",
+            "search/index.csv?searchFor=etopo5+-zzznope",
+            # Advanced search's constraints (#4). Bounds: kept unless wholly
+            # outside; min > max is refused; no time axis fails a time bound.
+            *[
+                ADVANCED + constraint
+                for constraint in [
+                    "&minLon=0&maxLon=10",
+                    "&minLon=10&maxLon=0",
+                    "&minLat=95&maxLat=100",
+                    "&minTime=2000-01-01",
+                    # categories: cleaned-up values, matched ignoring case;
+                    # a value no dataset has is refused
+                    "&institution=noaa_marine_geology_and_geophysics_mgg_",
+                    "&institution=nonsense",
+                    "&variableName=ROSE",
+                    "&long_name=relief_of_the_surface_of_the_earth",
+                    "&standard_name=altitude",
+                    "&ioos_category=bathymetry",
+                    "&ioos_category=temperature",
+                    "&cdm_data_type=grid",
+                    "&keywords=topography",
+                ]
+            ],
+            ADVANCED.replace("protocol=griddap", "protocol=wcs"),
+            # no tabledap here; the real server has some, so ask for etopo5
+            ADVANCED.replace("protocol=griddap", "protocol=tabledap")
+            + "&searchFor=etopo5",
         ],
     ),
 ]

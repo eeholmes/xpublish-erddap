@@ -82,6 +82,29 @@ ERDDAP.
     `{erddap_id}`, because `{dataset_id}` is xpublish's own.
   - `tests/flux_host.py` stands in for Flux's routing; a store's root group
     would need `.../{ref}//erddap` there, so only groups below it are tested.
+- **The dataset table and searches copy ERDDAP's source (#27, #4, 2026-10-07).**
+  `search.py` ports, from github.com/ERDDAP/erddap `main`:
+  `Erddap.makePlainDatasetTable` (columns), `EDD.extendedSummary` (the
+  Summary column's variable list and where it is cut), `doAdvancedSearch`
+  (filters), `LoadDatasets.categorize*Atts` (category values), and the
+  default "original" search engine (`getSearchDatasetIDs`, `searchRank`,
+  `searchString`). Things a future session would otherwise re-derive:
+  - **Columns depend on the server's config**, so there is no single
+    "ERDDAP's columns". coastwatch.noaa.gov/polarwatch: 15; +`Email` with
+    subscriptions (oceanwatch, and ERDDAP's *default* `setup.xml`); +
+    `Accessible` with logins (erddap.ioos.us: 17). **EH chose the 15**
+    (CoastWatch is what the tutorials use; we have neither feature). Links to
+    services we do not offer are empty, as ERDDAP leaves them for datasets
+    those services cannot handle.
+  - Parity compares the header without `Accessible`/`Email` and etopo5's row
+    in the columns we fill (`parity/compare.py`, `dataset_table`).
+  - **`searchFor=all etopo5` matches** (every dataset's search text starts
+    with "all"). #19's test said 404; that was not checked against a server
+    then. erddap.ioos.us returns 200; fixed and now a parity case.
+  - Category filters match ERDDAP's cleaned values (file-name safe, lower
+    case: `noaa_marine_geology_and_geophysics_mgg_`), not the attribute as
+    written; a value no dataset has is a 404 naming the parameter.
+  - A time bound drops a dataset with no time axis (etopo5), as ERDDAP does.
 - **Catalog caching (#3, EH's call 2026-10-07).** A cached catalog is valid
   for one `_xpublish_id` (the tree's own, else its root's): both roots ask
   the host for the current tree each request and rebuild when the id changes
