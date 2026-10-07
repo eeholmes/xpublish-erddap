@@ -359,7 +359,7 @@
       "lists_dataset": true
     },
     {
-      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&ioos_category=temperature",
+      "path": "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap&ioos_category=bathymetry&minLat=95&maxLat=100",
       "file": "c33.error",
       "catalog": true,
       "status": 404,
