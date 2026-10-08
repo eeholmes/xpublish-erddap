@@ -13,7 +13,6 @@ import re
 from dataclasses import dataclass, field
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from .timeaxes import servable_axes
@@ -411,9 +410,10 @@ def coverage_globals(
         if values.size == 0:
             continue
         if np.issubdtype(values.dtype, np.datetime64):
-            stamps = pd.to_datetime([values.min(), values.max()])
-            out["time_coverage_start"] = stamps[0].strftime("%Y-%m-%dT%H:%M:%SZ")
-            out["time_coverage_end"] = stamps[1].strftime("%Y-%m-%dT%H:%M:%SZ")
+            # numpy, not pandas: pandas 2.2 stops at 2262 (nanoseconds)
+            first, last = np.datetime_as_string([values.min(), values.max()], unit="s")
+            out["time_coverage_start"] = f"{first}Z"
+            out["time_coverage_end"] = f"{last}Z"
             continue
         recognised = recognised_axis(str(dim), ds[dim])
         for axis, served in (("lat", "latitude"), ("lon", "longitude")):

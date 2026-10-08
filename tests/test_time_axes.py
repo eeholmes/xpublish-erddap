@@ -7,6 +7,7 @@ it, a timedelta axis as numbers in its units, and do not take projected
 """
 
 import io
+from datetime import timedelta
 
 import numpy as np
 import pytest
@@ -197,9 +198,9 @@ def test_no_served_time_differs_from_its_source(calendar):
             labels = [d.strftime("%Y-%m-%dT%H:%M:%S") + f".{d.microsecond:06d}" for d in values]
             assert [str(t) for t in served] == labels
             continue
-        us = np.timedelta64(1, "us")
-        elapsed = [(b - a) / us for a, b in zip(values[:-1], values[1:], strict=True)]
-        np.testing.assert_array_equal(np.diff(served) / us, elapsed)
+        us = timedelta(microseconds=1)
+        elapsed = [(b - a) // us for a, b in zip(values[:-1], values[1:], strict=True)]
+        np.testing.assert_array_equal(np.diff(served).astype("int64"), elapsed)
         anchor = values[0].change_calendar("proleptic_gregorian")
         assert str(served[0])[:19] == anchor.strftime("%Y-%m-%dT%H:%M:%S")
 
