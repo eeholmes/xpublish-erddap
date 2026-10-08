@@ -181,6 +181,35 @@ def test_bad_constraint_is_400(client):
     assert resp.status_code == 400
 
 
+def test_value_off_an_axis_is_404_like_erddap(client):
+    """Not snapped to the axis end and served with 200 (#57)."""
+    for query in ("tos[0][(45)][(-130)]", "tos[(2030-01-01)][0][0]", "lat[(95)]"):
+        resp = client.get(f"/erddap/griddap/testgrid.csv?{query}")
+        assert resp.status_code == 404, query
+        assert resp.text.startswith('Error {\n    code=404;\n    message="Not Found: Your query')
+    # an index off the axis is still a 400
+    assert client.get("/erddap/griddap/testgrid.csv?tos[99][0][0]").status_code == 400
+    # a value just past the end, inside the half-spacing margin, is served
+    assert client.get("/erddap/griddap/testgrid.csv?tos[0][(50.1)][(230)]").status_code == 200
+
+
+def test_raw_plus_in_a_time_zone(client):
+    """A raw "+" arrives as a space; it is still the zone's sign (#58)."""
+    # 2020-01-02T14:00+13:00 is 01:00Z on the 2nd; dropping the zone gives the 3rd
+    for plus in ("+", "%2B"):
+        resp = client.get(f"/erddap/griddap/testgrid.csv?time[(2020-01-02T14:00:00{plus}13:00)]")
+        assert resp.status_code == 200, resp.text
+        assert resp.text.splitlines()[2] == "2020-01-02T00:00:00Z", plus
+
+
+def test_last_plus_and_a_negative_index(client):
+    last = client.get("/erddap/griddap/testgrid.csv?time[last]").text
+    assert client.get("/erddap/griddap/testgrid.csv?time[last%2B0]").text == last
+    resp = client.get("/erddap/griddap/testgrid.csv?time[-1]")
+    assert resp.status_code == 400
+    assert 'Start=\\"-1\\" is invalid.' in resp.text
+
+
 def test_non_monotonic_axis_is_refused_like_erddap(grid_dataset):
     """ERDDAP refuses non-monotonic axes; serving them corrupts index ranges."""
     broken = grid_dataset.copy()

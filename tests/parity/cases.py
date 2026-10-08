@@ -38,6 +38,9 @@ class Case:
     #: server's catalog, so only the status and whether this dataset is
     #: listed are compared.
     catalog: list[str] = field(default_factory=list)
+    #: Whether to compare METADATA too. Off for a case that is only about
+    #: query parsing, so it does not also test unrelated metadata.
+    metadata: bool = True
 
     @property
     def slug(self) -> str:
@@ -47,7 +50,7 @@ class Case:
 
     def requests(self) -> list[str]:
         """Every request path for this case, ``{id}`` filled in."""
-        paths = list(METADATA)
+        paths = list(METADATA) if self.metadata else []
         for query in self.queries:
             paths.extend(f"griddap/{{id}}.{ext}?{query}" for ext in DATA_TYPES)
         paths.extend(self.extra)
@@ -69,6 +72,7 @@ ADVANCED = "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap"
 
 OCEANWATCH = "https://oceanwatch.pifsc.noaa.gov/erddap"
 IOOS = "https://erddap.ioos.us/erddap"
+COASTWATCH = "https://coastwatch.pfeg.noaa.gov/erddap"
 
 CASES = [
     # The dataset the CoastWatch tutorials use. Deprecated upstream, but it is
@@ -131,6 +135,20 @@ CASES = [
             "ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
             "ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
         ],
+        # A value off an axis is refused, not snapped to its end (#57). The
+        # axes' half-spacing margin lets 90.03 through and not 90.05; a
+        # bad "stop" and an axis-only request are refused the same way.
+        extra=[
+            "griddap/{id}.csv?ROSE[(20)][(-120)]",
+            "griddap/{id}.csv?ROSE[(90.05)][(0)]",
+            "griddap/{id}.csv?ROSE[(90.03)][(0)]",
+            "griddap/{id}.csv?ROSE[(0)][(360.0)]",
+            "griddap/{id}.csv?ROSE[(-90.05)][(0):(1)]",
+            "griddap/{id}.csv?ROSE[(0):(120)][(0)]",
+            "griddap/{id}.csv?latitude[(95)]",
+            # an unreadable value is a 400, not a 404
+            "griddap/{id}.csv?ROSE[(abc)][(0)]",
+        ],
         # This server has one griddap dataset, so a search that should list
         # every dataset must list this one.
         catalog=[
@@ -191,6 +209,54 @@ CASES = [
             ADVANCED.replace("protocol=griddap", "protocol=wcs"),
             # no tabledap here; the real server has some, so ask for etopo5
             ADVANCED.replace("protocol=griddap", "protocol=tabledap") + "&searchFor=etopo5",
+        ],
+    ),
+    # How ERDDAP reads time values and "last" (#58). Daily at 09:00Z, so a
+    # time zone that is dropped or misread moves the answer to another day.
+    # Axis-only requests: the data is a 5 TB grid.
+    Case(
+        COASTWATCH,
+        "jplMURSST41",
+        # Its metadata differs for a reason that is not about parsing: a Byte
+        # variable with a _FillValue (mask) becomes Float32 when xarray masks it.
+        metadata=False,
+        extra=[
+            # +08:00 is 19:00Z the day before: the 1st, not the 2nd. A raw "+"
+            # arrives as a space and must still be read as "+".
+            "griddap/{id}.csv?time[(2013-01-02T03:00:00)]",
+            "griddap/{id}.csv?time[(2013-01-02T03:00:00+08:00)]",
+            "griddap/{id}.csv?time[(2013-01-02T03:00:00%2B08:00)]",
+            "griddap/{id}.csv?time[(2013-01-02T03:00:00+08)]",
+            "griddap/{id}.csv?time[(2013-01-02T03:00:00+0800)]",
+            "griddap/{id}.csv?time[(2013-01-01T22:00:00-08:00)]",
+            # lenient dates roll over; partial dates and epoch seconds read
+            "griddap/{id}.csv?time[(2019-01-32)]",
+            "griddap/{id}.csv?time[(2019-03-00)]",
+            "griddap/{id}.csv?time[(2019-13-01)]",
+            "griddap/{id}.csv?time[(2019-02-30T25:61:00Z)]",
+            "griddap/{id}.csv?time[(2019-01-01Tgarbage)]",
+            "griddap/{id}.csv?time[(2019-1-2%2012:00)]",
+            "griddap/{id}.csv?time[(1.5e9)]",
+            "griddap/{id}.csv?time[(20190102)]",
+            # last, with + or -
+            "griddap/{id}.csv?time[last%2B0]",
+            "griddap/{id}.csv?time[last%2B-1]",
+            "griddap/{id}.csv?time[last%20-%201]",
+            "griddap/{id}.csv?time[(last%2B-86400)]",
+            "griddap/{id}.csv?time[(last%2B1)]",
+            "griddap/{id}.csv?time[last+0]",
+            "griddap/{id}.csv?time[last-1.5]",
+            "griddap/{id}.csv?time[last-x]",
+            "griddap/{id}.csv?time[(last-x)]",
+            "griddap/{id}.csv?time[last-9000]",
+            # values that cannot be read, and indices that are not indices
+            "griddap/{id}.csv?time[(notadate)]",
+            "griddap/{id}.csv?time[(1_500_000_000)]",
+            "griddap/{id}.csv?time[-1]",
+            "griddap/{id}.csv?time[0:1:-1]",
+            "griddap/{id}.csv?time[1.5]",
+            "griddap/{id}.csv?time[%2B1]",
+            "griddap/{id}.csv?time[9000]",
         ],
     ),
 ]

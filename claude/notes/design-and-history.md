@@ -31,6 +31,8 @@ ERDDAP.
       catalog.py      one Dataset -> N ERDDAP datasets; metadata inference; check_axes
       constraints.py  ERDDAP griddap query -> integer (start, stop, stride)
       formats.py      nc csv csvp csv0 json das dds ncml
+      errors.py       ERDDAP plain-text error bodies
+      search.py       dataset table, ranked searchFor, advanced-search filters
 
 - **`app_router` first (and now a `dataset_router` too, #18).** ERDDAP is organized around a catalog:
   clients point at one server root and address many flat datasetIDs. The
@@ -93,10 +95,11 @@ ERDDAP.
   `Unsupported fileType=.x` (tables, 404), `Query error: fileType=.x isn't
   supported by this dataset.` (griddap, 400), search's no-match text with
   "Try using fewer search words." when the search has a space. Kept on
-  purpose: our constraint-error wording, and 400 where ERDDAP says 404 for an
-  out-of-range **index** or 500 for an unknown variable. (An out-of-range
-  **value** is not refused at all yet: it is snapped to the axis end and
-  served with 200. That is a bug, #57, found by the #50 audit.) Parity compares the full
+  purpose: some constraint-error wording (stride, selector count), and 400
+  where ERDDAP gives 500 for an unknown variable. A **value** off an axis is a
+  404 and index and `last` errors are 400s, all with ERDDAP's text (#57, #58;
+  see below; the old note said ERDDAP gives 404 for an index, but CoastWatch
+  gives 400, 2026-10-08). Parity compares the full
   error text wherever the golden is ERDDAP's own body (all IOOS cases;
   OceanWatch's are proxy pages). Paths outside our routes (`/erddap/nope`)
   still get FastAPI's 404.
@@ -159,7 +162,7 @@ ERDDAP.
   outside parentheses, because ISO 8601 values contain colons.
 - **Never materialize data just to learn its type.** The first CEFI run
   returned a 500: `dds_response` called `.values` to get a dtype and pulled an
-  11869×815×341 array from Flux (413 Request Entity Too Large). `_dtype_of()`
+  11869×815×341 array from Flux (413 Request Entity Too Large). `formats.dtype_of`
   reads `.dtype` instead. **A local tutorial dataset would never have shown
   this**, so always test against a lazily opened remote store.
 
@@ -231,3 +234,83 @@ as its own entry point, with one module per format in a `formats/`
 subpackage. This should be done **before** adding many more formats. `.das`,
 `.dds` and `.ncml` should stay in core: they describe the dataset, and their
 formatting has to match ERDDAP exactly.
+
+## A source that fails is left out of the server-wide root (#56)
+
+`ErddapPlugin.server_catalog` catches any exception per source (network, auth,
+a deleted store, an unresolvable listed id, a cftime calendar `check_axes`
+cannot handle), logs it as a warning naming the dataset, and serves the rest,
+as ERDDAP does with datasets that fail to load. **Decision:** a source that
+fails after loading once *drops out*; it does not keep its last good entry.
+Serving a stale entry would hide that the store is unreachable, and the
+failure is not cached, so the dataset returns on the next request after it
+heals. The cost: one warning per request while it is down. The per-dataset
+root (`/datasets/{id}/erddap`) is unchanged and answers with the error for its
+own dataset only.
+
+## A value off an axis is refused, not snapped (#57)
+
+`constraints.check_in_range` is ported from ERDDAP's `EDDGrid.parseAxisBrackets`
+(`validateGreaterThanThrowOrRepair`, then `validateLessThanThrowOrRepair`) and
+`EDVGridAxis.initializeAverageSpacingAndCoarseMinMax`. A `(value)`, a
+`(last-d)` result, start or stop, on a data variable or an axis-only request,
+must lie within min − |avg spacing|/2 … max + |avg spacing|/2 (a one-value axis:
+`max(|v|/100, 0.01)`), compared at 13 digits for time, 9 for a double axis, 5
+otherwise (`Math2.lessThanAE`). Outside is a **404** (`NoMatchError`); inside but
+off the axis still snaps to the nearest element. Only `repair=false` (the REST
+path) throws; ERDDAP's HTML form and graph pages pass `repair=true` and clamp,
+which we do not serve.
+
+**Decision: the message is copied byte for byte, including a glitch.** The
+"greater than the axis maximum" text ERDDAP sends begins with its own template
+(`{0}="{1}" is greater than the axis maximum={2} (and even {3}).="Start" is
+greater than...`) because `validateLessThanThrowOrRepair` passes the template as
+an extra first argument. Both clients show the body to users and parity compares
+it, so we match the real server (checked on erddap.ioos.us and two
+coastwatch datasets, 2026-10-08, time and double axes). If ERDDAP fixes it, the
+scheduled capture job will show the drift and the `greater` branch in
+`check_in_range` should follow.
+
+Two things that look fussy but are needed (found in review, 2026-10-08):
+
+- **Values are ERDDAP's destination doubles, never `datetime64[ns]`.** Time is
+  epoch seconds as a float (axis via `datetime64[us]`). The ns form wraps
+  silently past 2262: `(2577-08-21T23:34:33)` wrapped to 1993-02-01 and was
+  served with 200, and `(3000-01-01)` was called "less than the minimum".
+  `_nearest_index` works on the same doubles.
+- **A float32 axis's margin uses `nice_doubles`** (ERDDAP's 7-digit doubles),
+  not the raw floats: erdMH1chla8day's live text is `(and even
+  -90.00000333294744)`; raw floats give `-90.00000508655744`.
+
+An unreadable value (`(abc)`, `(NaN)`, a bad date) is a **400**, `Start=NaN
+(invalid format?) isn't allowed.`, ERDDAP's wording, checked before the range.
+
+## Values and `last` are read with ERDDAP's own parsers (#58)
+
+`xpublish_erddap/javaparse.py` ports `String2.parseDouble`/`parseInt` and
+`Calendar2.parseISODateTime`/`parseN`/`isIsoDate`; `constraints._convert_last`
+ports `EDDGrid.convertLast`, and `_resolve_token` follows `parseAxisBrackets`.
+Things that look wrong but are ERDDAP's behaviour, checked on coastwatch's
+jplMURSST41 (now a parity case, daily at 09Z):
+
+- **A space in a time is a `+`.** A raw `+` in a URL is decoded to a space (we
+  and ERDDAP both decode `+` as space), and `parseISODateTime` turns spaces back
+  into `+`. So `+08:00`, `+08`, `+0800`, raw or `%2B`, all work. Do **not** fix
+  this by changing `unquote_plus`: `searchFor` relies on `+` being a space, and
+  a raw `last+0` is a 400 in ERDDAP too (`Unexpected character after "last"`).
+- **Impossible dates roll over**: `2019-01-32` is Feb 1, `2019-13-01` is
+  2020-01-01, `2019-02-30T25:61` is 2019-03-03T02:01. Fields are added to Jan 1
+  in turn. Trailing junk ends the parse (`2019-01-01Tgarbage` is midnight).
+- **Date or number?** On a time axis only text shaped like `yyyy-M...`
+  (`isIsoDate`) is a date; `2019` and `20190102` are epoch seconds.
+- **`last±n`** without parentheses is a strict integer (`last-1.5` is a 400
+  with Java's `NumberFormatException` text, copied); with them any double, so
+  `(last--86400)` is past the end (404).
+- **An index is digits only and at most n-1.** `[-1]` is a 400, not the last
+  element; `last-9000` past the start is reported as `Start="-108"`, the index
+  it converted to.
+
+`capture.py` now retries a 503 (CoastWatch under load); ERDDAP never answers a
+request with 503, so a 503 is never a real answer. The jplMURSST41 case has
+`metadata=False`: its metadata differs for an unrelated reason (the Byte `mask`
+variable with a `_FillValue` becomes Float32 when xarray masks it).

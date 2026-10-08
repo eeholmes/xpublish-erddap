@@ -1,0 +1,4 @@
+Error {
+    code=400;
+    message="Bad Request: Query error: For variable=ROSE axis#0=latitude Constraint=\"[(abc)]\": Start=NaN (invalid format?) isn't allowed.";
+}

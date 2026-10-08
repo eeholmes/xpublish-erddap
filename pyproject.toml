@@ -35,6 +35,9 @@ dependencies = { file = ["requirements.txt"] }
 [tool.setuptools_scm]
 write_to = "xpublish_erddap/_version.py"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.check-manifest]
 ignore = ["xpublish_erddap/_version.py"]
 

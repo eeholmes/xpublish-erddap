@@ -1,0 +1,194 @@
+{
+  "server": "https://coastwatch.pfeg.noaa.gov/erddap",
+  "dataset_id": "jplMURSST41",
+  "erddap_version": "ERDDAP_version=2.31",
+  "captured": "2026-10-08",
+  "requests": [
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00)]",
+      "file": "00.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08:00)]",
+      "file": "01.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00%2B08:00)]",
+      "file": "02.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08)]",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+0800)]",
+      "file": "04.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-01T22:00:00-08:00)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-01-32)]",
+      "file": "06.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-03-00)]",
+      "file": "07.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-13-01)]",
+      "file": "08.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-02-30T25:61:00Z)]",
+      "file": "09.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-01-01Tgarbage)]",
+      "file": "10.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(2019-1-2%2012:00)]",
+      "file": "11.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(1.5e9)]",
+      "file": "12.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(20190102)]",
+      "file": "13.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last%2B0]",
+      "file": "14.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last%2B-1]",
+      "file": "15.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last%20-%201]",
+      "file": "16.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(last%2B-86400)]",
+      "file": "17.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(last%2B1)]",
+      "file": "18.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last+0]",
+      "file": "19.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last-1.5]",
+      "file": "20.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last-x]",
+      "file": "21.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(last-x)]",
+      "file": "22.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last-9000]",
+      "file": "23.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(notadate)]",
+      "file": "24.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(1_500_000_000)]",
+      "file": "25.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[-1]",
+      "file": "26.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[0:1:-1]",
+      "file": "27.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[1.5]",
+      "file": "28.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[%2B1]",
+      "file": "29.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[9000]",
+      "file": "30.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    }
+  ]
+}

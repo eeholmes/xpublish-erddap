@@ -5,7 +5,9 @@ actually call, so existing client code works unchanged against an Xpublish
 server. The HTML interfaces (Data Access Form, Make-A-Graph) are out of scope.
 
 ERDDAP is catalog-oriented -- clients point at one server root holding many
-flat datasetIDs -- so this is an ``app_router``, not a ``dataset_router``.
+flat datasetIDs -- so the main router is a server-wide ``app_router``; a
+``dataset_router`` serves the same API for one dataset or group (see
+``docs/hosting.md``).
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import logging
 import time
 from collections.abc import Callable
 from urllib import parse
@@ -31,8 +34,10 @@ from xpublish_erddap.catalog import (
     tree_datasets,
     unique_ids,
 )
-from xpublish_erddap.constraints import ConstraintError, parse_griddap_query
+from xpublish_erddap.constraints import ConstraintError, NoMatchError, parse_griddap_query
 from xpublish_erddap.errors import ErddapRoute
+
+logger = logging.getLogger("uvicorn")
 
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
@@ -279,6 +284,8 @@ def griddap_response(
             list(ed.dims),
             list(ed.data_vars),
         )
+    except NoMatchError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ConstraintError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -633,9 +640,24 @@ class ErddapPlugin(Plugin):
         cache = _resolve(request, deps.cache)
         stamps, entries = [], []
         for xpublish_id in _resolve(request, deps.dataset_ids):
-            tree = _resolve(request, deps.datatree, xpublish_id)
-            stamps.append((xpublish_id, self.stamp(tree)))
-            entries += self.entries(cache, xpublish_id, tree)
+            # One source that cannot be opened or built must not take the
+            # others down (ERDDAP keeps serving the datasets that loaded). It
+            # is left out, and tried again on the next request, so it returns
+            # as soon as it heals; it does not keep a last good entry (#56).
+            try:
+                tree = _resolve(request, deps.datatree, xpublish_id)
+                stamp = self.stamp(tree)
+                built = self.entries(cache, xpublish_id, tree)
+            except Exception as exc:  # noqa: BLE001 -- includes HTTPException
+                logger.warning(
+                    "ERDDAP: leaving dataset %r out of the server-wide catalog -- %s: %s",
+                    xpublish_id,
+                    type(exc).__name__,
+                    getattr(exc, "detail", None) or exc,
+                )
+                continue
+            stamps.append((xpublish_id, stamp))
+            entries += built
         return memo(cache, "erddap_catalog", tuple(stamps), lambda: unique_ids(entries))
 
     @hookimpl

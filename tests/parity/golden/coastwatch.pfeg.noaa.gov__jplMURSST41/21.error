@@ -1,0 +1,5 @@
+Error {
+    code=400;
+    message="Bad Request: Query error: The +/- index value in Start=last-x isn't an integer.
+(Cause: java.lang.NumberFormatException: For input string: \"x\")";
+}
