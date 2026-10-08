@@ -120,31 +120,19 @@ def test_noleap_nc_round_trips_as_gregorian(client):
     assert [str(t)[:10] for t in ds.time.values] == ["1993-12-31", "1994-01-01"]
 
 
-def test_daily_360_day_keeps_every_step(client):
-    # Feb 29 and 30 are not real dates in 1993, so days move to the nearest
-    # day at the same place in the year; none is dropped, indices hold
-    r = client.get("/erddap/griddap/d360.csv?time[57:1:61]")
-    assert r.status_code == 200, r.text
-    assert r.text.splitlines()[2:] == [
-        "1993-02-28T00:00:00Z",
-        "1993-03-01T00:00:00Z",
-        "1993-03-02T00:00:00Z",
-        "1993-03-03T00:00:00Z",
-        "1993-03-04T00:00:00Z",
-    ]
-    das = client.get("/erddap/griddap/d360.das").text
-    assert "nearest day at the same place in the year" in das
+def test_daily_360_day_is_refused(client, caplog):
+    # 1993-02-29 and 02-30 are not dates: serving them would change a time
+    assert client.get("/erddap/griddap/d360.das").status_code == 404
+    assert "d360" not in client.get("/erddap/griddap/index.csv").text
+    assert build_catalog("d360", model_run("360_day", 730)) == []
+    assert "1993-02-29 is not a Gregorian date" in caplog.text
 
 
-def test_360_day_matches_xarray_convert_calendar():
-    times = xr.date_range("2001-01-01", periods=730, freq="D", calendar="360_day", use_cftime=True)
-    expected = (
-        xr.DataArray(np.arange(730), dims="time", coords={"time": times})
-        .convert_calendar("proleptic_gregorian", align_on="year")
-        .time.values.astype("datetime64[us]")
-    )
-    served, _ = cftime_to_datetime64(times.values)
-    np.testing.assert_array_equal(served, expected)
+@pytest.mark.parametrize("calendar", ["360_day", "all_leap", "366_day"])
+def test_dates_that_do_not_exist_are_refused(calendar):
+    times = xr.date_range("2001-02-27", periods=3, freq="D", calendar=calendar, use_cftime=True)
+    with pytest.raises(ValueError, match="2001-02-29 is not a Gregorian date"):
+        cftime_to_datetime64(times.values)
 
 
 def test_monthly_360_day_keeps_labels():
@@ -155,19 +143,65 @@ def test_monthly_360_day_keeps_labels():
     assert str(served[1])[:10] == "2001-02-16"
 
 
-@pytest.mark.parametrize("calendar", ["all_leap", "366_day"])
-def test_366_day_year_keeps_steps_distinct(calendar):
-    # 366 days cannot each have their own day in 365: kept to the fraction
-    times = xr.date_range("2001-01-01", periods=730, freq="D", calendar=calendar, use_cftime=True)
-    served, how = cftime_to_datetime64(times.values)
-    assert how == "each step kept at the same fraction of its year"
-    assert (np.diff(served) > np.timedelta64(0, "us")).all()
-
-
-def test_julian_keeps_labels():
+def test_julian_is_converted_by_moment():
+    # the same day, written on the Gregorian calendar (12 days later in 1900)
     times = xr.date_range("1900-01-01", periods=3, freq="D", calendar="julian", use_cftime=True)
+    served, how = cftime_to_datetime64(times.values)
+    assert how == "each moment kept"
+    assert str(served[0])[:10] == "1900-01-13"
+
+
+def test_standard_calendar_crosses_1582_by_moment():
+    # the standard (mixed) calendar goes from Julian 1582-10-04 straight to
+    # Gregorian 1582-10-15, one day later; both are served as Gregorian
+    times = xr.date_range("1582-10-03", periods=3, freq="D", calendar="standard", use_cftime=True)
     served, _ = cftime_to_datetime64(times.values)
-    assert str(served[0])[:10] == "1900-01-01"
+    assert [str(t)[:10] for t in served] == ["1582-10-13", "1582-10-14", "1582-10-15"]
+
+
+MODEL_CALENDARS = ["noleap", "365_day", "360_day", "all_leap", "366_day"]
+REAL_CALENDARS = ["julian", "standard", "gregorian", "proleptic_gregorian"]
+
+
+def source_axes(calendar):
+    """Hourly, daily and monthly axes in ``calendar`` that a step could move in."""
+    for start, freq, n in (
+        ("2000-02-20T00:00:00", "7h", 200),
+        ("1999-12-25", "D", 400),
+        ("1500-01-01", "D", 40),
+        ("1990-01-16T12:00:00", "MS", 48),
+    ):
+        times = xr.date_range(start, periods=n, freq=freq, calendar=calendar, use_cftime=True)
+        if freq == "MS":
+            times = [t.replace(day=16, hour=12) for t in times]
+        yield np.array(list(times), dtype=object)
+
+
+@pytest.mark.parametrize("calendar", MODEL_CALENDARS + REAL_CALENDARS)
+def test_no_served_time_differs_from_its_source(calendar):
+    """The guarantee (EH): a format or calendar may change, a time may not.
+
+    A model calendar has only labels, so each served label must be the
+    source's, to the microsecond. A real calendar has moments: the elapsed
+    time between any two steps must be the source's, and one anchor must be
+    the known Gregorian date. Axes with a non-date are refused, not moved.
+    """
+    for values in source_axes(calendar):
+        try:
+            served, _ = cftime_to_datetime64(values)
+        except ValueError:
+            assert calendar in ("360_day", "all_leap", "366_day")
+            continue
+        assert served.dtype == np.dtype("datetime64[us]")
+        if calendar in MODEL_CALENDARS:
+            labels = [d.strftime("%Y-%m-%dT%H:%M:%S") + f".{d.microsecond:06d}" for d in values]
+            assert [str(t) for t in served] == labels
+            continue
+        us = np.timedelta64(1, "us")
+        elapsed = [(b - a) / us for a, b in zip(values[:-1], values[1:], strict=True)]
+        np.testing.assert_array_equal(np.diff(served) / us, elapsed)
+        anchor = values[0].change_calendar("proleptic_gregorian")
+        assert str(served[0])[:19] == anchor.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def test_cftime_far_outside_nanoseconds():

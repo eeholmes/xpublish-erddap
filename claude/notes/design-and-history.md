@@ -423,27 +423,37 @@ Sources: `OpendapHelper.getAtomicType`/`dasToStringBuilder`,
 must be formatted before it will serve it, so plenty of data never appears on
 a real ERDDAP as stored. We do not impose those rules; we serve what an ERDDAP
 admin would have converted the data to. Refuse only when there is no honest
-conversion (non-monotonic axes, a year before 1). Stated in the README's
+conversion (non-monotonic axes, a date with no Gregorian equivalent). Stated in the README's
 "Notes for anyone extending this". The audit's issue had assumed refusing
 cftime was the cheap option; EH chose serving.
+
+**A format or calendar may change, a time may not (EH, 2026-10-08).** The
+first version of #60 moved days to make daily `360_day` and `all_leap` fit
+(xarray's `align_on="year"`, then a year fraction) and kept Julian labels;
+EH rejected both because they change times. `test_no_served_time_differs_from_its_source`
+enforces the rule for 9 calendars; it was checked to fail when Julian keeps
+labels or when any time moves by one second.
 
 **cftime axes** (`xpublish_erddap/timeaxes.py`). ERDDAP never reads
 `calendar`: `EDVTimeStampGridAxis` converts with
 `Calendar2.getTimeBaseAndFactor`, so a noleap axis on a real ERDDAP drifts
 (`days since 1993-01-01`: 7 days early by 2024, 360_day 162 days early) and
 the untouched `calendar` attribute makes xarray clients shift it again. No
-public ERDDAP of ~25 searched has a noleap/360_day dataset. So we do not copy
-it. Rules, in order: keep every **date label** when all are real dates
-(noleap, julian, monthly 360_day); otherwise move each day to the **nearest
-day at the same place in the year**, which is exactly xarray's
-`convert_calendar(align_on="year")` (tested equal) and keeps every step, so
-indices do not move (`align_on="date"` would drop Feb 29/30 and shift every
-later index); if that puts two steps on one day (a 366-day year), keep the
-**exact fraction of the year** to the microsecond. Julian keeps labels, not
-true instants (~13 days apart around 1900): model output tagged julian means
-the labels. The served axis is `datetime64[us]` (no 2262 limit), `calendar`
-dropped, and the source calendar and rule are appended to the axis `comment`.
-Conversion happens in `build_catalog`, on the 1-D axis only; data stays lazy.
+public ERDDAP of ~25 searched has a noleap/360_day dataset. We do not copy
+it. **Model calendars** (`noleap`, `365_day`, `360_day`, `all_leap`,
+`366_day`) have labels, not moments, so each **label is kept**. Every noleap
+date is a Gregorian date; monthly `360_day` (day 16) is too. A label that is
+not a Gregorian date (Feb 29/30 in daily `360_day`, Feb 29 2001 in
+`all_leap`) **refuses the dataset**, logging the first such date: ERDDAP time
+is one number of Gregorian seconds, so no value means "2001-02-29".
+**Real calendars** (`julian`, `standard`/`gregorian` before 1582,
+`proleptic_gregorian` out of datetime64[ns] range) are converted **by moment**
+with cftime's `change_calendar`: Julian 1900-01-01 is served as 1900-01-13;
+the standard calendar's 1582-10-04 -> 1582-10-15 jump is one day. A year
+before 1 is refused. The served axis is `datetime64[us]` (no 2262 limit),
+`calendar` dropped, and the source calendar and rule appended to the axis
+`comment`. Conversion happens in `build_catalog`, on the 1-D axis only; data
+stays lazy.
 
 **timedelta axes** (`lead_time`, `step`): served as numbers in their source
 units (`encoding["units"]`, e.g. `hours`) and source integer type, as an admin
