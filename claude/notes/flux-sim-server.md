@@ -218,3 +218,12 @@ range past an axis (`pres` to 2000, max 1975) is a 404 before the size check.
 Results: `check_clients.py` 0 unexpected failures, `check_rerddap.R` all ok,
 kit 10/10 Python, 7/7 R, both kit examples run (`example_python.py` needs
 matplotlib, which `~/venvs/xpe` lacks; run it with the hub's python3).
+
+## Redeploy on 2026-10-08 (`bbe53e0`, after #78 and #64)
+
+Same SSM steps. The server now serves integer variables in their own type
+(a masked Byte stays Byte, fill cells NaN/null; #78), unsigned and 64-bit
+types without 500s in `.nc`, and packed variables with their unpacked
+`_FillValue`/`valid_*` (#64). No script changes were needed. Results: 22
+datasets listed, `check_clients.py` 0 unexpected failures, `check_rerddap.R`
+all ok, collaborator kit 10/10 Python, 7/7 R.
