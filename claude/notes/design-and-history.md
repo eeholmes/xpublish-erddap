@@ -275,5 +275,32 @@ Two things that look fussy but are needed (found in review, 2026-10-08):
 An unreadable value (`(abc)`, `(NaN)`, a bad date) is a **400**, `Start=NaN
 (invalid format?) isn't allowed.`, ERDDAP's wording, checked before the range.
 
-Not covered: `(last+d)` and exponents in `last-d` (`last-1e11`) do not parse;
-that is #58's `last` parsing.
+## Values and `last` are read with ERDDAP's own parsers (#58)
+
+`xpublish_erddap/javaparse.py` ports `String2.parseDouble`/`parseInt` and
+`Calendar2.parseISODateTime`/`parseN`/`isIsoDate`; `constraints._convert_last`
+ports `EDDGrid.convertLast`, and `_resolve_token` follows `parseAxisBrackets`.
+Things that look wrong but are ERDDAP's behaviour, checked on coastwatch's
+jplMURSST41 (now a parity case, daily at 09Z):
+
+- **A space in a time is a `+`.** A raw `+` in a URL is decoded to a space (we
+  and ERDDAP both decode `+` as space), and `parseISODateTime` turns spaces back
+  into `+`. So `+08:00`, `+08`, `+0800`, raw or `%2B`, all work. Do **not** fix
+  this by changing `unquote_plus`: `searchFor` relies on `+` being a space, and
+  a raw `last+0` is a 400 in ERDDAP too (`Unexpected character after "last"`).
+- **Impossible dates roll over**: `2019-01-32` is Feb 1, `2019-13-01` is
+  2020-01-01, `2019-02-30T25:61` is 2019-03-03T02:01. Fields are added to Jan 1
+  in turn. Trailing junk ends the parse (`2019-01-01Tgarbage` is midnight).
+- **Date or number?** On a time axis only text shaped like `yyyy-M...`
+  (`isIsoDate`) is a date; `2019` and `20190102` are epoch seconds.
+- **`last±n`** without parentheses is a strict integer (`last-1.5` is a 400
+  with Java's `NumberFormatException` text, copied); with them any double, so
+  `(last--86400)` is past the end (404).
+- **An index is digits only and at most n-1.** `[-1]` is a 400, not the last
+  element; `last-9000` past the start is reported as `Start="-108"`, the index
+  it converted to.
+
+`capture.py` now retries a 503 (CoastWatch under load); ERDDAP never answers a
+request with 503, so a 503 is never a real answer. The jplMURSST41 case has
+`metadata=False`: its metadata differs for an unrelated reason (the Byte `mask`
+variable with a `_FillValue` becomes Float32 when xarray masks it).

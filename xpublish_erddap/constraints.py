@@ -8,7 +8,8 @@ ERDDAP's griddap query grammar, as used by erddapy and rerddap::
     var1[]
 
 Values in parentheses are *coordinate values* (nearest match); bare values are
-*integer indices*. ``last``/``last-N`` work in both forms. This module resolves
+*integer indices*. ``last``/``last-N``/``last+N`` work in both forms. Values
+are read with ERDDAP's own lenient parsers (``javaparse``). This module resolves
 everything down to integer ``(start, stop, stride)`` triples with an inclusive
 ``stop``, which is how ERDDAP defines them.
 """
@@ -20,8 +21,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
-import pandas as pd
 
+from xpublish_erddap import javaparse
 from xpublish_erddap.catalog import nice_doubles
 from xpublish_erddap.formats import java_number
 
@@ -131,24 +132,58 @@ def _axis_is_time(values: np.ndarray) -> bool:
 def _destination_double(text: str, values: np.ndarray) -> float:
     """A ``(value)`` as ERDDAP's destination double; NaN if it cannot be read.
 
-    ``EDV.destinationToDouble``: a time axis takes ISO 8601 or epoch seconds
-    and works in epoch seconds. Kept a float, never ``datetime64[ns]``, which
-    wraps silently past 2262 and would let a far date land inside the axis.
+    ``EDVTimeStampGridAxis.destinationToDouble``: on a time axis, text shaped
+    like a date (``Calendar2.isIsoDate``) is read leniently as one, in epoch
+    seconds; anything else, on any axis, is ``String2.parseDouble``. Kept a
+    float, never ``datetime64[ns]``, which wraps silently past 2262.
     """
-    text = text.strip()
-    try:
-        return float(text)
-    except ValueError:
-        if not _axis_is_time(values):
+    if _axis_is_time(values) and javaparse.is_iso_date(text):
+        try:
+            return javaparse.iso_to_epoch_seconds(text)
+        except ValueError:
             return float("nan")
-    try:
-        ts = pd.Timestamp(text)
-    except (ValueError, OverflowError):
-        return float("nan")
-    if ts is pd.NaT:
-        return float("nan")
-    # A naive time is UTC, as in ERDDAP.
-    return ts.timestamp()
+    return javaparse.parse_double(text)
+
+
+def _last_value(values: np.ndarray) -> float:
+    """``EDVGridAxis.lastDestinationValue``: the last value as a double."""
+    arr = np.asarray(values)
+    if _axis_is_time(arr):
+        return float(_axis_seconds(arr[-1:])[0])
+    return float(nice_doubles(arr[-1:])[0])
+
+
+def _convert_last(token: str, values: np.ndarray, role: str) -> str:
+    """``EDDGrid.convertLast``: ``last[±n]`` to an index, ``(last[±x])`` to a ``(value)``.
+
+    ``+`` or ``-`` (with spaces around it, if wanted); ``x`` is any number in
+    value units (seconds for time), ``n`` a strict integer. The result goes
+    through the same checks as an index or value the user wrote.
+    """
+    paren = token.startswith("(")
+    text = token[1:-1].strip() if paren else token
+    text = text[len("last") :].strip()
+    if not text:
+        return f"({java_number(_last_value(values))})" if paren else str(len(values) - 1)
+    if text[0] not in "+-":
+        msg = f'Query error: Unexpected character after "last" in {role}={token}.'
+        raise ConstraintError(msg)
+    sign = -1 if text[0] == "-" else 1
+    text = text[1:].strip()
+    if paren:
+        offset = javaparse.parse_double(text)
+        if np.isnan(offset):
+            msg = f"Query error: The +/- value in {role}={token} isn't valid."
+            raise ConstraintError(msg)
+        return f"({java_number(_last_value(values) + sign * offset)})"
+    offset = javaparse.strict_int(text)
+    if offset is None:
+        msg = (
+            f"Query error: The +/- index value in {role}={token} isn't an integer.\n"
+            f'(Cause: java.lang.NumberFormatException: For input string: "{text}")'
+        )
+        raise ConstraintError(msg)
+    return str(len(values) - 1 + sign * offset)
 
 
 #: ``MustBe.THERE_IS_NO_DATA`` followed by ``EDStatic.messages.queryError``.
@@ -262,9 +297,6 @@ def _nearest_index(values: np.ndarray, target: float) -> int:
     return int(tied[np.argmax(numeric[tied])])
 
 
-_LAST_RE = re.compile(r"^last\s*(?:-\s*(\d+(?:\.\d+)?))?$")
-
-
 def _resolve_token(
     token: str,
     values: np.ndarray,
@@ -273,59 +305,37 @@ def _resolve_token(
     role: str = "Start",
     where: str = "",
 ) -> int:
-    """Resolve one endpoint token to an integer index.
+    """Resolve one start or stop to an index, as ``EDDGrid.parseAxisBrackets`` does.
 
-    A ``(value)`` outside the axis raises ``NoMatchError`` (#57); ``role``
-    and ``where`` only word that error.
+    ``last`` forms are converted first (``_convert_last``). A ``(value)`` must
+    be readable (else a 400) and inside the axis (else a 404, #57), then snaps
+    to the nearest element. An index must be digits only, at most n - 1:
+    ``-1`` is refused, not counted from the end. ``role`` and ``where`` word
+    the errors as ERDDAP does.
     """
     token = token.strip()
     n = len(values)
     if token == "":
         return default
+    head = f"Query error: {where}: " if where else "Query error: "
 
-    paren = token.startswith("(") and token.endswith(")")
-    inner = token[1:-1].strip() if paren else token
+    if token.startswith(("last", "(last")):
+        token = _convert_last(token, values, role)
 
-    m = _LAST_RE.match(inner)
-    if m:
-        offset = m.group(1)
-        if offset is None:
-            return n - 1
-        if paren:
-            # (last-d): d is in *value* space (seconds for time), as in
-            # ERDDAP's convertLast, which also writes the result as Java does.
-            arr = np.asarray(values)
-            last = _axis_seconds(arr[-1:])[0] if _axis_is_time(arr) else float(arr[-1])
-            target = float(last) - float(offset)
-            check_in_range(arr, target, java_number(target), role=role, where=where)
-            return _nearest_index(arr, target)
-        idx = n - 1 - int(float(offset))
-        if not 0 <= idx < n:
-            msg = f"index {idx} out of range for axis of length {n}"
-            raise ConstraintError(msg)
-        return idx
-
-    if paren:
+    if token.startswith("("):
+        inner = token[1:-1].strip()
         target = _destination_double(inner, values)
         if np.isnan(target):
-            # EDDGrid.parseAxisBrackets: a 400, before the range checks.
-            head = f"Query error: {where}: " if where else "Query error: "
+            # A 400, before the range checks.
             msg = f"{head}{role}=NaN (invalid format?) isn't allowed."
             raise ConstraintError(msg)
         check_in_range(values, target, inner, role=role, where=where)
         return _nearest_index(values, target)
 
-    try:
-        idx = int(inner)
-    except ValueError as exc:
-        msg = f"cannot interpret {token!r} as an index; use (value) for coordinate values"
-        raise ConstraintError(msg) from exc
-    if idx < 0:
-        idx += n
-    if not 0 <= idx < n:
-        msg = f"index {idx} out of range for axis of length {n}"
+    if not re.fullmatch(r"[0-9]+", token) or int(token) > n - 1:
+        msg = f'{head}{role}="{token}" is invalid.  It must be an integer between 0 and {n - 1}.'
         raise ConstraintError(msg)
-    return idx
+    return int(token)
 
 
 def parse_selector(
