@@ -184,6 +184,24 @@ and a dict gives your own mapping. Variable names ERDDAP cannot serve
 (`sst-anom`) are served as ERDDAP would name them (`sst_anom`). The rules are in
 [`docs/hosting.md`](docs/hosting.md#7-axis-and-variable-names).
 
+**Data is served as if ERDDAP's rules had been followed.** An ERDDAP server
+accepts a dataset only once it is formatted the way ERDDAP requires, so much
+data never appears on one as it is stored. This package does not impose those
+rules on a store. Where a store has something ERDDAP would not accept, it
+serves what an ERDDAP administrator would have converted it to. A conversion
+may change a format or a calendar, never a value: where that is impossible,
+the dataset is refused with a log line (as with non-monotonic axes, above).
+For example, a time axis in another calendar is served as ERDDAP's
+`seconds since 1970-01-01T00:00:00Z`, with the source calendar recorded in the
+axis's `comment`. A model calendar's dates are kept as they are (`noleap`
+2010-06-15 is served as 2010-06-15); a real calendar's moments are kept
+(`julian` 1900-01-01 is served as 1900-01-13, the same day); an axis with a
+date that does not exist in the Gregorian calendar (Feb 30 in daily
+`360_day`) is refused. Real ERDDAP ignores the `calendar` attribute and serves
+such dates days or months off. A forecast lead time (`lead_time`, `step`) is
+served as numbers in its source units. The reasoning is in
+[#60](https://github.com/eeholmes/xpublish-erddap/issues/60).
+
 ## Demos
 
 `demo/serve_air.py` serves xarray's tutorial dataset; `demo/serve_cefi.py`
