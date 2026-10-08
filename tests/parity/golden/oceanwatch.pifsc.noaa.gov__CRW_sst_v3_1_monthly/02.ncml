@@ -31,13 +31,13 @@
   <attribute name="grid_mapping_inverse_flattening" type="float" value="298.2572" />
   <attribute name="grid_mapping_name" value="latitude_longitude" />
   <attribute name="grid_mapping_semi_major_axis" type="float" value="6378137.0" />
-  <attribute name="history" value="Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_bounds,global,o,c,&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot; ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:17 2026: ncap2 -O -s where(lon&lt;0) lon=lon+360 ct5km_sst-mean_v3.1_202608-0-360.nc ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:15 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202608.nc ct5km_sst-mean_v3.1_202608-0-360.nc
+  <attribute name="history" value="Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_bounds,global,o,c,&quot;POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))&quot; ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:26 2026: ncap2 -O -s where(lon&lt;0) lon=lon+360 ct5km_sst-mean_v3.1_202609-0-360.nc ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:24 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202609.nc ct5km_sst-mean_v3.1_202609-0-360.nc
 This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0)." />
   <attribute name="id" value="Satellite_Global_5km_SST_Monthly_Mean_Composite" />
   <attribute name="infoUrl" value="https://coralreefwatch.noaa.gov/product/5km/index.php" />
@@ -70,17 +70,17 @@ This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satell
   <attribute name="standard_name_vocabulary" value="CF Standard Name Table v27" />
   <attribute name="summary" value="NOAA Coral Reef Watch Global 5km Satellite Sea Surface Temperature (CoralTemp Version 1.0) Monthly Mean Composite for February 2021. This is a product of NOAA Coral Reef Watch Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0." />
   <attribute name="time_coverage_duration" value="P1M" />
-  <attribute name="time_coverage_end" value="2026-08-31T12:00:00Z" />
+  <attribute name="time_coverage_end" value="2026-09-30T12:00:00Z" />
   <attribute name="time_coverage_resolution" value="P1M" />
   <attribute name="time_coverage_start" value="1985-01-31T12:00:00Z" />
   <attribute name="title" value="Sea Surface Temperature, Coral Reef Watch, CoralTemp, v3.1 - Monthly, 1985-present" />
   <attribute name="Westernmost_Easting" type="double" value="0.025" />
-  <dimension name="time" length="500" />
+  <dimension name="time" length="501" />
   <dimension name="latitude" length="3600" />
   <dimension name="longitude" length="7200" />
   <variable name="time" shape="time" type="double">
     <attribute name="_CoordinateAxisType" value="Time" />
-    <attribute name="actual_range" type="double" value="4.760208E8 1.7881776E9" />
+    <attribute name="actual_range" type="double" value="4.760208E8 1.7907696E9" />
     <attribute name="axis" value="T" />
     <attribute name="coverage_content_type" value="coordinate" />
     <attribute name="ioos_category" value="Time" />

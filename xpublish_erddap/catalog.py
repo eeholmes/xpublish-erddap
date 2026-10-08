@@ -25,6 +25,7 @@ __all__ = [
     "build_catalog",
     "check_axes",
     "sanitize_id",
+    "served_dtype",
 ]
 
 logger = logging.getLogger("uvicorn")
@@ -124,9 +125,10 @@ class ErddapDataset:
             # rerddap's info() reads actual_range off every variable
             attrs.setdefault("actual_range", self._actual_range(name))
         else:
-            attrs.update(
-                {k: v for k, v in _fill_attrs(self.ds[name]).items() if k not in attrs},
-            )
+            da = self.ds[name]
+            attrs.update({k: v for k, v in _fill_attrs(da).items() if k not in attrs})
+            if not _is_packed(da):
+                attrs.update(_typed_as_variable(attrs, served_dtype(da)))
         return {k: attrs[k] for k in sorted(attrs, key=lambda k: (k.lower(), k))}
 
     def _actual_range(self, name: str) -> np.ndarray | str:
@@ -147,6 +149,64 @@ class ErddapDataset:
         return np.array([np.nanmin(nice), np.nanmax(nice)]).astype(values.dtype)
 
 
+def _is_packed(da) -> bool:
+    """Whether xarray unpacked the variable with ``scale_factor``/``add_offset``."""
+    enc = getattr(da, "encoding", {})
+    return "scale_factor" in enc or "add_offset" in enc
+
+
+def served_dtype(da) -> np.dtype:
+    """The dtype a variable is served in, which is not always ``da.dtype``.
+
+    xarray's default decoding turns an integer variable with a ``_FillValue``
+    into floats, to hold NaN for the fill. ERDDAP serves such a variable in
+    its stored integer type (a Byte ``mask`` stays Byte), so the stored type,
+    kept in ``.encoding``, wins. Packed variables are served unpacked, as
+    floats, as ERDDAP does.
+    """
+    dtype = np.dtype(da.dtype)
+    stored = getattr(da, "encoding", {}).get("dtype")
+    if dtype.kind == "f" and stored is not None and not _is_packed(da):
+        stored = np.dtype(stored)
+        if stored.kind in "iu":
+            return stored
+    return dtype
+
+
+#: Attributes ERDDAP gives in the variable's own type (``EDV``'s constructor
+#: converts the first four to the destination type). CF requires the same of
+#: ``flag_values``/``flag_masks``, which arrive from Zarr's JSON as plain ints.
+_TYPED_AS_VARIABLE = (
+    "_FillValue",
+    "missing_value",
+    "valid_min",
+    "valid_max",
+    "valid_range",
+    "flag_values",
+    "flag_masks",
+)
+
+
+def _typed_as_variable(attrs: dict, dtype: np.dtype) -> dict:
+    """``attrs``' fill, valid and flag values in ``dtype``, where they fit it."""
+    if dtype.kind not in "iuf":
+        return {}
+    out = {}
+    for key in _TYPED_AS_VARIABLE:
+        value = attrs.get(key)
+        if value is None or isinstance(value, str | bytes | bool | np.bool_):
+            continue
+        arr = np.asarray(value)
+        if arr.dtype.kind not in "iuf" or (key.startswith("flag_") and dtype.kind == "f"):
+            continue
+        with np.errstate(all="ignore"):
+            typed = arr.astype(dtype)
+        if not np.array_equal(typed, arr, equal_nan=dtype.kind == "f" and arr.dtype.kind == "f"):
+            continue  # it does not fit; leave it as the source gave it
+        out[key] = typed if arr.ndim else typed[()]
+    return out
+
+
 def _fill_attrs(da: xr.DataArray) -> dict:
     """``_FillValue`` / ``missing_value``, which xarray keeps in ``.encoding``.
 
@@ -158,8 +218,9 @@ def _fill_attrs(da: xr.DataArray) -> dict:
     """
     enc = da.encoding
     out = {}
-    floating = da.dtype.kind == "f"
-    packed = floating and ("scale_factor" in enc or "add_offset" in enc)
+    dtype = served_dtype(da)
+    floating = dtype.kind == "f"
+    packed = floating and _is_packed(da)
     for key in ("_FillValue", "missing_value"):
         value = enc.get(key)
         if value is None:
@@ -167,7 +228,7 @@ def _fill_attrs(da: xr.DataArray) -> dict:
         value = np.asarray(np.nan if packed else value).reshape(-1)[0]
         if not floating and np.isnan(value):
             continue  # an integer variable cannot hold a NaN fill
-        out[key] = value.astype(da.dtype)
+        out[key] = value.astype(dtype)
     return out
 
 

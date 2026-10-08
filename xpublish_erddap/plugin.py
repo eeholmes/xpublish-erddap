@@ -155,13 +155,38 @@ def raw_query(request: Request) -> str:
     return parse.unquote_plus(request.url.components[3])
 
 
+_JSON_ESCAPES = {"\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\b": ""}
+
+
 def csv_cell(value: object) -> str:
-    """One csv field, quoted the way ERDDAP quotes it."""
-    # ERDDAP writes a newline inside a value as the two characters \n
-    text = "" if value is None else str(value).replace("\n", "\\n")
-    if any(c in text for c in ',"'):
-        return '"' + text.replace('"', '""') + '"'
-    return text
+    r"""One csv field, quoted the way ERDDAP quotes it.
+
+    A port of ERDDAP's ``String2.toSVString(s, 127)``: text with a control
+    character, comma, backslash, quote, a character from 127 up, or a
+    leading or trailing space is JSON-encoded (``toJson``: ``\n``, and
+    ``\u00b0`` for a degree sign, so the file is plain ASCII), and then
+    ``\"`` becomes ``""``.
+    """
+    text = "" if value is None else str(value)
+    needs_json = any(c in ',\\"' or not 32 <= ord(c) < 127 for c in text)  # noqa: PLR2004
+    if not needs_json and not text.startswith(" ") and not text.endswith(" "):
+        return text
+    out = []
+    # Java strings are UTF-16: a character past U+FFFF is two \u escapes
+    for unit in _utf16_units(text):
+        c = chr(unit)
+        if unit < 32 or unit >= 127:  # noqa: PLR2004
+            out.append(_JSON_ESCAPES.get(c, f"\\u{unit:04x}"))
+        elif c in '\\"':
+            out.append("\\" + c)
+        else:
+            out.append(c)
+    return '"' + "".join(out).replace('\\"', '""') + '"'
+
+
+def _utf16_units(text: str) -> list[int]:
+    data = text.encode("utf-16-be", "surrogatepass")
+    return [int.from_bytes(data[i : i + 2], "big") for i in range(0, len(data), 2)]
 
 
 def table_response(columns: list[str], rows: list[list], ext: str) -> Response:
@@ -270,7 +295,12 @@ def griddap_response(
 ) -> Response:
     """Answer a griddap request for one dataset in one file type."""
     if ext == "das":
-        return PlainTextResponse(formats.das_response(ed, ed.ds))
+        # ERDDAP's DAS is ISO-8859-1 (a degree sign is one byte); Java writes
+        # a character outside it as "?"
+        return Response(
+            formats.das_response(ed, ed.ds).encode("latin-1", "replace"),
+            media_type="text/plain;charset=ISO-8859-1",
+        )
     if ext == "ncml":
         return Response(
             formats.ncml_response(ed, f"{base}/griddap/{ed.dataset_id}"),

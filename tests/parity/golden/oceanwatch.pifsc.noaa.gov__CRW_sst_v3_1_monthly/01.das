@@ -1,7 +1,7 @@
 Attributes {
   time {
     String _CoordinateAxisType "Time";
-    Float64 actual_range 4.760208e+8, 1.7881776e+9;
+    Float64 actual_range 4.760208e+8, 1.7907696e+9;
     String axis "T";
     String coverage_content_type "coordinate";
     String ioos_category "Time";
@@ -80,16 +80,16 @@ Attributes {
     Float32 grid_mapping_inverse_flattening 298.2572;
     String grid_mapping_name "latitude_longitude";
     Float32 grid_mapping_semi_major_axis 6378137.0;
-    String history "Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_bounds,global,o,c,\"POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))\" ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:19 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:17 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_sst-mean_v3.1_202608-0-360.nc ct5km_sst-mean_v3.1_202608-0-360.nc
-Tue Sep  1 07:31:15 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202608.nc ct5km_sst-mean_v3.1_202608-0-360.nc
+    String history "Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_bounds,global,o,c,\"POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))\" ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:28 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:26 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_sst-mean_v3.1_202609-0-360.nc ct5km_sst-mean_v3.1_202609-0-360.nc
+Thu Oct  1 07:33:24 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202609.nc ct5km_sst-mean_v3.1_202609-0-360.nc
 This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0).
-2026-09-16T19:48:19Z (local files)
-2026-09-16T19:48:19Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v3_1_monthly.das";
+2026-10-08T18:47:29Z (local files)
+2026-10-08T18:47:29Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v3_1_monthly.das";
     String id "Satellite_Global_5km_SST_Monthly_Mean_Composite";
     String infoUrl "https://coralreefwatch.noaa.gov/product/5km/index.php";
     String institution "NOAA/NESDIS/STAR Coral Reef Watch Program";
@@ -121,7 +121,7 @@ This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satell
     String standard_name_vocabulary "CF Standard Name Table v27";
     String summary "NOAA Coral Reef Watch Global 5km Satellite Sea Surface Temperature (CoralTemp Version 1.0) Monthly Mean Composite for February 2021. This is a product of NOAA Coral Reef Watch Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0.";
     String time_coverage_duration "P1M";
-    String time_coverage_end "2026-08-31T12:00:00Z";
+    String time_coverage_end "2026-09-30T12:00:00Z";
     String time_coverage_resolution "P1M";
     String time_coverage_start "1985-01-31T12:00:00Z";
     String title "Sea Surface Temperature, Coral Reef Watch, CoralTemp, v3.1 - Monthly, 1985-present";

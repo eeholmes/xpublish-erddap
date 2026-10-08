@@ -1,0 +1,13 @@
+Dataset {
+  Float64 time[time = 15152];
+  Float32 latitude[latitude = 3600];
+  Float32 longitude[longitude = 7200];
+  GRID {
+    ARRAY:
+      Byte bleaching_alert_area[time = 15152][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15152];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } bleaching_alert_area;
+} CRW_baa_max_7d_v1_0;

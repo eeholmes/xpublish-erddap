@@ -1,0 +1,68 @@
+{
+  "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
+  "dataset_id": "CRW_baa_max_7d_v1_0",
+  "erddap_version": "ERDDAP_version=2.22",
+  "captured": "2026-10-08",
+  "requests": [
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/CRW_baa_max_7d_v1_0/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/CRW_baa_max_7d_v1_0/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.csv?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.csvp?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.csv0?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.json?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.nc?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    }
+  ]
+}

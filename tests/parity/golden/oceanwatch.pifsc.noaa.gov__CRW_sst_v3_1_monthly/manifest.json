@@ -2,7 +2,7 @@
   "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
   "dataset_id": "CRW_sst_v3_1_monthly",
   "erddap_version": "ERDDAP_version=2.22",
-  "captured": "2026-09-16",
+  "captured": "2026-10-08",
   "requests": [
     {
       "path": "griddap/CRW_sst_v3_1_monthly.dds",

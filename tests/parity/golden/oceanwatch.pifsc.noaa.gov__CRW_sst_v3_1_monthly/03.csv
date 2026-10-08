@@ -30,7 +30,7 @@ attribute,NC_GLOBAL,grid_mapping_epsg_code,String,EPSG:4326
 attribute,NC_GLOBAL,grid_mapping_inverse_flattening,float,298.2572
 attribute,NC_GLOBAL,grid_mapping_name,String,latitude_longitude
 attribute,NC_GLOBAL,grid_mapping_semi_major_axis,float,6378137.0
-attribute,NC_GLOBAL,history,String,"Tue Sep  1 07:31:19 2026: ncatted -O -a geospatial_bounds,global,o,c,""POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))"" ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:19 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:19 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:19 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:17 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_sst-mean_v3.1_202608-0-360.nc ct5km_sst-mean_v3.1_202608-0-360.nc\nTue Sep  1 07:31:15 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202608.nc ct5km_sst-mean_v3.1_202608-0-360.nc\nThis is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0)."
+attribute,NC_GLOBAL,history,String,"Thu Oct  1 07:33:28 2026: ncatted -O -a geospatial_bounds,global,o,c,""POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))"" ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:28 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:28 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:28 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:26 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_sst-mean_v3.1_202609-0-360.nc ct5km_sst-mean_v3.1_202609-0-360.nc\nThu Oct  1 07:33:24 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202609.nc ct5km_sst-mean_v3.1_202609-0-360.nc\nThis is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0)."
 attribute,NC_GLOBAL,id,String,Satellite_Global_5km_SST_Monthly_Mean_Composite
 attribute,NC_GLOBAL,infoUrl,String,https://coralreefwatch.noaa.gov/product/5km/index.php
 attribute,NC_GLOBAL,institution,String,NOAA/NESDIS/STAR Coral Reef Watch Program
@@ -62,14 +62,14 @@ attribute,NC_GLOBAL,spatial_resolution,String,0.05 degrees
 attribute,NC_GLOBAL,standard_name_vocabulary,String,CF Standard Name Table v27
 attribute,NC_GLOBAL,summary,String,"NOAA Coral Reef Watch Global 5km Satellite Sea Surface Temperature (CoralTemp Version 1.0) Monthly Mean Composite for February 2021. This is a product of NOAA Coral Reef Watch Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0."
 attribute,NC_GLOBAL,time_coverage_duration,String,P1M
-attribute,NC_GLOBAL,time_coverage_end,String,2026-08-31T12:00:00Z
+attribute,NC_GLOBAL,time_coverage_end,String,2026-09-30T12:00:00Z
 attribute,NC_GLOBAL,time_coverage_resolution,String,P1M
 attribute,NC_GLOBAL,time_coverage_start,String,1985-01-31T12:00:00Z
 attribute,NC_GLOBAL,title,String,"Sea Surface Temperature, Coral Reef Watch, CoralTemp, v3.1 - Monthly, 1985-present"
 attribute,NC_GLOBAL,Westernmost_Easting,double,0.025
-dimension,time,,double,"nValues=500, evenlySpaced=false, averageSpacing=30 days 10h 26m 13s"
+dimension,time,,double,"nValues=501, evenlySpaced=false, averageSpacing=30 days 10h 24m 58s"
 attribute,time,_CoordinateAxisType,String,Time
-attribute,time,actual_range,double,"4.760208E8, 1.7881776E9"
+attribute,time,actual_range,double,"4.760208E8, 1.7907696E9"
 attribute,time,axis,String,T
 attribute,time,coverage_content_type,String,coordinate
 attribute,time,ioos_category,String,Time

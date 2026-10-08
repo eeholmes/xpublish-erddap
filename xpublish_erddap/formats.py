@@ -20,7 +20,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from xpublish_erddap.catalog import ErddapDataset, coverage_globals, nice_doubles
+from xpublish_erddap.catalog import (
+    ErddapDataset,
+    coverage_globals,
+    nice_doubles,
+    served_dtype,
+)
 
 __all__ = [
     "NCML_NS",
@@ -56,13 +61,16 @@ _DAP_TYPES = {
 
 
 def dtype_of(obj) -> np.dtype:
-    """Dtype of a DataArray/array *without* materializing it.
+    """Dtype a DataArray/array is served in, *without* materializing it.
 
     Calling ``.values`` here would pull the whole variable from the backing
-    store -- fatal for a lazily-opened remote dataset.
+    store -- fatal for a lazily-opened remote dataset. An integer variable
+    that xarray masked into floats is served in its integer type
+    (``served_dtype``).
     """
-    dtype = getattr(obj, "dtype", None)
-    return dtype if dtype is not None else np.asarray(obj).dtype
+    if getattr(obj, "dtype", None) is None:
+        return np.asarray(obj).dtype
+    return served_dtype(obj)
 
 
 def _is_time(obj) -> bool:
@@ -252,7 +260,12 @@ def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
 
 
 def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
-    """ERDDAP-flavoured DAS."""
+    """ERDDAP-flavoured DAS.
+
+    DAP2 defines Byte as unsigned while ERDDAP treats it as signed, so, like
+    ERDDAP (``OpendapHelper.dasToStringBuilder``), a Byte variable that has
+    no ``_Unsigned`` attribute gets one here, and only here.
+    """
     lines = ["Attributes {"]
     for name in list(ed.dims) + [v for v in ed.data_vars if v in sub]:
         attrs = dict(ed.variable_attrs(name))
@@ -261,6 +274,10 @@ def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
             attrs.setdefault("_CoordinateAxisType", "Time")
             attrs.pop("_FillValue", None)  # ERDDAP rejects NaN fill on axes
             attrs.pop("calendar", None)
+        dtype = dtype_of(ed.ds[name])
+        if dtype.itemsize == 1 and dtype.kind in "iu" and "_Unsigned" not in attrs:
+            attrs["_Unsigned"] = "true" if dtype.kind == "u" else "false"
+            attrs = {k: attrs[k] for k in sort_globals(attrs)}
         lines.append(f"  {name} {{")
         lines.extend(_das_attr_lines(attrs, "    "))
         lines.append("  }")
@@ -307,7 +324,7 @@ def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
     types = [erddap_type(sub[c]) for c in cols]
     times = [_is_time(sub[c]) for c in cols]
     axis_values = [np.asarray(sub[a].values) for a in axis_names]
-    stacked = [np.asarray(sub[v].transpose(*axis_names).values).ravel() for v in value_names]
+    stacked = [_cells(ed, v, sub[v].transpose(*axis_names)) for v in value_names]
 
     def rows():
         for i, combo in enumerate(itertools.product(*axis_values)):
@@ -315,6 +332,32 @@ def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
             yield [format_value(v, is_time=is_t) for v, is_t in zip(row, times, strict=True)]
 
     return cols, units, types, rows()
+
+
+def _cells(ed: ErddapDataset, name: str, da: xr.DataArray) -> np.ndarray:
+    """A data variable's cells, flattened, as ERDDAP writes them.
+
+    ERDDAP turns cells holding the ``_FillValue`` or ``missing_value`` into
+    missing values (``Table.convertToStandardMissingValues``): ``NaN`` in
+    csv, ``null`` in json. An integer variable keeps its integers, including
+    one that xarray masked into floats; its missing cells become ``None``.
+    """
+    values = np.asarray(da.values).ravel()
+    if values.dtype.kind not in "iuf":
+        return values
+    attrs = ed.variable_attrs(name)
+    fills = [np.asarray(attrs[k]).ravel() for k in ("_FillValue", "missing_value") if k in attrs]
+    missing = np.isin(values, np.concatenate(fills)) if fills else np.zeros(values.shape, bool)
+    if values.dtype.kind == "f":
+        missing |= np.isnan(values)
+    dtype = dtype_of(ed.ds[name])
+    if dtype.kind == "f":
+        if missing.any():
+            values = np.where(missing, np.nan, values).astype(values.dtype)
+        return values
+    cells = np.where(missing, 0, values).astype(dtype).astype(object)
+    cells[missing] = None
+    return cells
 
 
 def to_csv(
@@ -358,7 +401,8 @@ def to_erddap_json(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> 
         "table": {
             "columnNames": cols,
             "columnTypes": types,
-            "columnUnits": units,
+            # a variable with no units is null, as in ERDDAP
+            "columnUnits": [u or None for u in units],
             "rows": [[None if v == "" else v for v in row] for row in rows],
         },
     }
@@ -390,13 +434,18 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
     encoding = {}
     for name in list(out.variables):
         # fill values travel in .encoding; xarray refuses them in both places
-        attrs = {
-            k: v
-            for k, v in ed.variable_attrs(name).items()
-            if k not in ("_FillValue", "missing_value")
-        }
+        full = ed.variable_attrs(name)
+        attrs = {k: v for k, v in full.items() if k not in ("_FillValue", "missing_value")}
         if name not in ed.dims:
             out[name].attrs = attrs
+            # in the served type: an integer xarray masked into floats is
+            # written back as integers, its NaNs as the fill
+            encoding[name] = {
+                "dtype": dtype_of(ed.ds[name]),
+                "_FillValue": full.get("_FillValue"),
+            }
+            if "missing_value" in full:
+                encoding[name]["missing_value"] = full["missing_value"]
             continue
         encoding[name] = {"_FillValue": None}
         values = np.asarray(out[name].values)

@@ -213,13 +213,16 @@ CASES = [
     ),
     # How ERDDAP reads time values and "last" (#58). Daily at 09:00Z, so a
     # time zone that is dropped or misread moves the answer to another day.
-    # Axis-only requests: the data is a 5 TB grid.
+    # Mostly axis-only requests: the data is a 5 TB grid. Its mask is a Byte
+    # with a _FillValue, which xarray's default decoding turns into Float32;
+    # it must still be served as a Byte (#78).
     Case(
         COASTWATCH,
         "jplMURSST41",
-        # Its metadata differs for a reason that is not about parsing: a Byte
-        # variable with a _FillValue (mask) becomes Float32 when xarray masks it.
-        metadata=False,
+        queries=[
+            # Oahu: land (2) beside open sea (1)
+            "mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
+        ],
         extra=[
             # +08:00 is 19:00Z the day before: the 1st, not the 2nd. A raw "+"
             # arrives as a space and must still be read as "+".
@@ -257,6 +260,16 @@ CASES = [
             "griddap/{id}.csv?time[1.5]",
             "griddap/{id}.csv?time[%2B1]",
             "griddap/{id}.csv?time[9000]",
+        ],
+    ),
+    # A Byte variable whose fill value (127) is in the data: land cells.
+    # ERDDAP writes them as NaN in csv, null in json, and 127 in .nc (#78).
+    Case(
+        OCEANWATCH,
+        "CRW_baa_max_7d_v1_0",
+        queries=[
+            # Oahu's north shore: stress levels 1 and 2 beside land
+            "bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
         ],
     ),
 ]

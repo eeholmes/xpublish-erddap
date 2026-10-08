@@ -1,0 +1,112 @@
+Row Type,Variable Name,Attribute Name,Data Type,Value
+attribute,NC_GLOBAL,_NCProperties,String,"version=2,netcdf=4.8.1,hdf5=1.12.1"
+attribute,NC_GLOBAL,acknowledgement,String,NOAA Coral Reef Watch program
+attribute,NC_GLOBAL,cdm_data_type,String,Grid
+attribute,NC_GLOBAL,comment,String,This is a product of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1.
+attribute,NC_GLOBAL,contributor_name,String,NOAA Coral Reef Watch Program
+attribute,NC_GLOBAL,contributor_role,String,"Collecting source data and deriving products; performing quality control of products; disseminating, storing, and submitting data to archive"
+attribute,NC_GLOBAL,Conventions,String,"CF-1.6, ACDD-1.3, COARDS"
+attribute,NC_GLOBAL,creator_email,String,coralreefwatch@noaa.gov
+attribute,NC_GLOBAL,creator_institution,String,NOAA/NESDIS/STAR Coral Reef Watch Program
+attribute,NC_GLOBAL,creator_name,String,NOAA Coral Reef Watch Program
+attribute,NC_GLOBAL,creator_type,String,group
+attribute,NC_GLOBAL,creator_url,String,https://coralreefwatch.noaa.gov/
+attribute,NC_GLOBAL,date_created,String,2018-03-01T12:00:00Z
+attribute,NC_GLOBAL,date_issued,String,2019-08-01T14:55:48Z
+attribute,NC_GLOBAL,date_metadata_modified,String,2019-02-05T12:00:00Z
+attribute,NC_GLOBAL,date_modified,String,2018-03-01T12:00:00Z
+attribute,NC_GLOBAL,Easternmost_Easting,double,359.975
+attribute,NC_GLOBAL,geospatial_bounds,String,"""POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))"""
+attribute,NC_GLOBAL,geospatial_bounds_crs,String,EPSG:4326
+attribute,NC_GLOBAL,geospatial_lat_max,double,89.975
+attribute,NC_GLOBAL,geospatial_lat_min,double,-89.975
+attribute,NC_GLOBAL,geospatial_lat_resolution,double,0.049999999999999996
+attribute,NC_GLOBAL,geospatial_lat_units,String,degrees_north
+attribute,NC_GLOBAL,geospatial_lon_max,double,359.975
+attribute,NC_GLOBAL,geospatial_lon_min,double,0.025
+attribute,NC_GLOBAL,geospatial_lon_resolution,double,0.05000000000000001
+attribute,NC_GLOBAL,geospatial_lon_units,String,degrees_east
+attribute,NC_GLOBAL,history,String,"Fri Sep 11 06:25:12 2026: ncatted -O -a geospatial_bounds,global,o,c,""POLYGON((-90.0 360.0, 90.0 360.0, 90.0 0.0, -90.0 0.0, -90.0 360.0))"" ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:12 2026: ncatted -O -a geospatial_lon_max,global,o,f,359.975 ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:12 2026: ncatted -O -a geospatial_lon_min,global,o,f,0.025 ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:12 2026: ncatted -O -a valid_max,lon,o,f,359.975 ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:12 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:11 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_baa-max-7d_v3.1_20260910-0-360.nc ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nFri Sep 11 06:25:10 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_baa-max-7d_v3.1_20260910.nc ct5km_baa-max-7d_v3.1_20260910-0-360.nc\nThis is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0)."
+attribute,NC_GLOBAL,id,String,Satellite_Daily_Global_5km_7day_Maximum_Bleaching_Alert_Area_Composite
+attribute,NC_GLOBAL,infoUrl,String,https://coralreefwatch.noaa.gov/product/5km/index.php
+attribute,NC_GLOBAL,institution,String,NOAA/NESDIS/STAR Coral Reef Watch Program
+attribute,NC_GLOBAL,instrument,String,"ATSR-1, ATSR-2, AATSR, AVHRR, AVHRR-2, AVHRR-3, VIIRS, GOES Imager, MTSAT Imager, MTSAT 2 Imager, AHI, ABI, SEVIRI, buoy - moored buoy, buoy - drifting buoy, buoy - TAO buoy, surface seawater intake"
+attribute,NC_GLOBAL,instrument_vocabulary,String,NOAA NODC Ocean Archive System Instruments
+attribute,NC_GLOBAL,keywords,String,"5km, 7-day, alert, area, bleaching, bleaching_alert_area, composite, coral, crw, daily, data, day, Earth Science > Oceans > Ocean Temperature > Bleaching Alert Area, Earth Science > Oceans > Ocean Temperature > Sea Surface Temperature, Earth Science > Oceans > Ocean Temperature > Water Temperature, Earth Science > Spectral/Engineering > Infrared Wavelengths > Thermal Infrared, engineering, environmental, global, information, infrared, maximum, national, nesdis, noaa, ocean, oceanography, oceans, physical, physical oceanography, program, reef, satellite, sea, seawater, service, spectral, spectral/engineering, star, surface, temperature, thermal, time, watch, water, wavelengths"
+attribute,NC_GLOBAL,keywords_vocabulary,String,GCMD Science Keywords
+attribute,NC_GLOBAL,license,String,"The data produced by Coral Reef Watch are available for use without restriction, but Coral Reef Watch relies on the ethics and integrity of the user to ensure that the source of the data and products is appropriately cited and credited. When using these data and products, credit and courtesy should be given to NOAA Coral Reef Watch. Please include the appropriate DOI associated with this dataset in the citation. For more information, visit the NOAA Coral Reef Watch website: https://coralreefwatch.noaa.gov. Recommendations for citing and providing credit are provided at https://coralreefwatch.noaa.gov/satellite/docs/recommendations_crw_citation.php. Users are referred to the footer section of the Coral Reef Watch website (https://coralreefwatch.noaa.gov/index.php) for disclaimers, policies, notices pertaining to the use of the data."
+attribute,NC_GLOBAL,metadata_link,String,https://coralreefwatch.noaa.gov/product/5km/index.php
+attribute,NC_GLOBAL,naming_authority,String,gov.noaa.coralreefwatch
+attribute,NC_GLOBAL,NCO,String,"netCDF Operators version 5.0.7 (Homepage = http://nco.sf.net, Code = https://github.com/nco/nco)"
+attribute,NC_GLOBAL,Northernmost_Northing,double,89.975
+attribute,NC_GLOBAL,platform,String,"Ships, drifting buoys, moored buoys, TOGA-TAO buoy arrays, GOES-8 satellite, GOES-9 satellite, GOES-10 satellite, GOES-11 satellite, GOES-12 satellite, GOES-13 satellite, GOES-14 satellite, GOES-15 satellite, GOES-16 satellite, MTSAT-1R satellite, MTSAT-2 satellite, Himawari-8 satellite, Meteosat-8 satellite, Meteosat-9 satellite, Meteoset-10 satellite, Meteosat-11 satellite, Suomi NPP, MetOp-A satellite, MetOp-B satellite, NOAA-9 satellite, NOAA-11 satellite, NOAA-12 satellite, NOAA-14 satellite, NOAA-15 satellite, NOAA-16 satellite, NOAA-17 satellite, NOAA-18 satellite, NOAA-19 satellite."
+attribute,NC_GLOBAL,platform_vocabulary,String,NOAA NODC Ocean Archive System Platforms
+attribute,NC_GLOBAL,processing_level,String,Derived from L4 satellite sea surface temperaure analysis
+attribute,NC_GLOBAL,product_version,String,3.1
+attribute,NC_GLOBAL,program,String,NOAA Coral Reef Watch Program
+attribute,NC_GLOBAL,project,String,NOAA Coral Reef Watch Program
+attribute,NC_GLOBAL,publisher_email,String,coralreefwatch@noaa.gov
+attribute,NC_GLOBAL,publisher_institution,String,NOAA/NESDIS/STAR Coral Reef Watch Program
+attribute,NC_GLOBAL,publisher_name,String,NOAA Coral Reef Watch Program
+attribute,NC_GLOBAL,publisher_type,String,group
+attribute,NC_GLOBAL,publisher_url,String,https://coralreefwatch.noaa.gov
+attribute,NC_GLOBAL,references,String,https://coralreefwatch.noaa.gov/product/5km/index.php
+attribute,NC_GLOBAL,source,String,Coral Reef Watch Daily Global 5km Satellite Sea Surface Temperature v3.1 (CoralTemp v3.1)
+attribute,NC_GLOBAL,sourceUrl,String,(local files)
+attribute,NC_GLOBAL,Southernmost_Northing,double,-89.975
+attribute,NC_GLOBAL,spatial_resolution,String,0.05 degrees
+attribute,NC_GLOBAL,standard_name_vocabulary,String,CF Standard Name Table v27
+attribute,NC_GLOBAL,summary,String,"This is a product of NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0. Bleaching Alert Levels: 0 - No stress, 1 - Watch, 2 - Warning, 3 - Alert Level 1, 4 - Alert LEvel 2. For more information: https://coralreefwatch.noaa.gov/product/5km/index_5km_baa_max_r07d.php"
+attribute,NC_GLOBAL,time_coverage_duration,String,P7D
+attribute,NC_GLOBAL,time_coverage_end,String,2026-10-07T12:00:00Z
+attribute,NC_GLOBAL,time_coverage_resolution,String,P7D
+attribute,NC_GLOBAL,time_coverage_start,String,1985-03-31T12:00:00Z
+attribute,NC_GLOBAL,title,String,"Coral Bleaching Alert Area 7-day Maximum Composite, Coral Reef Watch - Daily, 1985-\npresent"
+attribute,NC_GLOBAL,Westernmost_Easting,double,0.025
+dimension,time,,double,"nValues=15152, evenlySpaced=false, averageSpacing=1 day 0h 1m 20s"
+attribute,time,_CoordinateAxisType,String,Time
+attribute,time,actual_range,double,"4.811184E8, 1.7913744E9"
+attribute,time,axis,String,T
+attribute,time,coverage_content_type,String,coordinate
+attribute,time,ioos_category,String,Time
+attribute,time,long_name,String,reference time of the ending day of the 7-day period
+attribute,time,standard_name,String,time
+attribute,time,time_origin,String,01-JAN-1970 00:00:00
+attribute,time,units,String,seconds since 1970-01-01T00:00:00Z
+dimension,latitude,,float,"nValues=3600, evenlySpaced=true, averageSpacing=-0.049999999999999996"
+attribute,latitude,_CoordinateAxisType,String,Lat
+attribute,latitude,actual_range,float,"-89.975, 89.975"
+attribute,latitude,axis,String,Y
+attribute,latitude,comment,String,equirectangular projection and grid centers
+attribute,latitude,coverage_content_type,String,coordinate
+attribute,latitude,ioos_category,String,Location
+attribute,latitude,long_name,String,Latitude
+attribute,latitude,standard_name,String,latitude
+attribute,latitude,units,String,degrees_north
+attribute,latitude,valid_max,float,89.975
+attribute,latitude,valid_min,float,-89.975
+dimension,longitude,,float,"nValues=7200, evenlySpaced=true, averageSpacing=0.05000000000000001"
+attribute,longitude,_CoordinateAxisType,String,Lon
+attribute,longitude,actual_range,float,"0.025, 359.975"
+attribute,longitude,axis,String,X
+attribute,longitude,comment,String,equirectangular projection and grid centers
+attribute,longitude,coverage_content_type,String,coordinate
+attribute,longitude,ioos_category,String,Location
+attribute,longitude,long_name,String,Longitude
+attribute,longitude,standard_name,String,longitude
+attribute,longitude,units,String,degrees_east
+attribute,longitude,valid_max,float,359.975
+attribute,longitude,valid_min,float,0.025
+variable,bleaching_alert_area,,byte,"time, latitude, longitude"
+attribute,bleaching_alert_area,_FillValue,byte,127
+attribute,bleaching_alert_area,colorBarMaximum,int,4
+attribute,bleaching_alert_area,colorBarMinimum,int,0
+attribute,bleaching_alert_area,comment,String,Bleaching Alert Area (BAA) values are coral bleaching heat stress levels: 0 - No Stress; 1 - Bleaching Watch; 2 - Bleaching Warning; 3 - Bleaching Alert Level 1; 4 - Bleaching Alert Level 2. Product description is provided at https://coralreefwatch.noaa.gov/product/5km/index.php.
+attribute,bleaching_alert_area,coverage_content_type,String,thematicClassification
+attribute,bleaching_alert_area,grid_mapping,String,crs
+attribute,bleaching_alert_area,ioos_category,String,Physical Oceanography
+attribute,bleaching_alert_area,long_name,String,bleaching alert area 7-day maximum composite
+attribute,bleaching_alert_area,standard_name,String,n/a
+attribute,bleaching_alert_area,units,String,stress_level
+attribute,bleaching_alert_area,valid_max,byte,4
+attribute,bleaching_alert_area,valid_min,byte,0

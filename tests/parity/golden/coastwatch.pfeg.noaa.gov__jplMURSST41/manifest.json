@@ -5,188 +5,248 @@
   "captured": "2026-10-08",
   "requests": [
     {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00)]",
-      "file": "00.csv",
+      "path": "griddap/jplMURSST41.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/jplMURSST41.das",
+      "file": "01.das",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08:00)]",
-      "file": "01.csv",
+      "path": "griddap/jplMURSST41.ncml",
+      "file": "02.ncml",
       "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
+      "content_type": "application/xml;charset=UTF-8"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00%2B08:00)]",
-      "file": "02.csv",
-      "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
-    },
-    {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08)]",
+      "path": "info/jplMURSST41/index.csv",
       "file": "03.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+0800)]",
-      "file": "04.csv",
+      "path": "info/jplMURSST41/index.json",
+      "file": "04.json",
       "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
+      "content_type": "application/json;charset=UTF-8"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2013-01-01T22:00:00-08:00)]",
+      "path": "griddap/jplMURSST41.csv?mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
       "file": "05.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-01-32)]",
-      "file": "06.csv",
+      "path": "griddap/jplMURSST41.csvp?mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
+      "file": "06.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-03-00)]",
-      "file": "07.csv",
+      "path": "griddap/jplMURSST41.csv0?mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
+      "file": "07.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-13-01)]",
-      "file": "08.csv",
+      "path": "griddap/jplMURSST41.json?mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
+      "file": "08.json",
       "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
+      "content_type": "application/json;charset=UTF-8"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-02-30T25:61:00Z)]",
-      "file": "09.csv",
+      "path": "griddap/jplMURSST41.nc?mask[(2019-01-02)][(21.6):1:(21.64)][(-158.14):1:(-158.08)]",
+      "file": "09.nc",
       "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
+      "content_type": "application/x-netcdf"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-01-01Tgarbage)]",
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00)]",
       "file": "10.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(2019-1-2%2012:00)]",
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08:00)]",
       "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(1.5e9)]",
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00%2B08:00)]",
       "file": "12.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(20190102)]",
-      "file": "13.error",
-      "status": 404,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+08)]",
+      "file": "13.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last%2B0]",
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-02T03:00:00+0800)]",
       "file": "14.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last%2B-1]",
+      "path": "griddap/jplMURSST41.csv?time[(2013-01-01T22:00:00-08:00)]",
       "file": "15.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last%20-%201]",
+      "path": "griddap/jplMURSST41.csv?time[(2019-01-32)]",
       "file": "16.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(last%2B-86400)]",
+      "path": "griddap/jplMURSST41.csv?time[(2019-03-00)]",
       "file": "17.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(last%2B1)]",
+      "path": "griddap/jplMURSST41.csv?time[(2019-13-01)]",
       "file": "18.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last+0]",
-      "file": "19.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(2019-02-30T25:61:00Z)]",
+      "file": "19.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last-1.5]",
-      "file": "20.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(2019-01-01Tgarbage)]",
+      "file": "20.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last-x]",
-      "file": "21.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(2019-1-2%2012:00)]",
+      "file": "21.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(last-x)]",
-      "file": "22.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(1.5e9)]",
+      "file": "22.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[last-9000]",
+      "path": "griddap/jplMURSST41.csv?time[(20190102)]",
       "file": "23.error",
-      "status": 400,
+      "status": 404,
       "content_type": "text/plain;charset=UTF-8"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(notadate)]",
-      "file": "24.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[last%2B0]",
+      "file": "24.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[(1_500_000_000)]",
-      "file": "25.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[last%2B-1]",
+      "file": "25.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[-1]",
-      "file": "26.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[last%20-%201]",
+      "file": "26.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[0:1:-1]",
-      "file": "27.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(last%2B-86400)]",
+      "file": "27.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[1.5]",
-      "file": "28.error",
-      "status": 400,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/jplMURSST41.csv?time[(last%2B1)]",
+      "file": "28.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[%2B1]",
+      "path": "griddap/jplMURSST41.csv?time[last+0]",
       "file": "29.error",
       "status": 400,
       "content_type": "text/plain;charset=UTF-8"
     },
     {
-      "path": "griddap/jplMURSST41.csv?time[9000]",
+      "path": "griddap/jplMURSST41.csv?time[last-1.5]",
       "file": "30.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last-x]",
+      "file": "31.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(last-x)]",
+      "file": "32.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[last-9000]",
+      "file": "33.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(notadate)]",
+      "file": "34.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[(1_500_000_000)]",
+      "file": "35.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[-1]",
+      "file": "36.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[0:1:-1]",
+      "file": "37.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[1.5]",
+      "file": "38.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[%2B1]",
+      "file": "39.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/jplMURSST41.csv?time[9000]",
+      "file": "40.error",
       "status": 400,
       "content_type": "text/plain;charset=UTF-8"
     }
