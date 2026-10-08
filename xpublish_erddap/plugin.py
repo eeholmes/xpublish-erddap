@@ -570,6 +570,14 @@ class ErddapPlugin(Plugin):
     #: Drop datasets whose axes are not strictly monotonic, as ERDDAP does.
     strict_axes: bool = True
 
+    #: Serve latitude, longitude and time axes under ERDDAP's names
+    #: (``latitude``, ``longitude``, ``time``), which clients such as plotdap
+    #: read by name. ``False`` keeps the source names; a dict maps source axis
+    #: names to served names instead of recognising them (``{"lat":
+    #: "latitude"}``). Names ERDDAP cannot serve (``sst-anom``) are made safe
+    #: either way. See ``catalog.served_names`` and ``docs/hosting.md``.
+    rename_axes: bool | dict[str, str] = True
+
     #: Refuse a data request (nc, csv, json, ...) whose values would exceed
     #: this many MB, before reading any data. ``None`` means no limit beyond
     #: the 2 GB ``.nc`` cap copied from real ERDDAP servers. Responses are
@@ -600,6 +608,7 @@ class ErddapPlugin(Plugin):
                 ds,
                 metadata=self.metadata,
                 strict_axes=self.strict_axes,
+                rename_axes=self.rename_axes,
             )
         return entries
 

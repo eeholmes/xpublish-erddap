@@ -62,10 +62,10 @@ def test_erddapy_works_against_the_store(store_root):
         {
             "time>=": "2020-01-02T00:00:00Z",
             "time<=": "2020-01-04T00:00:00Z",
-            "lat>=": 22.0,
-            "lat<=": 23.0,
-            "lon>=": 231.0,
-            "lon<=": 232.0,
+            "latitude>=": 22.0,
+            "latitude<=": 23.0,
+            "longitude>=": 231.0,
+            "longitude<=": 232.0,
         },
     )
     ds = e.to_xarray()
@@ -73,8 +73,8 @@ def test_erddapy_works_against_the_store(store_root):
     times = pd.to_datetime(ds.time.values).values
     expected = tos(
         times[:, None, None],
-        ds.lat.values[None, :, None],
-        ds.lon.values[None, None, :],
+        ds.latitude.values[None, :, None],
+        ds.longitude.values[None, None, :],
     )
     np.testing.assert_allclose(ds.tos.values, expected)
 
@@ -85,7 +85,9 @@ def test_erddapy_finds_the_split_dataset(store_root):
     e.dataset_id = DEPTH
     e.griddap_initialize()
     assert e.variables == ["thetao"]
-    assert e.dim_names == ["time", "z_l", "lat", "lon"]
-    e.constraints.update({"lat>=": 25.0, "lat<=": 25.0, "lon>=": 235.0, "lon<=": 235.0})
+    assert e.dim_names == ["time", "z_l", "latitude", "longitude"]
+    e.constraints.update(
+        {"latitude>=": 25.0, "latitude<=": 25.0, "longitude>=": 235.0, "longitude<=": 235.0},
+    )
     df = e.to_pandas()
     assert list(df["z_l (meter)"]) == [2.5, 10.0, 50.0]

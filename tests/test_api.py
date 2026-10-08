@@ -90,8 +90,8 @@ def test_coordinate_value_subsetting(client):
     assert len(df) == 2 * 3 * 2
     assert list(df.columns) == [
         "time (UTC)",
-        "lat (degrees_north)",
-        "lon (degrees_east)",
+        "latitude (degrees_north)",
+        "longitude (degrees_east)",
         "tos (degC)",
     ]
 
@@ -130,7 +130,7 @@ def test_json_response_shape(client):
         "columnUnits",
         "rows",
     }
-    assert payload["table"]["columnNames"] == ["time", "lat", "lon", "tos"]
+    assert payload["table"]["columnNames"] == ["time", "latitude", "longitude", "tos"]
 
 
 def test_search_finds_and_filters(client):
@@ -183,7 +183,7 @@ def test_bad_constraint_is_400(client):
 
 def test_value_off_an_axis_is_404_like_erddap(client):
     """Not snapped to the axis end and served with 200 (#57)."""
-    for query in ("tos[0][(45)][(-130)]", "tos[(2030-01-01)][0][0]", "lat[(95)]"):
+    for query in ("tos[0][(45)][(-130)]", "tos[(2030-01-01)][0][0]", "latitude[(95)]"):
         resp = client.get(f"/erddap/griddap/testgrid.csv?{query}")
         assert resp.status_code == 404, query
         assert resp.text.startswith('Error {\n    code=404;\n    message="Not Found: Your query')
@@ -247,7 +247,7 @@ def test_ncml_matches_what_erddapy_parses(client):
 
     dims = [d.attrib["name"] for d in root.findall(f"{{{NCML_NS}}}dimension")]
     variables = [v.attrib["name"] for v in root.findall(f"{{{NCML_NS}}}variable")]
-    assert dims == ["time", "lat", "lon"]
+    assert dims == ["time", "latitude", "longitude"]
     # erddapy derives data variables by subtracting dimension names
     assert set(variables) - set(dims) == {"tos", "sos"}
 
@@ -300,7 +300,7 @@ def test_globals_sort_ignoring_case_and_hide_xpublish_id(client):
 
 def test_axis_only_columns_sit_side_by_side(client):
     """ERDDAP pads shorter axis columns with blanks, no cartesian product."""
-    body = client.get("/erddap/griddap/testgrid.csv0?time[(last)],lat[0:1:2]").text
+    body = client.get("/erddap/griddap/testgrid.csv0?time[(last)],latitude[0:1:2]").text
     assert body == "2020-01-06T00:00:00Z,40.0\n,42.5\n,45.0\n"
 
 
@@ -341,8 +341,8 @@ def test_subset_netcdf_describes_the_subset(client):
     assert ds.attrs["geospatial_lat_min"] == 42.5
     assert ds.attrs["Northernmost_Northing"] == 45.0
     assert ds.attrs["Westernmost_Easting"] == 230.0
-    assert list(ds.lat.attrs["actual_range"]) == [42.5, 45.0]
-    assert "_FillValue" not in ds.lat.attrs
+    assert list(ds.latitude.attrs["actual_range"]) == [42.5, 45.0]
+    assert "_FillValue" not in ds.latitude.attrs
     assert ds.time.attrs["units"] == "seconds since 1970-01-01T00:00:00Z"
     assert "calendar" not in ds.time.attrs
     assert list(ds.time.attrs["actual_range"]) == [1577923200.0, 1578009600.0]
