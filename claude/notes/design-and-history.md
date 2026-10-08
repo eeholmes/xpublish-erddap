@@ -230,8 +230,7 @@ formatting has to match ERDDAP exactly.
 ## A source that fails is left out of the server-wide root (#56)
 
 `ErddapPlugin.server_catalog` catches any exception per source (network, auth,
-a deleted store, an unresolvable listed id, a cftime calendar `check_axes`
-cannot handle), logs it as a warning naming the dataset, and serves the rest,
+a deleted store, an unresolvable listed id; until #60, a cftime calendar), logs it as a warning naming the dataset, and serves the rest,
 as ERDDAP does with datasets that fail to load. **Decision:** a source that
 fails after loading once *drops out*; it does not keep its last good entry.
 Serving a stale entry would hide that the store is unreachable, and the
@@ -417,3 +416,49 @@ Sources: `OpendapHelper.getAtomicType`/`dasToStringBuilder`,
 - **Capture:** netCDF-C's DAP client fails on dhw_5km's Byte variables
   ("NetCDF: DAP failure"), so `capture.block_reader` falls back to ERDDAP's
   own `.nc` for a data block; the snapshot keeps `_Unsigned` in encoding.
+
+## Data is served as if ERDDAP's rules had been followed (#60)
+
+**Principle (EH, 2026-10-08):** ERDDAP has many rules about how a dataset
+must be formatted before it will serve it, so plenty of data never appears on
+a real ERDDAP as stored. We do not impose those rules; we serve what an ERDDAP
+admin would have converted the data to. Refuse only when there is no honest
+conversion (non-monotonic axes, a year before 1). Stated in the README's
+"Notes for anyone extending this". The audit's issue had assumed refusing
+cftime was the cheap option; EH chose serving.
+
+**cftime axes** (`xpublish_erddap/timeaxes.py`). ERDDAP never reads
+`calendar`: `EDVTimeStampGridAxis` converts with
+`Calendar2.getTimeBaseAndFactor`, so a noleap axis on a real ERDDAP drifts
+(`days since 1993-01-01`: 7 days early by 2024, 360_day 162 days early) and
+the untouched `calendar` attribute makes xarray clients shift it again. No
+public ERDDAP of ~25 searched has a noleap/360_day dataset. So we do not copy
+it. Rules, in order: keep every **date label** when all are real dates
+(noleap, julian, monthly 360_day); otherwise move each day to the **nearest
+day at the same place in the year**, which is exactly xarray's
+`convert_calendar(align_on="year")` (tested equal) and keeps every step, so
+indices do not move (`align_on="date"` would drop Feb 29/30 and shift every
+later index); if that puts two steps on one day (a 366-day year), keep the
+**exact fraction of the year** to the microsecond. Julian keeps labels, not
+true instants (~13 days apart around 1900): model output tagged julian means
+the labels. The served axis is `datetime64[us]` (no 2262 limit), `calendar`
+dropped, and the source calendar and rule are appended to the axis `comment`.
+Conversion happens in `build_catalog`, on the 1-D axis only; data stays lazy.
+
+**timedelta axes** (`lead_time`, `step`): served as numbers in their source
+units (`encoding["units"]`, e.g. `hours`) and source integer type, as an admin
+would set them up. This fixed `v[(3)]` returning lead 0 and `.nc` failing.
+
+**Projected x/y** in metres are not lat/lon: `coverage_globals` and
+`_axis_units` use `recognised_axis` (#59's ERDDAP-ported test, under which a
+bare `x`/`y` needs degree units) rather than the name list. A dimension with
+no coordinate named `y` gets units `"1"`.
+
+**Derived globals follow `EDDGrid`, not the issue.** The issue asked that a
+supplied `geospatial_lat_min` survive. ERDDAP's `EDDGrid` constructor instead
+*removes* `geospatial_lat/lon_*`, the four `*most_*` bounds and
+`time_coverage_*`, whatever their source (store or `addAttributes`), and
+derives them from the axes named `latitude`, `longitude`, `time`; a grid with
+none of those has none. We now do the same, so a polar grid has no lat bounds
+and is not found by a `minLat` search (as on ERDDAP). The case that motivated
+the issue's version, wrong bounds from metre axes, is gone with the x/y fix.

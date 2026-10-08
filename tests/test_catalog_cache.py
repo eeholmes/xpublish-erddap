@@ -141,7 +141,8 @@ def test_listed_but_unresolvable_id_is_skipped(grid_dataset, caplog):
     assert_good_served(client, caplog, "gone")
 
 
-def test_noleap_dataset_beside_a_good_one(grid_dataset, caplog):
+def test_noleap_dataset_beside_a_good_one(grid_dataset):
+    # until #60 a noleap axis raised while building the catalog; now it is served
     cf = pytest.importorskip("cftime")
     del cf
     noleap = grid_dataset[["tos"]].isel(time=slice(0, 3))
@@ -151,7 +152,10 @@ def test_noleap_dataset_beside_a_good_one(grid_dataset, caplog):
     client = flaky_client(
         {"good": version(grid_dataset, 2, "g"), "cal": xr.DataTree(noleap)},
     )
-    assert_good_served(client, caplog, "cal")
+    index = client.get("/erddap/griddap/index.csv").text
+    assert "good" in index
+    assert "cal" in index
+    assert client.get("/erddap/griddap/cal.das").status_code == 200
 
 
 def test_failed_source_returns_once_it_heals(grid_dataset):

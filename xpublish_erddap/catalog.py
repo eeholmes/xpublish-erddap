@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from .timeaxes import servable_axes
+
 __all__ = [
     "AxisProblem",
     "coverage_globals",
@@ -282,6 +284,21 @@ _AXIS_ALIASES = {
     "lon": ("lon", "longitude", "x"),
 }
 
+#: Globals ``EDDGrid`` always derives from the axes (its constructor).
+_DERIVED_GLOBALS = (
+    *(
+        f"geospatial_{axis}_{part}"
+        for axis in ("lat", "lon")
+        for part in ("min", "max", "resolution", "units")
+    ),
+    "Southernmost_Northing",
+    "Northernmost_Northing",
+    "Westernmost_Easting",
+    "Easternmost_Easting",
+    "time_coverage_start",
+    "time_coverage_end",
+)
+
 
 @dataclass(frozen=True)
 class AxisProblem:
@@ -338,11 +355,12 @@ def _axis_units(name: str, da: xr.DataArray) -> str:
     """Units ERDDAP would infer for an axis that has none declared."""
     if np.issubdtype(getattr(da, "dtype", np.dtype("O")), np.datetime64):
         return "UTC"
-    low = str(name).lower()
-    if low in _AXIS_ALIASES["lat"]:
+    recognised = recognised_axis(str(name), da)
+    if recognised == "latitude":
         return "degrees_north"
-    if low in _AXIS_ALIASES["lon"]:
+    if recognised == "longitude":
         return "degrees_east"
+    low = str(name).lower()
     if low in ("depth", "z", "lev", "level", "altitude"):
         return "m"
     return "1"
@@ -397,9 +415,9 @@ def coverage_globals(
             out["time_coverage_start"] = stamps[0].strftime("%Y-%m-%dT%H:%M:%SZ")
             out["time_coverage_end"] = stamps[1].strftime("%Y-%m-%dT%H:%M:%SZ")
             continue
-        low = str(dim).lower()
-        for axis, names in _AXIS_ALIASES.items():
-            if low not in names:
+        recognised = recognised_axis(str(dim), ds[dim])
+        for axis, served in (("lat", "latitude"), ("lon", "longitude")):
+            if recognised != served:
                 continue
             nice = nice_doubles(values)
             lo, hi = float(np.nanmin(nice)), float(np.nanmax(nice))
@@ -665,6 +683,29 @@ def served_names(
     return renames, refused
 
 
+def _dataset_globals(
+    source: dict,
+    metadata: dict | None,
+    sub: xr.Dataset,
+    sig: tuple[str, ...],
+    dataset_id: str,
+) -> dict:
+    """A hypercube's global attributes: the source's, ``metadata``, derived ones."""
+    attrs = dict(source)
+    # xpublish tags every dataset with its id; not a real attribute
+    attrs.pop("_xpublish_id", None)
+    attrs.update(metadata or {})
+    # EDDGrid removes these, even when supplied, and derives them from the
+    # latitude, longitude and time axes, if there are any
+    for key in _DERIVED_GLOBALS:
+        attrs.pop(key, None)
+    attrs.update(coverage_globals(sub, sig))
+    attrs.setdefault("title", dataset_id)
+    for key, value in _FALLBACK_GLOBALS.items():
+        attrs.setdefault(key, value)
+    return attrs
+
+
 def build_catalog(
     source_id: str,
     ds: xr.Dataset,
@@ -727,6 +768,9 @@ def build_catalog(
         sub = ds[keep]
         # keep only the coordinates that are this hypercube's axes
         sub = sub.drop_vars([c for c in sub.coords if c not in source_sig], errors="ignore")
+        sub = servable_axes(sub, source_sig, dataset_id=dataset_id)
+        if sub is None:
+            continue
 
         named = served_names(sub, source_sig, keep, dataset_id=dataset_id, rename_axes=rename_axes)
         if named is None:
@@ -742,14 +786,7 @@ def build_catalog(
         keep = [renames.get(n, n) for n in keep]
         sig = tuple(renames.get(d, d) for d in source_sig)
 
-        attrs = dict(ds.attrs)
-        # xpublish tags every dataset with its id; not a real attribute
-        attrs.pop("_xpublish_id", None)
-        attrs.update(metadata or {})
-        attrs.update(coverage_globals(sub, sig))
-        attrs.setdefault("title", attrs.get("title", dataset_id))
-        for key, value in _FALLBACK_GLOBALS.items():
-            attrs.setdefault(key, value)
+        attrs = _dataset_globals(ds.attrs, metadata, sub, sig, dataset_id)
         sub.attrs = attrs
 
         problems = check_axes(sub, sig)
