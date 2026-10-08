@@ -223,3 +223,16 @@ as its own entry point, with one module per format in a `formats/`
 subpackage. This should be done **before** adding many more formats. `.das`,
 `.dds` and `.ncml` should stay in core: they describe the dataset, and their
 formatting has to match ERDDAP exactly.
+
+## A source that fails is left out of the server-wide root (#56)
+
+`ErddapPlugin.server_catalog` catches any exception per source (network, auth,
+a deleted store, an unresolvable listed id, a cftime calendar `check_axes`
+cannot handle), logs it as a warning naming the dataset, and serves the rest,
+as ERDDAP does with datasets that fail to load. **Decision:** a source that
+fails after loading once *drops out*; it does not keep its last good entry.
+Serving a stale entry would hide that the store is unreachable, and the
+failure is not cached, so the dataset returns on the next request after it
+heals. The cost: one warning per request while it is down. The per-dataset
+root (`/datasets/{id}/erddap`) is unchanged and answers with the error for its
+own dataset only.
