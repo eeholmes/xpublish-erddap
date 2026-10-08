@@ -303,9 +303,8 @@ jplMURSST41 (now a parity case, daily at 09Z):
   it converted to.
 
 `capture.py` now retries a 503 (CoastWatch under load); ERDDAP never answers a
-request with 503, so a 503 is never a real answer. The jplMURSST41 case has
-`metadata=False`: its metadata differs for an unrelated reason (the Byte `mask`
-variable with a `_FillValue` becomes Float32 when xarray masks it).
+request with 503, so a 503 is never a real answer. The jplMURSST41 case had
+`metadata=False` until #78 fixed its Byte `mask`.
 
 ## Axes get ERDDAP's names; unsafe names are made safe (#59)
 
@@ -349,3 +348,42 @@ tests (rerddap, rerddapXtracto tutorials) with the new names, and an ad hoc
 plotdap `add_griddap` on `air` now builds a plot (the committed plotdap test
 is #67). The collaborator kit (`collaborator-test/`, local) still uses
 `lat`/`lon` and must be updated when the test server is redeployed with this.
+
+## Integer variables keep their type when xarray masks them (#78)
+
+xarray's default decoding turns an integer variable with a `_FillValue` into
+floats (NaN for the fill). ERDDAP serves it as stored, so
+`catalog.served_dtype` takes the integer type from `.encoding["dtype"]` when
+the variable is float, the stored type is integer and it is not packed.
+`formats.dtype_of` uses it, so `.dds`, `.das`, `.ncml`, `info` and the json
+column types all follow. Ported from ERDDAP's source and checked live:
+
+- **Attributes in the variable's type** (`EDV` constructor): `_FillValue`,
+  `missing_value`, `valid_min`, `valid_max`, `valid_range`. We also type
+  `flag_values`/`flag_masks` (ERDDAP passes them through, but CF requires the
+  variable's type, and from Zarr JSON they arrive as plain ints). A value
+  that does not fit the type is left alone. **Packed variables are skipped**:
+  ERDDAP unpacks their `valid_*` (`scaleAddOffset`); we do not yet (#64).
+- **Fill cells are missing** (`Table.convertToStandardMissingValues`):
+  `NaN` in csv, `null` in json, for any cell equal to `_FillValue` or
+  `missing_value`, decoded or raw. Seen on oceanwatch's CRW_baa_max_7d_v1_0
+  (Byte, fill 127 on land), now a parity case. `.nc` writes the integer type
+  with the fill, as ERDDAP does.
+- **Not copied:** ERDDAP standardises an integer column's missing value to
+  the type's maximum and then treats *every* maximum as missing (`maxIsMV`),
+  so a real 127 in a Byte with fill -128 is also `NaN`. That loses data, so
+  we only blank the fill and missing values.
+- **`_Unsigned` only in the DAS.** `OpendapHelper.dasToStringBuilder` adds
+  `_Unsigned "false"` (`"true"` for ubyte) to every Byte variable without one,
+  because DAP2 calls Byte unsigned. It is in no other response.
+
+Found on the way, fixed because the jplMURSST41 metadata cases needed them:
+
+- **The DAS is ISO-8859-1** (`text/plain;charset=ISO-8859-1`), a `°` one byte.
+- **CSV text is ERDDAP's `String2.toSVString(s, 127)`** (`plugin.csv_cell`):
+  JSON-escaped and quoted when it has a comma, quote, backslash, control
+  character, non-ASCII character or edge space (`\u00b0`, `\n`).
+- **json `columnUnits` is `null`** for a variable without units.
+- **Capture repairs text** (`capture.repair_text`): over OPeNDAP a `°` arrives
+  as U+FFFD and `history` carries ERDDAP's per-request lines; both are taken
+  from ERDDAP's UTF-8 `info` JSON before the snapshot is written.

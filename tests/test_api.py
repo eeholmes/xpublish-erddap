@@ -500,3 +500,69 @@ def test_unexpected_errors_are_erddap_500s(grid_dataset, monkeypatch):
     resp = TestClient(rest.app, raise_server_exceptions=False).get("/erddap/griddap/g.das")
     assert resp.status_code == 500
     assert message(resp) == "Internal Server Error: RuntimeError: something broke"
+
+
+@pytest.fixture(scope="module")
+def raw_byte_dataset() -> xr.Dataset:
+    """An undecoded int8 mask whose _FillValue is in the data (#78).
+
+    The attributes are plain ints, as Zarr's JSON gives them back when a
+    store is opened with ``mask_and_scale=False``.
+    """
+    return xr.Dataset(
+        {
+            "mask": (
+                ("lat", "lon"),
+                np.array([[1, 2], [-128, 4]], dtype="int8"),
+                {"_FillValue": -128, "flag_masks": [1, 2, 4], "valid_min": 1, "valid_max": 31},
+            ),
+        },
+        coords={"lat": [10.0, 11.0], "lon": [20.0, 21.0]},
+    )
+
+
+@pytest.mark.parametrize("decoded", [True, False], ids=["decoded", "raw"])
+def test_masked_integer_is_served_as_its_integer_type(raw_byte_dataset, decoded):
+    """An int8 with a _FillValue is a Byte everywhere, as ERDDAP serves it (#78).
+
+    xarray's default decoding (``decode_cf``, as ``open_zarr`` does) turns it
+    into float32 with NaN for the fill and the int8 in ``.encoding``; raw,
+    the fill is an int attribute. Either way ERDDAP's answer is the same:
+    Byte, attributes typed as the variable, and the fill cell missing (NaN
+    in csv, null in json, the fill in .nc).
+    """
+    ds = xr.decode_cf(raw_byte_dataset) if decoded else raw_byte_dataset
+    assert (ds.mask.dtype.kind == "f") == decoded
+    rest = xpublish.Rest({"m": ds}, plugins={"erddap": ErddapPlugin()})
+    client = TestClient(rest.app)
+    url = "/erddap/griddap/m"
+
+    assert "Byte mask[latitude = 2][longitude = 2];" in client.get(f"{url}.dds").text
+    das = client.get(f"{url}.das").text
+    for line in [
+        "Byte _FillValue -128;",
+        'String _Unsigned "false";',
+        "Byte flag_masks 1, 2, 4;",
+        "Byte valid_max 31;",
+        "Byte valid_min 1;",
+    ]:
+        assert line in das
+    assert (
+        '<variable name="mask" shape="latitude longitude" type="byte">'
+        in client.get(f"{url}.ncml").text
+    )
+    assert (
+        'variable,mask,,byte,"latitude, longitude"' in client.get("/erddap/info/m/index.csv").text
+    )
+
+    rows = client.get(f"{url}.csv0?mask").text.splitlines()
+    assert [r.rsplit(",", 1)[1] for r in rows] == ["1", "2", "NaN", "4"]
+    table = client.get(f"{url}.json?mask").json()["table"]
+    assert table["columnTypes"][-1] == "byte"
+    assert [r[-1] for r in table["rows"]] == [1, 2, None, 4]
+
+    body = client.get(f"{url}.nc?mask").content
+    with xr.open_dataset(io.BytesIO(body), decode_cf=False) as nc:
+        assert nc.mask.dtype == np.int8
+        assert nc.mask.attrs["_FillValue"] == -128
+        assert nc.mask.values.ravel().tolist() == [1, 2, -128, 4]

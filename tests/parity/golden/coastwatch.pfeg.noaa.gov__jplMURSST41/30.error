@@ -1,4 +1,5 @@
 Error {
     code=400;
-    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[9000]\": Start=\"9000\" is invalid.  It must be an integer between 0 and 8892.";
+    message="Bad Request: Query error: The +/- index value in Start=last-1.5 isn't an integer.
+(Cause: java.lang.NumberFormatException: For input string: \"1.5\")";
 }

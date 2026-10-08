@@ -6,6 +6,7 @@ import pytest
 
 from xpublish_erddap.catalog import nice_doubles
 from xpublish_erddap.formats import _duration, _spacing, attr_type, java_number
+from xpublish_erddap.plugin import csv_cell
 
 
 @pytest.mark.parametrize(
@@ -69,3 +70,23 @@ def test_spacing_of_uneven_times():
     # "0h 0m 0s" is inferred from "1 day 0h 6m 4s"; no real server checked
     times = pd.to_datetime(["2020-01-01", "2020-02-01", "2020-03-01"]).values
     assert _spacing(times) == (", evenlySpaced=false, averageSpacing=30 days 0h 0m 0s")
+
+
+@pytest.mark.parametrize(
+    ("value", "cell"),
+    [
+        ("plain text", "plain text"),
+        (None, ""),
+        ("a, b", '"a, b"'),
+        ('say "hi"', '"say ""hi"""'),
+        # seen on coastwatch (jplMURSST41's title and history)
+        ("Global, 0.01°, Daily", '"Global, 0.01\\u00b0, Daily"'),
+        ("line one\nline two", '"line one\\nline two"'),
+        ("back\\slash", '"back\\\\slash"'),
+        (" padded", '" padded"'),
+        ("\U0001f600", '"\\ud83d\\ude00"'),  # UTF-16 surrogates, as Java
+    ],
+)
+def test_csv_cell_quotes_like_erddap(value, cell):
+    """ERDDAP's ``String2.toSVString(s, 127)``: plain ASCII, JSON-escaped."""
+    assert csv_cell(value) == cell

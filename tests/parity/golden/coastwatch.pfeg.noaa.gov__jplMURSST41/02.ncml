@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://coastwatch.pfeg.noaa.gov/griddap/jplMURSST41">
+  <attribute name="_NCProperties" value="version=2,netcdf=4.7.4,hdf5=1.8.12" />
+  <attribute name="acknowledgement" value="Please acknowledge the use of these data with the following statement:  These data were provided by JPL under support by NASA MEaSUREs program." />
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="comment" value="MUR = &quot;Multi-scale Ultra-high Resolution&quot;" />
+  <attribute name="Conventions" value="CF-1.6, COARDS, ACDD-1.3" />
+  <attribute name="creator_email" value="ghrsst@podaac.jpl.nasa.gov" />
+  <attribute name="creator_name" value="JPL MUR SST project" />
+  <attribute name="creator_type" value="group" />
+  <attribute name="creator_url" value="https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1" />
+  <attribute name="date_created" value="2026-10-08T07:57:52Z" />
+  <attribute name="Easternmost_Easting" type="double" value="180.0" />
+  <attribute name="file_quality_level" type="int" value="3" />
+  <attribute name="gds_version_id" value="2.0" />
+  <attribute name="geospatial_lat_max" type="double" value="89.99" />
+  <attribute name="geospatial_lat_min" type="double" value="-89.99" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.01" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="180.0" />
+  <attribute name="geospatial_lon_min" type="double" value="-179.99" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.01" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="history" value="created at nominal 4-day latency; replaced nrt (1-day latency) version.
+Data is downloaded daily from https://podaac-opendap.jpl.nasa.gov/opendap/allData/ghrsst/data/GDS2/L4/GLOB/JPL/MUR/v4.1/ to NOAA NMFS SWFSC ERD by erd.data@noaa.gov .
+The data for the most recent 7 days is usually revised everyday. The data for other days is sometimes revised." />
+  <attribute name="id" value="MUR-JPL-L4-GLOB-v04.1" />
+  <attribute name="infoUrl" value="https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1" />
+  <attribute name="institution" value="NASA JPL" />
+  <attribute name="keywords" value="analysed, analysed_sst, analysis, analysis_error, area, binary, composite, daily, data, day, deviation, distribution, Earth Science &gt; Oceans &gt; Ocean Temperature &gt; Sea Surface Temperature, error, estimated, field, final, foundation, fraction, ghrsst, high, ice, ice distribution, identifier, jet, jpl, laboratory, land, land_binary_mask, mask, multi, multi-scale, mur, nasa, ocean, oceans, product, propulsion, resolution, scale, sea, sea ice area fraction, sea/land, sea_ice_fraction, sea_surface_foundation_temperature, sst, standard, statistics, surface, temperature, time, ultra, ultra-high" />
+  <attribute name="keywords_vocabulary" value="GCMD Science Keywords" />
+  <attribute name="license" value="These data are available free of charge under the JPL PO.DAAC data policy.
+
+The data may be used and redistributed for free but is not intended
+for legal use, since it may contain inaccuracies. Neither the data
+Contributor, ERD, NOAA, nor the United States Government, nor any
+of their employees or contractors, makes any warranty, express or
+implied, including warranties of merchantability and fitness for a
+particular purpose, or assumes any legal liability for the accuracy,
+completeness, or usefulness, of this information." />
+  <attribute name="naming_authority" value="org.ghrsst" />
+  <attribute name="netcdf_version_id" value="4.1" />
+  <attribute name="Northernmost_Northing" type="double" value="89.99" />
+  <attribute name="platform" value="Terra, Aqua, GCOM-W, MetOp-B, Buoys/Ships" />
+  <attribute name="processing_level" value="L4" />
+  <attribute name="product_version" value="04.1" />
+  <attribute name="project" value="NASA Making Earth Science Data Records for Use in Research Environments (MEaSUREs) Program" />
+  <attribute name="publisher_email" value="ghrsst-po@nceo.ac.uk" />
+  <attribute name="publisher_name" value="GHRSST Project Office" />
+  <attribute name="publisher_url" value="https://www.ghrsst.org" />
+  <attribute name="references" value="https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1" />
+  <attribute name="sensor" value="MODIS, AMSR2, AVHRR, in-situ" />
+  <attribute name="source" value="MODIS_T-JPL, MODIS_A-JPL, AMSR2-REMSS, AVHRRMTB_G-NAVO, iQUAM-NOAA/NESDIS, Ice_Conc-OSISAF" />
+  <attribute name="sourceUrl" value="(local files)" />
+  <attribute name="Southernmost_Northing" type="double" value="-89.99" />
+  <attribute name="spatial_resolution" value="0.01 degrees" />
+  <attribute name="standard_name_vocabulary" value="CF Standard Name Table v70" />
+  <attribute name="summary" value="This is a merged, multi-sensor L4 Foundation Sea Surface Temperature (SST) analysis product from Jet Propulsion Laboratory (JPL). This daily, global, Multi-scale, Ultra-high Resolution (MUR) Sea Surface Temperature (SST) 1-km data set, Version 4.1, is produced at JPL under the NASA MEaSUREs program. For details, see https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1 . This dataset is part of the Group for High-Resolution Sea Surface Temperature (GHRSST) project. The data for the most recent 7 days is usually revised everyday.  The data for other days is sometimes revised." />
+  <attribute name="testOutOfDate" value="now-3days" />
+  <attribute name="time_coverage_end" value="2026-10-07T09:00:00Z" />
+  <attribute name="time_coverage_start" value="2002-06-01T09:00:00Z" />
+  <attribute name="title" value="Multi-scale Ultra-high Resolution (MUR) SST Analysis fv04.1, Global, 0.01°, 2002-present, Daily" />
+  <attribute name="Westernmost_Easting" type="double" value="-179.99" />
+  <dimension name="time" length="8893" />
+  <dimension name="latitude" length="17999" />
+  <dimension name="longitude" length="36000" />
+  <variable name="time" shape="time" type="double">
+    <attribute name="_CoordinateAxisType" value="Time" />
+    <attribute name="actual_range" type="double" value="1.022922E9 1.7913636E9" />
+    <attribute name="axis" value="T" />
+    <attribute name="comment" value="Nominal time of analyzed fields" />
+    <attribute name="ioos_category" value="Time" />
+    <attribute name="long_name" value="reference time of sst field" />
+    <attribute name="standard_name" value="time" />
+    <attribute name="time_origin" value="01-JAN-1970 00:00:00" />
+    <attribute name="units" value="seconds since 1970-01-01T00:00:00Z" />
+  </variable>
+  <variable name="latitude" shape="latitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="float" value="-89.99 89.99" />
+    <attribute name="axis" value="Y" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+    <attribute name="valid_max" type="float" value="90.0" />
+    <attribute name="valid_min" type="float" value="-90.0" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="float" value="-179.99 180.0" />
+    <attribute name="axis" value="X" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+    <attribute name="valid_max" type="float" value="180.0" />
+    <attribute name="valid_min" type="float" value="-180.0" />
+  </variable>
+  <variable name="analysed_sst" shape="time latitude longitude" type="double">
+    <attribute name="_FillValue" type="double" value="-7.768000000000001" />
+    <attribute name="colorBarMaximum" type="double" value="32.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="comment" value="&quot;Final&quot; version using Multi-Resolution Variational Analysis (MRVA) method for interpolation" />
+    <attribute name="ioos_category" value="Temperature" />
+    <attribute name="long_name" value="Analysed Sea Surface Temperature" />
+    <attribute name="source" value="MODIS_T-JPL, MODIS_A-JPL, AMSR2-REMSS, AVHRRMTB_G-NAVO, iQUAM-NOAA/NESDIS, Ice_Conc-OSISAF" />
+    <attribute name="standard_name" value="sea_surface_foundation_temperature" />
+    <attribute name="units" value="degree_C" />
+    <attribute name="valid_max" type="double" value="57.767" />
+    <attribute name="valid_min" type="double" value="-7.767000000000003" />
+  </variable>
+  <variable name="analysis_error" shape="time latitude longitude" type="double">
+    <attribute name="_FillValue" type="double" value="-327.68" />
+    <attribute name="colorBarMaximum" type="double" value="5.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="ioos_category" value="Statistics" />
+    <attribute name="long_name" value="Estimated Error Standard Deviation of analysed_sst" />
+    <attribute name="units" value="degree_C" />
+    <attribute name="valid_max" type="double" value="327.67" />
+    <attribute name="valid_min" type="double" value="0.0" />
+  </variable>
+  <variable name="mask" shape="time latitude longitude" type="byte">
+    <attribute name="_FillValue" type="byte" value="-128" />
+    <attribute name="colorBarMaximum" type="double" value="20.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="comment" value="mask can be used to further filter the data." />
+    <attribute name="flag_masks" type="byte" value="1 2 4 8 16" />
+    <attribute name="flag_meanings" value="open_sea land open_lake open_sea_with_ice_in_the_grid open_lake_with_ice_in_the_grid" />
+    <attribute name="ioos_category" value="Identifier" />
+    <attribute name="long_name" value="Sea/Land Field Composite Mask" />
+    <attribute name="source" value="GMT &quot;grdlandmask&quot;, ice flag from sea_ice_fraction data" />
+    <attribute name="standard_name" value="land_binary_mask" />
+    <attribute name="valid_max" type="byte" value="31" />
+    <attribute name="valid_min" type="byte" value="1" />
+  </variable>
+  <variable name="sea_ice_fraction" shape="time latitude longitude" type="double">
+    <attribute name="_FillValue" type="double" value="-1.28" />
+    <attribute name="colorBarMaximum" type="double" value="1.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.0" />
+    <attribute name="comment" value="ice fraction is a dimensionless quantity between 0 and 1; it has been interpolated by a nearest neighbor approach; EUMETSAT OSI-SAF files used: ice_conc_nh_polstere-100_amsr3_202610021200.nc, ice_conc_sh_polstere-100_amsr3_202610021200.nc." />
+    <attribute name="ioos_category" value="Ice Distribution" />
+    <attribute name="long_name" value="Sea Ice Area Fraction" />
+    <attribute name="source" value="EUMETSAT OSI-SAF, copyright EUMETSAT" />
+    <attribute name="standard_name" value="sea_ice_area_fraction" />
+    <attribute name="units" value="1" />
+    <attribute name="valid_max" type="double" value="1.0" />
+    <attribute name="valid_min" type="double" value="0.0" />
+  </variable>
+</netcdf>

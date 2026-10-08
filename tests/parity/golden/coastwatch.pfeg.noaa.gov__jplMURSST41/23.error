@@ -1,4 +1,4 @@
 Error {
-    code=400;
-    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[last-9000]\": Start=\"-108\" is invalid.  It must be an integer between 0 and 8892.";
+    code=404;
+    message="Not Found: Your query produced no matching results. Query error: For variable=time axis#0=time Constraint=\"[(20190102)]\": Start=\"20190102\" is less than the axis minimum=2002-06-01T09:00:00Z (and even 2002-05-31T20:59:50Z).";
 }

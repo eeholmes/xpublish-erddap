@@ -84,6 +84,27 @@ def data_blocks(case: Case, ds: xr.Dataset) -> list:
     return blocks
 
 
+def repair_text(case: Case, client: httpx.Client, ds: xr.Dataset) -> None:
+    """Put back text attributes that reading over OPeNDAP changed.
+
+    ERDDAP writes its DAS in ISO-8859-1, and the netCDF library reads it as
+    UTF-8, so a ``°`` arrives as U+FFFD. And ``history`` arrives with the
+    lines ERDDAP appends for each request, so it has newlines the dataset's
+    own ``history`` may not (which changes how csv quotes it). ERDDAP's
+    ``info`` JSON is UTF-8 and holds the real text.
+    """
+    url = f"{case.server}/info/{case.dataset_id}/index.json"
+    rows = get(client, url).json()["table"]["rows"]
+    real = {(row[1], row[2]): row[4] for row in rows if row[0] == "attribute"}
+    owners = [("NC_GLOBAL", ds.attrs)] + [(str(n), v.attrs) for n, v in ds.variables.items()]
+    for owner, attrs in owners:
+        for key, value in attrs.items():
+            if not isinstance(value, str) or (owner, key) not in real:
+                continue
+            if key == "history" or "�" in value:
+                attrs[key] = real[(owner, key)]
+
+
 def capture(case: Case, client: httpx.Client, root: Path) -> None:
     """Record one case's snapshot and responses under ``root``."""
     out = root / case.slug
@@ -93,6 +114,7 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
 
     print(f"== {case.slug}")
     ds = xr.open_dataset(f"{case.server}/griddap/{case.dataset_id}")
+    repair_text(case, client, ds)
     blocks = data_blocks(case, ds)
     write_snapshot(ds, blocks, out / SNAPSHOT)
     print(f"   snapshot: {len(blocks)} block(s)")
