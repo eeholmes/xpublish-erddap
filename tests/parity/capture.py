@@ -22,6 +22,7 @@ datasets gain time steps.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 import time
@@ -30,6 +31,7 @@ from pathlib import Path
 from urllib import parse
 
 import httpx
+import numpy as np
 import xarray as xr
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -105,6 +107,29 @@ def repair_text(case: Case, client: httpx.Client, ds: xr.Dataset) -> None:
                 attrs[key] = real[(owner, key)]
 
 
+def block_reader(case: Case, client: httpx.Client, ds: xr.Dataset):
+    """Read a data block over OPeNDAP, or from ERDDAP's ``.nc`` if that fails.
+
+    netCDF-C's DAP client fails on some Byte variables (dhw_5km's unsigned
+    bytes: "NetCDF: DAP failure"). ERDDAP's own ``.nc`` of the same block
+    decodes to the same values.
+    """
+
+    def read(name: str, index: dict) -> np.ndarray:
+        try:
+            return ds[name].isel(index).values
+        except RuntimeError:
+            dims = ds[name].dims
+            query = name + "".join(f"[{index[d].start}:{index[d].stop - 1}]" for d in dims)
+            url = f"{case.server}/griddap/{case.dataset_id}.nc?{parse.quote(query, safe='')}"
+            resp = get(client, url)
+            resp.raise_for_status()
+            with xr.open_dataset(io.BytesIO(resp.content)) as nc:
+                return nc[name].transpose(*dims).values
+
+    return read
+
+
 def capture(case: Case, client: httpx.Client, root: Path) -> None:
     """Record one case's snapshot and responses under ``root``."""
     out = root / case.slug
@@ -116,7 +141,7 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
     ds = xr.open_dataset(f"{case.server}/griddap/{case.dataset_id}")
     repair_text(case, client, ds)
     blocks = data_blocks(case, ds)
-    write_snapshot(ds, blocks, out / SNAPSHOT)
+    write_snapshot(ds, blocks, out / SNAPSHOT, read=block_reader(case, client, ds))
     print(f"   snapshot: {len(blocks)} block(s)")
 
     version = client.get(f"{case.server}/version").text.strip()

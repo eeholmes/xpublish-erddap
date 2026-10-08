@@ -362,8 +362,7 @@ column types all follow. Ported from ERDDAP's source and checked live:
   `missing_value`, `valid_min`, `valid_max`, `valid_range`. We also type
   `flag_values`/`flag_masks` (ERDDAP passes them through, but CF requires the
   variable's type, and from Zarr JSON they arrive as plain ints). A value
-  that does not fit the type is left alone. **Packed variables are skipped**:
-  ERDDAP unpacks their `valid_*` (`scaleAddOffset`); we do not yet (#64).
+  that does not fit the type is left alone. Packed variables: see #64.
 - **Fill cells are missing** (`Table.convertToStandardMissingValues`):
   `NaN` in csv, `null` in json, for any cell equal to `_FillValue` or
   `missing_value`, decoded or raw. Seen on oceanwatch's CRW_baa_max_7d_v1_0
@@ -387,3 +386,34 @@ Found on the way, fixed because the jplMURSST41 metadata cases needed them:
 - **Capture repairs text** (`capture.repair_text`): over OPeNDAP a `°` arrives
   as U+FFFD and `history` carries ERDDAP's per-request lines; both are taken
   from ERDDAP's UTF-8 `info` JSON before the snapshot is written.
+
+## Integer, unsigned and packed types follow ERDDAP (#64)
+
+`.nc` is netCDF-3 (scipy), which has no unsigned or 64-bit types; it gave
+500s. Ported from ERDDAP's source, checked on PacIOOS's `dhw_5km` (ERDDAP
+2.29; coastwatch's `NOAA_DHW` is a proxy that redirects data requests
+there, and the issue's `noaacrwdhwDaily` no longer exists):
+
+| served | `.dds`/DAS | json, info, NcML | `.nc` |
+| --- | --- | --- | --- |
+| ubyte | `Byte`, attributes signed, `_Unsigned "true"` | `ubyte` | byte + `_Unsigned = "true"`, attributes signed |
+| ushort, uint | `UInt16`, `UInt32` | `ushort`, `uint` | short, int + `_Unsigned`, attributes signed |
+| long, ulong | `Float64`, attribute digits in full | `long`, `ulong` (NcML attributes double) | double, attributes double |
+
+Sources: `OpendapHelper.getAtomicType`/`dasToStringBuilder`,
+`NcHelper.getNc3DataType`/`newAttribute`, `NcmlFiles.writeNcmlAttributes`.
+
+- **`_Unsigned = "true"` on signed storage is unsigned data** (netCDF-3's
+  convention; dhw_5km's source). xarray leaves it in `.encoding` when it
+  decodes and in `.attrs` when it does not; `served_dtype` reads both. The
+  attribute is then dropped from every listing, as ERDDAP does, and added
+  back only in the DAS (Bytes) and `.nc` (unsigned).
+- **Packed variables** (`scale_factor`/`add_offset`): `_FillValue` and
+  `valid_*` are unpacked, as `EDV` does. The fill is *not* NaN: coastwatch's
+  jplMURSST41 gives `Float64 _FillValue -7.768000000000001` and
+  `valid_min -7.767000000000003`, and we now print the same digits.
+- **NcML text uses ERDDAP's entity table** (`XML.encodeAsXML`): `%` is
+  `&#37;`, tab `&#9;`, other control characters dropped.
+- **Capture:** netCDF-C's DAP client fails on dhw_5km's Byte variables
+  ("NetCDF: DAP failure"), so `capture.block_reader` falls back to ERDDAP's
+  own `.nc` for a data block; the snapshot keeps `_Unsigned` in encoding.

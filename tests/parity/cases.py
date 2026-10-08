@@ -73,6 +73,7 @@ ADVANCED = "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap"
 OCEANWATCH = "https://oceanwatch.pifsc.noaa.gov/erddap"
 IOOS = "https://erddap.ioos.us/erddap"
 COASTWATCH = "https://coastwatch.pfeg.noaa.gov/erddap"
+PACIOOS = "https://pae-paha.pacioos.hawaii.edu/erddap"
 
 CASES = [
     # The dataset the CoastWatch tutorials use. Deprecated upstream, but it is
@@ -270,6 +271,17 @@ CASES = [
         queries=[
             # Oahu's north shore: stress levels 1 and 2 beside land
             "bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+        ],
+    ),
+    # Unsigned bytes (#64): stored signed with _Unsigned "true", fill 251
+    # (-5 signed) on land. coastwatch's NOAA_DHW redirects here for data.
+    Case(
+        PACIOOS,
+        "dhw_5km",
+        queries=[
+            # Oahu's north shore: stress levels and the pixel mask beside land
+            "CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+            "CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
         ],
     ),
 ]

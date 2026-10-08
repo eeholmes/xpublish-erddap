@@ -255,6 +255,8 @@ def _das_attr_lines(attrs: dict, indent: str) -> list[str]:
             out.append(f'{indent}String {key} "{escaped}";')
             continue
         dap = _DAP_TYPES.get(arr.dtype, "Float64")
+        if arr.dtype == np.uint8:
+            arr = arr.view(np.int8)  # DAP2 has no ubyte: Byte, written signed (makeSignedPA)
         out.append(f"{indent}{dap} {key} {attr_text(arr, das=True)};")
     return out
 
@@ -345,12 +347,14 @@ def _cells(ed: ErddapDataset, name: str, da: xr.DataArray) -> np.ndarray:
     values = np.asarray(da.values).ravel()
     if values.dtype.kind not in "iuf":
         return values
+    dtype = dtype_of(ed.ds[name])
+    if values.dtype.kind in "iu" and dtype.kind in "iu":
+        values = values.astype(dtype)  # unsigned data stored signed (_Unsigned) wraps back
     attrs = ed.variable_attrs(name)
     fills = [np.asarray(attrs[k]).ravel() for k in ("_FillValue", "missing_value") if k in attrs]
     missing = np.isin(values, np.concatenate(fills)) if fills else np.zeros(values.shape, bool)
     if values.dtype.kind == "f":
         missing |= np.isnan(values)
-    dtype = dtype_of(ed.ds[name])
     if dtype.kind == "f":
         if missing.any():
             values = np.where(missing, np.nan, values).astype(values.dtype)
@@ -428,7 +432,7 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         out = xr.Dataset(coords={d: sub[d] for d in dims})
         globals_ = {k: v for k, v in globals_.items() if not _is_bbox_global(k)}
     out = out.copy()
-    out.attrs = {**globals_, **coverage_globals(out, dims, subset=True)}
+    out.attrs = _nc3_attrs({**globals_, **coverage_globals(out, dims, subset=True)})
     # the netCDF-4 library's stamp; ERDDAP lists it but does not write it
     out.attrs.pop("_NCProperties", None)
     encoding = {}
@@ -436,6 +440,13 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         # fill values travel in .encoding; xarray refuses them in both places
         full = ed.variable_attrs(name)
         attrs = {k: v for k, v in full.items() if k not in ("_FillValue", "missing_value")}
+        if name not in ed.dims and dtype_of(ed.ds[name]).kind in "iu":
+            data, int_attrs = _nc3_integer(out[name], dtype_of(ed.ds[name]), full)
+            out[name] = xr.Variable(out[name].dims, data, int_attrs)
+            # the fill is already in the data and the attributes; add none
+            encoding[name] = {} if "_FillValue" in int_attrs else {"_FillValue": None}
+            continue
+        attrs = _nc3_attrs(attrs)
         if name not in ed.dims:
             out[name].attrs = attrs
             # in the served type: an integer xarray masked into floats is
@@ -465,6 +476,49 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
     return out.to_netcdf(encoding=encoding, engine="scipy")
 
 
+def _nc3_attrs(attrs: dict) -> dict:
+    """Attributes as netCDF-3 can hold them, as ERDDAP writes them.
+
+    ``NcHelper.newAttribute``: 64-bit integers become doubles; unsigned
+    integers are written as the signed type of the same size, bit for bit.
+    """
+    out = {}
+    for key, value in attrs.items():
+        arr = attr_array(value)
+        if arr is not None and arr.dtype.kind in "iu" and arr.dtype.itemsize == 8:  # noqa: PLR2004
+            out[key] = arr.astype("float64")
+        elif arr is not None and arr.dtype.kind == "u":
+            out[key] = arr.view(f"i{arr.dtype.itemsize}")
+        else:
+            out[key] = value
+    return out
+
+
+def _nc3_integer(da: xr.DataArray, dtype: np.dtype, attrs: dict) -> tuple[np.ndarray, dict]:
+    """An integer variable's data and attributes as ERDDAP writes them to ``.nc``.
+
+    NaNs from xarray's masking go back to the fill. netCDF-3 has no unsigned
+    or 64-bit types, so, as in ``NcHelper.getNc3DataType``, unsigned data is
+    written as the signed type of the same size with ``_Unsigned = "true"``,
+    and long data as doubles.
+    """
+    values = np.asarray(da.values)
+    if values.dtype.kind == "f":
+        missing = np.isnan(values)
+        if missing.any():
+            fill = attrs.get("_FillValue", attrs.get("missing_value"))
+            values = np.where(missing, np.asarray(fill).reshape(-1)[0], values)
+    with np.errstate(all="ignore"):
+        values = values.astype(dtype)  # raw signed storage of unsigned data wraps back
+    attrs = dict(attrs)
+    if dtype.itemsize == 8:  # noqa: PLR2004
+        values = values.astype("float64")
+    elif dtype.kind == "u":
+        values = values.view(f"i{dtype.itemsize}")
+        attrs = {"_Unsigned": "true", **attrs}
+    return values, _nc3_attrs(attrs)
+
+
 def _is_bbox_global(key: str) -> bool:
     return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in {
         "Northernmost_Northing",
@@ -474,21 +528,32 @@ def _is_bbox_global(key: str) -> bool:
     }
 
 
+#: ERDDAP's ``XML.encodeAsXML`` (its ``HTML_ENTITIES`` below 128): the five
+#: XML entities, plus ``%`` and tab as numeric ones; other control characters
+#: (all but newline and carriage return) are dropped.
+_XML_ENTITIES = {
+    **{c: None for c in [*range(32), 127] if c not in (10, 13)},
+    ord("\t"): "&#9;",
+    ord('"'): "&quot;",
+    ord("%"): "&#37;",
+    ord("&"): "&amp;",
+    ord("'"): "&#39;",
+    ord("<"): "&lt;",
+    ord(">"): "&gt;",
+}
+
+
 def _xml_escape(text: str) -> str:
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&#39;")
-    )
+    return str(text).translate(_XML_ENTITIES)
 
 
 def _ncml_attr_lines(attrs: dict, indent: str) -> list[str]:
     out = []
     for key in sort_globals(attrs):
         value = attrs[key]
+        arr = attr_array(value)
+        if arr is not None and arr.dtype == np.int64:
+            value = arr.astype("float64")  # NcmlFiles writes long attributes as double
         kind = attr_type(value)
         typed = "" if kind == "String" else f' type="{kind}"'
         text = _xml_escape(attr_text(value, sep=" "))
