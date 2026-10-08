@@ -89,3 +89,76 @@ def test_max_age_rebuilds_under_the_same_id(served, grid_dataset, root, monkeypa
     assert last_time(client, root) == before
     now[0] += 61
     assert last_time(client, root) > before
+
+
+# --- one bad source must not take the server-wide root down (#56) ---------
+
+
+class Flaky(Provider):
+    """A provider whose ``broken`` datasets raise, or are listed but unknown."""
+
+    broken: set = set()
+    unlisted: list = []
+
+    @hookimpl
+    def get_datasets(self):
+        return [*self.trees, *self.unlisted]
+
+    @hookimpl
+    def get_datatree(self, dataset_id: str, group: str):
+        if dataset_id in self.broken:
+            raise OSError("upstream store unreachable")
+        return super().get_datatree(dataset_id, group)
+
+
+def flaky_client(trees, **kwargs):
+    provider = Flaky(trees=trees, **kwargs)
+    rest = xpublish.Rest({}, plugins={"provider": provider, "erddap": ErddapPlugin()})
+    return TestClient(rest.app)
+
+
+def assert_good_served(client, caplog, bad):
+    resp = client.get("/erddap/griddap/good.das")
+    assert resp.status_code == 200, resp.text
+    assert "good" in client.get("/erddap/griddap/index.csv").text
+    assert bad in caplog.text
+
+
+def test_dataset_that_raises_is_skipped(grid_dataset, caplog):
+    client = flaky_client(
+        {"good": version(grid_dataset, 2, "g"), "bad": version(grid_dataset, 2, "b")},
+        broken={"bad"},
+    )
+    assert_good_served(client, caplog, "bad")
+    assert client.get("/erddap/griddap/bad.das").status_code == 404
+    # its own root still answers with an error for it alone
+    assert client.get("/datasets/good/erddap/griddap/good.das").status_code == 200
+    assert client.get("/datasets/bad/erddap/griddap/bad.das").status_code >= 400
+
+
+def test_listed_but_unresolvable_id_is_skipped(grid_dataset, caplog):
+    client = flaky_client({"good": version(grid_dataset, 2, "g")}, unlisted=["gone"])
+    assert_good_served(client, caplog, "gone")
+
+
+def test_noleap_dataset_beside_a_good_one(grid_dataset, caplog):
+    cf = pytest.importorskip("cftime")
+    del cf
+    noleap = grid_dataset[["tos"]].isel(time=slice(0, 3))
+    noleap = noleap.assign_coords(
+        time=xr.date_range("2000-01-01", periods=3, calendar="noleap", use_cftime=True),
+    )
+    client = flaky_client(
+        {"good": version(grid_dataset, 2, "g"), "cal": xr.DataTree(noleap)},
+    )
+    assert_good_served(client, caplog, "cal")
+
+
+def test_failed_source_returns_once_it_heals(grid_dataset):
+    provider = Flaky(trees={"good": version(grid_dataset, 2, "g")}, unlisted=["late"])
+    rest = xpublish.Rest({}, plugins={"provider": provider, "erddap": ErddapPlugin()})
+    client = TestClient(rest.app)
+    assert client.get("/erddap/griddap/late.das").status_code == 404
+    provider.unlisted = []
+    provider.trees["late"] = version(grid_dataset, 2, "l")
+    assert client.get("/erddap/griddap/late.das").status_code == 200
