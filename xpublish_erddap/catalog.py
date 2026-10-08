@@ -118,6 +118,8 @@ class ErddapDataset:
         Sorted as ERDDAP sorts them: alphabetically, ignoring case.
         """
         attrs = dict(self.ds[name].attrs)
+        # the type says it; the DAS and .nc add it back where ERDDAP does
+        attrs.pop("_Unsigned", None)
         attrs.setdefault("ioos_category", infer_ioos_category(name, attrs))
         if name in self.dims:
             if "units" not in attrs:
@@ -127,7 +129,9 @@ class ErddapDataset:
         else:
             da = self.ds[name]
             attrs.update({k: v for k, v in _fill_attrs(da).items() if k not in attrs})
-            if not _is_packed(da):
+            if _is_packed(da):
+                attrs.update(_unpacked_valid(attrs, da))
+            else:
                 attrs.update(_typed_as_variable(attrs, served_dtype(da)))
         return {k: attrs[k] for k in sorted(attrs, key=lambda k: (k.lower(), k))}
 
@@ -163,13 +167,21 @@ def served_dtype(da) -> np.dtype:
     its stored integer type (a Byte ``mask`` stays Byte), so the stored type,
     kept in ``.encoding``, wins. Packed variables are served unpacked, as
     floats, as ERDDAP does.
+
+    ``_Unsigned = "true"`` (netCDF-3's way to store unsigned data) makes a
+    signed integer its unsigned twin, as in ERDDAP: xarray leaves it in
+    ``.encoding`` when it decodes and in ``.attrs`` when it does not.
     """
     dtype = np.dtype(da.dtype)
-    stored = getattr(da, "encoding", {}).get("dtype")
+    enc = getattr(da, "encoding", {})
+    stored = enc.get("dtype")
     if dtype.kind == "f" and stored is not None and not _is_packed(da):
         stored = np.dtype(stored)
         if stored.kind in "iu":
-            return stored
+            dtype = stored
+    unsigned = enc.get("_Unsigned", getattr(da, "attrs", {}).get("_Unsigned"))
+    if dtype.kind == "i" and str(unsigned).lower() == "true":
+        return np.dtype(f"u{dtype.itemsize}")
     return dtype
 
 
@@ -199,11 +211,37 @@ def _typed_as_variable(attrs: dict, dtype: np.dtype) -> dict:
         arr = np.asarray(value)
         if arr.dtype.kind not in "iuf" or (key.startswith("flag_") and dtype.kind == "f"):
             continue
+        if dtype.kind == "u" and arr.dtype.kind == "i" and arr.dtype.itemsize == dtype.itemsize:
+            # stored signed beside _Unsigned; ERDDAP reads it unsigned (makeUnsignedPA)
+            out[key] = arr.view(dtype) if arr.ndim else arr.reshape(1).view(dtype)[0]
+            continue
         with np.errstate(all="ignore"):
             typed = arr.astype(dtype)
         if not np.array_equal(typed, arr, equal_nan=dtype.kind == "f" and arr.dtype.kind == "f"):
             continue  # it does not fit; leave it as the source gave it
         out[key] = typed if arr.ndim else typed[()]
+    return out
+
+
+def _unpacked_valid(attrs: dict, da) -> dict:
+    """A packed variable's ``valid_*``, unpacked as ERDDAP does.
+
+    CF gives them in the packed units; ERDDAP's ``EDV`` scales them
+    (``scaleAddOffset``) into the served type.
+    """
+    enc = da.encoding
+    scale = float(np.asarray(enc.get("scale_factor", 1.0)).reshape(-1)[0])
+    offset = float(np.asarray(enc.get("add_offset", 0.0)).reshape(-1)[0])
+    dtype = served_dtype(da)
+    out = {}
+    for key in ("valid_min", "valid_max", "valid_range"):
+        value = attrs.get(key)
+        if value is None or isinstance(value, str | bytes | bool | np.bool_):
+            continue
+        arr = np.asarray(value)
+        if arr.dtype.kind in "iu":
+            typed = (arr.astype("float64") * scale + offset).astype(dtype)
+            out[key] = typed if arr.ndim else typed[()]
     return out
 
 
@@ -213,22 +251,29 @@ def _fill_attrs(da: xr.DataArray) -> dict:
     Opening a netCDF or Zarr store moves both out of ``.attrs``, but clients
     read them from ERDDAP's metadata. They are given in the type of the
     values we serve. For packed data (``scale_factor``/``add_offset``) the
-    served values are unpacked floats with NaN for missing, so the fill
-    becomes NaN.
+    fill is unpacked too (``fill * scale + offset``, as ERDDAP's ``EDV``
+    gives it: jplMURSST41's ``_FillValue -7.768``).
     """
     enc = da.encoding
     out = {}
     dtype = served_dtype(da)
     floating = dtype.kind == "f"
     packed = floating and _is_packed(da)
+    scale = np.asarray(enc.get("scale_factor", 1.0)).reshape(-1)[0]
+    offset = np.asarray(enc.get("add_offset", 0.0)).reshape(-1)[0]
     for key in ("_FillValue", "missing_value"):
         value = enc.get(key)
         if value is None:
             continue
-        value = np.asarray(np.nan if packed else value).reshape(-1)[0]
+        value = np.asarray(value).reshape(-1)[0]
+        if packed:
+            value = np.float64(value) * scale + offset
         if not floating and np.isnan(value):
             continue  # an integer variable cannot hold a NaN fill
-        out[key] = value.astype(dtype)
+        if dtype.kind == "u" and value.dtype.kind == "i" and value.dtype.itemsize == dtype.itemsize:
+            out[key] = value.reshape(1).view(dtype)[0]  # stored signed beside _Unsigned
+        else:
+            out[key] = value.astype(dtype)
     return out
 
 

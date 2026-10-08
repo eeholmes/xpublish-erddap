@@ -1,0 +1,101 @@
+Dataset {
+  Float64 time[time = 15158];
+  Float32 latitude[latitude = 3600];
+  Float32 longitude[longitude = 7200];
+  GRID {
+    ARRAY:
+      Byte CRW_BAA[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_BAA;
+  GRID {
+    ARRAY:
+      Byte CRW_BAA_mask[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_BAA_mask;
+  GRID {
+    ARRAY:
+      Byte CRW_BAA_7D_MAX[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_BAA_7D_MAX;
+  GRID {
+    ARRAY:
+      Byte CRW_BAA_7D_MAX_mask[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_BAA_7D_MAX_mask;
+  GRID {
+    ARRAY:
+      Float64 CRW_DHW[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_DHW;
+  GRID {
+    ARRAY:
+      Byte CRW_DHW_mask[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_DHW_mask;
+  GRID {
+    ARRAY:
+      Float64 CRW_HOTSPOT[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_HOTSPOT;
+  GRID {
+    ARRAY:
+      Byte CRW_HOTSPOT_mask[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_HOTSPOT_mask;
+  GRID {
+    ARRAY:
+      Float64 CRW_SEAICE[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_SEAICE;
+  GRID {
+    ARRAY:
+      Float64 CRW_SST[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_SST;
+  GRID {
+    ARRAY:
+      Float64 CRW_SSTANOMALY[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_SSTANOMALY;
+  GRID {
+    ARRAY:
+      Byte CRW_SSTANOMALY_mask[time = 15158][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15158];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } CRW_SSTANOMALY_mask;
+} dhw_5km;

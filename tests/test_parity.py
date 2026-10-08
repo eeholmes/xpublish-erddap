@@ -40,8 +40,8 @@ KNOWN: list[tuple[str, str]] = []
 #: The same, for media-type differences.
 KNOWN_MEDIA: list[tuple[str, str]] = [
     (
-        r"^(etopo5_EDDGridCopy|jplMURSST41) griddap/\S*\.das$",
-        "ERDDAP 2.31 serves .das as text/csv; 2.22 says text/plain. Not copied.",
+        r"^(etopo5_EDDGridCopy|jplMURSST41|dhw_5km) griddap/\S*\.das$",
+        "ERDDAP 2.29 and 2.31 serve .das as text/csv; 2.22 says text/plain. Not copied.",
     ),
 ]
 

@@ -1,0 +1,98 @@
+{
+  "server": "https://pae-paha.pacioos.hawaii.edu/erddap",
+  "dataset_id": "dhw_5km",
+  "erddap_version": "ERDDAP_version=2.29",
+  "captured": "2026-10-08",
+  "requests": [
+    {
+      "path": "griddap/dhw_5km.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/dhw_5km/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/dhw_5km/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/dhw_5km.csv?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.csvp?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.csv0?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.json?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/dhw_5km.nc?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/dhw_5km.csv?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "10.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.csvp?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "11.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.csv0?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "12.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/dhw_5km.json?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "13.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/dhw_5km.nc?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "14.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    }
+  ]
+}

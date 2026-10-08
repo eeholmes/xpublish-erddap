@@ -55,6 +55,7 @@ def write_snapshot(
     ds: xr.Dataset,
     blocks: list[tuple[str, dict[str, tuple[int, int]]]],
     path: Path,
+    read=None,
 ) -> None:
     """Write axes, metadata and the given data blocks of ``ds`` to ``path``.
 
@@ -62,6 +63,8 @@ def write_snapshot(
         ds: the lazily opened source dataset.
         blocks: ``(variable, {dim: (start, stop)})`` with inclusive bounds.
         path: the netCDF file to write.
+        read: ``read(name, {dim: slice})`` returning a block's values, for a
+            source whose data ``ds`` cannot read; default ``ds`` itself.
     """
     out = xr.Dataset(coords={d: ds[d] for d in ds.dims}, attrs=_escape(ds.attrs))
     for name, da in ds.data_vars.items():
@@ -73,7 +76,7 @@ def write_snapshot(
     for k, (name, bounds) in enumerate(blocks):
         da = ds[name]
         index = {d: slice(lo, hi + 1) for d, (lo, hi) in bounds.items()}
-        values = da.isel(index).values
+        values = da.isel(index).values if read is None else read(name, index)
         dims = tuple(f"{_BLOCK}{k}_{d}" for d in da.dims)
         var = xr.Variable(dims, values)
         var.attrs["variable"] = name
@@ -87,7 +90,7 @@ def write_snapshot(
 
 
 def _keep_encoding(encoding: dict) -> dict:
-    keep = ("_FillValue", "missing_value", "dtype")
+    keep = ("_FillValue", "missing_value", "dtype", "_Unsigned")
     return {k: v for k, v in encoding.items() if k in keep}
 
 

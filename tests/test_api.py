@@ -566,3 +566,124 @@ def test_masked_integer_is_served_as_its_integer_type(raw_byte_dataset, decoded)
         assert nc.mask.dtype == np.int8
         assert nc.mask.attrs["_FillValue"] == -128
         assert nc.mask.values.ravel().tolist() == [1, 2, -128, 4]
+
+
+#: (dtype, fill, a large value, .dds type, DAS fill text, json type, .nc dtype)
+#: as ERDDAP serves them: DAP2 and netCDF-3 have no 64-bit integers or
+#: unsigned bytes, and netCDF-3 has no unsigned types at all (#64).
+_INTEGER_TYPES = [
+    ("int64", -9, 2**40, "Float64", "Float64 _FillValue -9", "long", "float64"),
+    ("uint8", 251, 200, "Byte", "Byte _FillValue -5", "ubyte", "int8"),
+    ("uint16", 65531, 60000, "UInt16", "UInt16 _FillValue 65531", "ushort", "int16"),
+    ("uint32", 2**32 - 5, 4_000_000_000, "UInt32", "UInt32 _FillValue 4294967291", "uint", "int32"),
+]
+
+
+@pytest.mark.parametrize("decoded", [True, False], ids=["decoded", "raw"])
+@pytest.mark.parametrize("case", _INTEGER_TYPES, ids=[t[0] for t in _INTEGER_TYPES])
+def test_integer_types_are_served_as_erddap_does(case, decoded):
+    """No 500s, and the same type in every format, as ERDDAP gives it (#64).
+
+    Mappings from ERDDAP's source (``OpendapHelper.getAtomicType``,
+    ``NcHelper.getNc3DataType``/``newAttribute``) and checked on PacIOOS's
+    dhw_5km: unsigned data in ``.nc`` is the signed type with
+    ``_Unsigned = "true"``, long data is double.
+    """
+    dtype, fill, big, dds, das, json_type, nc_dtype = case
+    raw = xr.Dataset(
+        {
+            "v": (
+                ("lat", "lon"),
+                np.array([[1, 2], [fill, big]], dtype=dtype),
+                {"_FillValue": np.array(fill, dtype=dtype)[()]},
+            ),
+        },
+        coords={"lat": [10.0, 11.0], "lon": [20.0, 21.0]},
+    )
+    ds = xr.decode_cf(raw) if decoded else raw
+    client = TestClient(xpublish.Rest({"m": ds}, plugins={"erddap": ErddapPlugin()}).app)
+    url = "/erddap/griddap/m"
+
+    assert f"{dds} v[latitude = 2][longitude = 2];" in client.get(f"{url}.dds").text
+    das_text = client.get(f"{url}.das").text
+    assert das in das_text
+    assert ('String _Unsigned "true";' in das_text) == (dtype == "uint8")
+    assert f'<variable name="v" shape="latitude longitude" type="{json_type}">' in (
+        client.get(f"{url}.ncml").text
+    )
+    rows = client.get(f"{url}.csv0?v").text.splitlines()
+    assert [r.rsplit(",", 1)[1] for r in rows] == ["1", "2", "NaN", str(big)]
+    table = client.get(f"{url}.json?v").json()["table"]
+    assert table["columnTypes"][-1] == json_type
+    assert [r[-1] for r in table["rows"]] == [1, 2, None, big]
+
+    resp = client.get(f"{url}.nc?v")
+    assert resp.status_code == 200
+    with xr.open_dataset(io.BytesIO(resp.content), decode_cf=False) as nc:
+        assert nc.v.dtype == np.dtype(nc_dtype)
+        assert (nc.v.attrs.get("_Unsigned") == "true") == (dtype[0] == "u")
+    with xr.open_dataset(io.BytesIO(resp.content)) as nc:  # what a client reads back
+        values = nc.v.values.ravel()
+        assert np.isnan(values[2])
+        assert values[[0, 1, 3]].tolist() == [1, 2, big]
+
+
+def test_unsigned_stored_signed_is_unsigned():
+    """netCDF-3 stores ubyte as byte with ``_Unsigned = "true"`` (dhw_5km does).
+
+    Opened raw, the attribute is still there and the data signed; ERDDAP
+    serves it as ubyte all the same.
+    """
+    raw = xr.Dataset(
+        {
+            "v": (
+                ("lat", "lon"),
+                np.array([[1, -56], [-5, 4]], dtype="int8"),
+                {"_FillValue": np.int8(-5), "_Unsigned": "true", "valid_max": np.int8(-6)},
+            ),
+        },
+        coords={"lat": [10.0, 11.0], "lon": [20.0, 21.0]},
+    )
+    client = TestClient(xpublish.Rest({"m": raw}, plugins={"erddap": ErddapPlugin()}).app)
+    info = client.get("/erddap/info/m/index.csv").text
+    assert "variable,v,,ubyte," in info
+    assert "attribute,v,_FillValue,ubyte,251" in info
+    assert "attribute,v,valid_max,ubyte,250" in info
+    assert "_Unsigned" not in info
+    rows = client.get("/erddap/griddap/m.csv0?v").text.splitlines()
+    assert [r.rsplit(",", 1)[1] for r in rows] == ["1", "200", "NaN", "4"]
+
+
+def test_packed_variable_unpacks_its_fill_and_valid_range():
+    """ERDDAP's ``EDV`` unpacks ``_FillValue`` and ``valid_*`` (#64).
+
+    jplMURSST41's analysed_sst, int16 with scale 0.001 and offset 25, has
+    ``_FillValue -7.768``, not NaN.
+    """
+    raw = xr.Dataset(
+        {
+            "sst": (
+                ("lat", "lon"),
+                np.array([[0, 1000], [-32768, 2000]], dtype="int16"),
+                {
+                    "_FillValue": np.int16(-32768),
+                    "scale_factor": 0.001,
+                    "add_offset": 25.0,
+                    "valid_min": np.int16(-32767),
+                    "valid_max": np.int16(32767),
+                },
+            ),
+        },
+        coords={"lat": [10.0, 11.0], "lon": [20.0, 21.0]},
+    )
+    client = TestClient(
+        xpublish.Rest({"m": xr.decode_cf(raw)}, plugins={"erddap": ErddapPlugin()}).app,
+    )
+    das = client.get("/erddap/griddap/m.das").text
+    assert "Float64 _FillValue -7.768000000000001;" in das
+    assert "Float64 valid_min -7.767000000000003;" in das  # as coastwatch writes it
+    assert "Float64 valid_max 57.767;" in das
+    rows = client.get("/erddap/griddap/m.csv0?sst").text.splitlines()
+    assert [r.rsplit(",", 1)[1] for r in rows] == ["25.0", "26.0", "NaN", "27.0"]
+    with xr.open_dataset(io.BytesIO(client.get("/erddap/griddap/m.nc?sst").content)) as nc:
+        assert np.isnan(nc.sst.values[1, 0])
