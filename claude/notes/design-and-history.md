@@ -472,3 +472,4 @@ derives them from the axes named `latitude`, `longitude`, `time`; a grid with
 none of those has none. We now do the same, so a polar grid has no lat bounds
 and is not found by a `minLat` search (as on ERDDAP). The case that motivated
 the issue's version, wrong bounds from metre axes, is gone with the x/y fix.
+EH confirmed following ERDDAP here (2026-10-08).
