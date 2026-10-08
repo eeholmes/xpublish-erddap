@@ -48,3 +48,15 @@ def test_head_on_data_builds_no_body(client, monkeypatch, ext):
 def test_head_still_validates(client):
     assert client.head("/erddap/griddap/nope.csv").status_code == 404
     assert client.head("/erddap/griddap/testgrid.bogus").status_code == 400
+
+
+def test_info_html_page(client):
+    """rerddapXtracto's safe_info() and rerddap's browse() need this URL to exist."""
+    for send in (client.get, client.head):
+        resp = send("/erddap/info/testgrid/index.html")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/html")
+    page = client.get("/erddap/info/testgrid/index.html").text
+    assert "/erddap/info/testgrid/index.csv" in page
+    assert "/erddap/griddap/testgrid.dds" in page
+    assert client.get("/erddap/info/nope/index.html").status_code == 404

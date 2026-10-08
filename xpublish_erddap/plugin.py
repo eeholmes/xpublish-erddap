@@ -12,6 +12,7 @@ flat datasetIDs -- so the main router is a server-wide ``app_router``; a
 
 from __future__ import annotations
 
+import html
 import inspect
 import io
 import json
@@ -22,7 +23,7 @@ from urllib import parse
 
 import xarray as xr
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
 from xpublish.utils.api import DATASET_ID_ATTR_KEY
@@ -254,6 +255,29 @@ def advanced_search_criteria(request: Request, ext: str) -> None:
         )
 
 
+def info_page(ed: ErddapDataset, base: str) -> HTMLResponse:
+    """A minimal ``info/{id}/index.html``: the title and links to the data.
+
+    There is no UI, but rerddapXtracto's ``safe_info()`` and rerddap's
+    ``browse()`` request this URL and need a page that exists (#62).
+    """
+    title = html.escape(str(ed.globals_.get("title", ed.dataset_id)))
+    links = [
+        (f"{base}/info/{ed.dataset_id}/index.{kind}", f"Variables and attributes ({kind})")
+        for kind in sorted(TABLE_EXTENSIONS)
+    ] + [
+        (f"{base}/griddap/{ed.dataset_id}.{kind}", f"Data access: {ed.dataset_id}.{kind}")
+        for kind in ("das", "dds")
+    ]
+    items = "\n".join(
+        f'<li><a href="{html.escape(url)}">{html.escape(text)}</a></li>' for url, text in links
+    )
+    return HTMLResponse(
+        f"<!DOCTYPE html>\n<html><head><title>{title}</title></head>\n"
+        f"<body><h1>{title}</h1>\n<ul>\n{items}\n</ul></body></html>\n",
+    )
+
+
 def search_response(
     found: list[ErddapDataset],
     base: str,
@@ -472,12 +496,16 @@ def add_erddap_routes(
 
     @route(INFO)
     def dataset_info(
+        request: Request,
         erddap_id: str,
         ext: str,
         cat: Catalog = Depends(catalog),
     ) -> Response:
         """Variable and attribute table for one dataset."""
-        return table_response(*formats.info_table(lookup(cat, erddap_id)), ext)
+        ed = lookup(cat, erddap_id)
+        if ext == "html":
+            return info_page(ed, root_of(request, INFO))
+        return table_response(*formats.info_table(ed), ext)
 
     @route(SEARCH)
     def search_index(

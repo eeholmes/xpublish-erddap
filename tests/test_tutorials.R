@@ -58,6 +58,12 @@ parameter <- dataInfo$variable$variable_name[1]
 stopifnot(parameter == "analysed_sst")
 ok("tutorial 3: info() names the parameter")
 
+# rerddapXtracto's exported safe_info() (shown in the rxtracto help examples)
+# HEADs info/{id}/index.html and returns NULL on a status >= 400 (#62)
+head_resp <- HEAD(paste0(server, "info/CRW_sst_v1_0_monthly/index.html"))
+stopifnot(status_code(head_resp) < 400)
+ok("tutorial 3: HEAD on info/{id}/index.html succeeds, as safe_info() needs")
+
 # A polygon across the dateline, in 0-360 longitudes as the tutorial converts
 # them to, standing in for the Papahanaumokuakea monument shapefile.
 xcoord <- c(177.5, 181.0, 190.0, 199.0, 198.0, 183.0, 177.5)
