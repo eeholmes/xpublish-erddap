@@ -28,7 +28,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
-  account, running `main` at `f928540` (redeployed 2026-10-08). 12 stores,
+  account, running `main` at `bbe53e0` (redeployed 2026-10-08). 12 stores,
   22 datasets in the server-wide root, plus one root per store at
   `/datasets/{id}/erddap`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
