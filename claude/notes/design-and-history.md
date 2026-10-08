@@ -96,7 +96,8 @@ ERDDAP.
   supported by this dataset.` (griddap, 400), search's no-match text with
   "Try using fewer search words." when the search has a space. Kept on
   purpose: our constraint-error wording, and 400 where ERDDAP says 404 for an
-  out-of-range value or 500 for an unknown variable. Parity compares the full
+  out-of-range **index** or 500 for an unknown variable. (A **value** off an
+  axis is a 404 with ERDDAP's wording since #57; see below.) Parity compares the full
   error text wherever the golden is ERDDAP's own body (all IOOS cases;
   OceanWatch's are proxy pages). Paths outside our routes (`/erddap/nope`)
   still get FastAPI's 404.
@@ -236,3 +237,30 @@ failure is not cached, so the dataset returns on the next request after it
 heals. The cost: one warning per request while it is down. The per-dataset
 root (`/datasets/{id}/erddap`) is unchanged and answers with the error for its
 own dataset only.
+
+## A value off an axis is refused, not snapped (#57)
+
+`constraints.check_in_range` is ported from ERDDAP's `EDDGrid.parseAxisBrackets`
+(`validateGreaterThanThrowOrRepair`, then `validateLessThanThrowOrRepair`) and
+`EDVGridAxis.initializeAverageSpacingAndCoarseMinMax`. A `(value)`, a
+`(last-d)` result, start or stop, on a data variable or an axis-only request,
+must lie within min − |avg spacing|/2 … max + |avg spacing|/2 (a one-value axis:
+`max(|v|/100, 0.01)`), compared at 13 digits for time, 9 for a double axis, 5
+otherwise (`Math2.lessThanAE`). Outside is a **404** (`NoMatchError`); inside but
+off the axis still snaps to the nearest element. Only `repair=false` (the REST
+path) throws; ERDDAP's HTML form and graph pages pass `repair=true` and clamp,
+which we do not serve.
+
+**Decision: the message is copied byte for byte, including a glitch.** The
+"greater than the axis maximum" text ERDDAP sends begins with its own template
+(`{0}="{1}" is greater than the axis maximum={2} (and even {3}).="Start" is
+greater than...`) because `validateLessThanThrowOrRepair` passes the template as
+an extra first argument. Both clients show the body to users and parity compares
+it, so we match the real server (checked on erddap.ioos.us and two
+coastwatch datasets, 2026-10-08, time and double axes). If ERDDAP fixes it, the
+scheduled capture job will show the drift and the `greater` branch in
+`check_in_range` should follow.
+
+Not covered: ERDDAP also accepts `(last+d)`; ours does not parse it. A
+non-numeric `(abc)` is still an uncaught `ValueError` (a 500), where ERDDAP says
+`Start=NaN (invalid format?)`.

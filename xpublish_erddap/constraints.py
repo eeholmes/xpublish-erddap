@@ -17,11 +17,21 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pandas as pd
 
-__all__ = ["DimSelection", "ParsedQuery", "parse_griddap_query", "split_selectors"]
+from xpublish_erddap.formats import java_number
+
+__all__ = [
+    "ConstraintError",
+    "DimSelection",
+    "NoMatchError",
+    "ParsedQuery",
+    "parse_griddap_query",
+    "split_selectors",
+]
 
 #: ``[start:stop]`` has two parts; ``[start:stride:stop]`` has three.
 _RANGE_PARTS = 2
@@ -56,6 +66,13 @@ class ParsedQuery:
 
 class ConstraintError(ValueError):
     """Raised when a constraint expression cannot be parsed or resolved."""
+
+
+class NoMatchError(ConstraintError):
+    """A coordinate value is outside its axis: ERDDAP answers 404 (#57).
+
+    Its text is ERDDAP's, minus the ``Not Found:`` the error body adds.
+    """
 
 
 def _split_top_level(text: str, sep: str) -> list[str]:
@@ -126,6 +143,108 @@ def _to_comparable(value: str, values: np.ndarray):
     return float(value)
 
 
+#: ``MustBe.THERE_IS_NO_DATA`` followed by ``EDStatic.messages.queryError``.
+_NO_MATCH = "Your query produced no matching results. Query error: "
+
+#: ``Math2.fEps``, a float, and ``Math2.dEps``.
+_F_EPS = float(np.float32(1e-5))
+_D_EPS = 1e-13
+_DIGITS_FOR_DOUBLE_AXES = 9
+
+
+def _almost_equal(digits: int, d1: float, d2: float) -> bool:
+    """``Math2.almostEqual(nSignificantDigits, d1, d2)``."""
+    eps = _D_EPS if digits >= 6 else _F_EPS  # noqa: PLR2004
+    ten = 10.0**digits
+    with np.errstate(all="ignore"):
+        if abs(d2) < eps:
+            return abs(d1) < eps or bool(np.rint(d2 / d1 * ten) == ten)
+        return bool(np.rint(d1 / d2 * ten) == ten)
+
+
+def _iso_seconds(seconds: float) -> str:
+    """``Calendar2.epochSecondsToIsoStringTZ``: rounded to the millisecond."""
+    millis = int(np.rint(seconds * 1000))
+    try:
+        when = datetime(1970, 1, 1, tzinfo=UTC) + timedelta(milliseconds=millis)
+    except OverflowError:
+        return java_number(seconds)
+    return when.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _axis_seconds(values: np.ndarray) -> np.ndarray:
+    """A time axis as epoch seconds (ERDDAP's destination values)."""
+    return values.astype("datetime64[ns]").astype("int64") / 1e9
+
+
+def check_in_range(
+    values: np.ndarray,
+    value: float,
+    text: str,
+    *,
+    role: str,
+    where: str = "",
+) -> None:
+    """Refuse a coordinate ``value`` outside the axis, as ERDDAP does (#57).
+
+    Ported from ``EDDGrid.parseAxisBrackets`` (``validateGreaterThanThrowOrRepair``,
+    then ``validateLessThanThrowOrRepair``) and
+    ``EDVGridAxis.initializeAverageSpacingAndCoarseMinMax``
+    (github.com/ERDDAP/erddap ``main``, 2026-10-08). The allowed range is the
+    axis's min and max widened by half its average spacing (for a one-value
+    axis, by ``max(|min| / 100, 0.01)``), compared to 13 significant digits
+    for time, 9 for a double axis and 5 for any other. A value inside it but
+    off the axis still snaps to the nearest element, as before.
+
+    ``text`` is the value as the user wrote it, for the message; ``role`` is
+    ``"Start"`` or ``"Stop"``; ``where`` is ``For variable=... axis#N=...``.
+    """
+    arr = np.asarray(values)
+    is_time = _axis_is_time(arr)
+    if is_time:
+        digits, numeric = 13, _axis_seconds(arr)
+    else:
+        digits = _DIGITS_FOR_DOUBLE_AXES if arr.dtype == np.float64 else 5
+        numeric = arr.astype("float64")
+    low, high = float(np.min(numeric)), float(np.max(numeric))
+    if len(numeric) >= 2:  # noqa: PLR2004
+        rough = abs((numeric[-1] - numeric[0]) / (len(numeric) - 1)) / 2
+    else:
+        rough = max(abs(low) / 100, 0.01)
+    coarse_low, coarse_high = low - rough, high + rough
+
+    def show(x: float, element: int | None = None) -> str:
+        if is_time:
+            return _iso_seconds(x)
+        # An axis element prints at the axis's own precision (float32: 89.75625).
+        return java_number(arr[element] if element is not None else x)
+
+    first = f"{where}: " if where else ""
+    if not (value >= coarse_low or _almost_equal(digits, value, coarse_low)):
+        msg = (
+            f'{role}="{text}" is less than the axis minimum={show(low, int(np.argmin(numeric)))}'
+            f" (and even {show(coarse_low)})."
+        )
+        raise NoMatchError(_NO_MATCH + first + msg)
+    if not (value <= coarse_high or _almost_equal(digits, value, coarse_high)):
+        # ERDDAP passes the message template as its own first argument, so
+        # the template shows through before the sentence. Copied as it is, so
+        # the error body matches a real server's.
+        template = '{0}="{1}" is greater than the axis maximum={2} (and even {3}).'
+        msg = (
+            f'{template}="{role}" is greater than the axis maximum={text}'
+            f" (and even {show(high, int(np.argmax(numeric)))})."
+        )
+        raise NoMatchError(_NO_MATCH + first + msg)
+
+
+def _seconds_of(target, values: np.ndarray) -> float:
+    """``target`` (from ``_to_comparable``) as the axis's destination double."""
+    if _axis_is_time(values):
+        return float(np.datetime64(target, "ns").astype("int64")) / 1e9
+    return float(target)
+
+
 def _nearest_index(values: np.ndarray, target) -> int:
     """Index of the axis element nearest ``target``.
 
@@ -146,8 +265,19 @@ def _nearest_index(values: np.ndarray, target) -> int:
 _LAST_RE = re.compile(r"^last\s*(?:-\s*(\d+(?:\.\d+)?))?$")
 
 
-def _resolve_token(token: str, values: np.ndarray, *, default: int) -> int:
-    """Resolve one endpoint token to an integer index."""
+def _resolve_token(
+    token: str,
+    values: np.ndarray,
+    *,
+    default: int,
+    role: str = "Start",
+    where: str = "",
+) -> int:
+    """Resolve one endpoint token to an integer index.
+
+    A ``(value)`` outside the axis raises ``NoMatchError`` (#57); ``role``
+    and ``where`` only word that error.
+    """
     token = token.strip()
     n = len(values)
     if token == "":
@@ -168,6 +298,9 @@ def _resolve_token(token: str, values: np.ndarray, *, default: int) -> int:
                 target = arr[-1] - np.timedelta64(int(float(offset)), "s")
             else:
                 target = arr.astype("float64")[-1] - float(offset)
+            seconds = _seconds_of(target, arr)
+            # ERDDAP's convertLast turns it into the value's text, in Java's form.
+            check_in_range(arr, seconds, java_number(seconds), role=role, where=where)
             return _nearest_index(values, target)
         idx = n - 1 - int(float(offset))
         if not 0 <= idx < n:
@@ -176,7 +309,9 @@ def _resolve_token(token: str, values: np.ndarray, *, default: int) -> int:
         return idx
 
     if paren:
-        return _nearest_index(values, _to_comparable(inner, values))
+        target = _to_comparable(inner, values)
+        check_in_range(values, _seconds_of(target, values), inner, role=role, where=where)
+        return _nearest_index(values, target)
 
     try:
         idx = int(inner)
@@ -196,32 +331,39 @@ def parse_selector(
     values: np.ndarray,
     *,
     allow_reversed: bool = True,
+    where: str = "",
 ) -> DimSelection:
     """Parse one ``[...]`` selector against an axis's values.
 
     ``allow_reversed``: ERDDAP swaps a range given against the axis order for
-    data-variable requests, but refuses it for axis-only requests.
+    data-variable requests, but refuses it for axis-only requests. ``where``
+    (``For variable=sst axis#1=latitude``) opens the error for a value off the
+    axis (#57).
     """
     n = len(values)
+    if where:
+        where = f'{where} Constraint="[{selector}]"'
+    start_kw = {"role": "Start", "where": where}
+    stop_kw = {"role": "Stop", "where": where}
     parts = [p.strip() for p in _split_top_level(selector, ":")]
     if selector.strip() == "":
         return DimSelection(0, n - 1, 1)
     if len(parts) == 1:
-        idx = _resolve_token(parts[0], values, default=0)
+        idx = _resolve_token(parts[0], values, default=0, **start_kw)
         return DimSelection(idx, idx, 1)
     if len(parts) == _RANGE_PARTS:
-        start = _resolve_token(parts[0], values, default=0)
-        stop = _resolve_token(parts[1], values, default=n - 1)
+        start = _resolve_token(parts[0], values, default=0, **start_kw)
+        stop = _resolve_token(parts[1], values, default=n - 1, **stop_kw)
         stride = 1
     elif len(parts) == _STRIDED_PARTS:
-        start = _resolve_token(parts[0], values, default=0)
+        start = _resolve_token(parts[0], values, default=0, **start_kw)
         stride_text = parts[1].strip() or "1"
         try:
             stride = int(stride_text)
         except ValueError as exc:
             msg = f"stride must be an integer, got {stride_text!r}"
             raise ConstraintError(msg) from exc
-        stop = _resolve_token(parts[2], values, default=n - 1)
+        stop = _resolve_token(parts[2], values, default=n - 1, **stop_kw)
     else:
         msg = f"too many ':' separated parts in selector [{selector}]"
         raise ConstraintError(msg)
@@ -241,6 +383,7 @@ def _parse_axis_request(
     name: str,
     selectors: list[str],
     axes: dict[str, np.ndarray],
+    dim_order: list[str],
 ) -> DimSelection:
     """Selection for an axis-only request such as ``?time[(last)]``.
 
@@ -250,7 +393,8 @@ def _parse_axis_request(
     if len(selectors) > 1:
         msg = f"axis {name} takes one selector, got {len(selectors)}"
         raise ConstraintError(msg)
-    return parse_selector(selectors[0], axes[name], allow_reversed=False)
+    where = f"For variable={name} axis#{dim_order.index(name)}={name}"
+    return parse_selector(selectors[0], axes[name], allow_reversed=False, where=where)
 
 
 def parse_griddap_query(
@@ -287,7 +431,7 @@ def parse_griddap_query(
         if name in axes:
             variables.append(name)
             if selectors:
-                axis_selections[name] = _parse_axis_request(name, selectors, axes)
+                axis_selections[name] = _parse_axis_request(name, selectors, axes, dim_order)
             continue
         if name not in known_variables:
             msg = f"unknown variable {name!r}"
@@ -302,8 +446,12 @@ def parse_griddap_query(
             )
             raise ConstraintError(msg)
         parsed = {
-            dim: parse_selector(sel, axes[dim])
-            for dim, sel in zip(dim_order, selectors, strict=True)
+            dim: parse_selector(
+                sel,
+                axes[dim],
+                where=f"For variable={name} axis#{i}={dim}",
+            )
+            for i, (dim, sel) in enumerate(zip(dim_order, selectors, strict=True))
         }
         if selections is None:
             selections = parsed

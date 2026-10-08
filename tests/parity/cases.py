@@ -131,6 +131,18 @@ CASES = [
             "ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
             "ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
         ],
+        # A value off an axis is refused, not snapped to its end (#57). The
+        # axes' half-spacing margin lets 90.03 through and not 90.05; a
+        # bad "stop" and an axis-only request are refused the same way.
+        extra=[
+            "griddap/{id}.csv?ROSE[(20)][(-120)]",
+            "griddap/{id}.csv?ROSE[(90.05)][(0)]",
+            "griddap/{id}.csv?ROSE[(90.03)][(0)]",
+            "griddap/{id}.csv?ROSE[(0)][(360.0)]",
+            "griddap/{id}.csv?ROSE[(-90.05)][(0):(1)]",
+            "griddap/{id}.csv?ROSE[(0):(120)][(0)]",
+            "griddap/{id}.csv?latitude[(95)]",
+        ],
         # This server has one griddap dataset, so a search that should list
         # every dataset must list this one.
         catalog=[

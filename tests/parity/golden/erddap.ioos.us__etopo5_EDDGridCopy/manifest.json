@@ -2,7 +2,7 @@
   "server": "https://erddap.ioos.us/erddap",
   "dataset_id": "etopo5_EDDGridCopy",
   "erddap_version": "ERDDAP_version=2.31",
-  "captured": "2026-10-07",
+  "captured": "2026-10-08",
   "requests": [
     {
       "path": "griddap/etopo5_EDDGridCopy.dds",
@@ -93,6 +93,48 @@
       "file": "14.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(20)][(-120)]",
+      "file": "15.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.05)][(0)]",
+      "file": "16.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.03)][(0)]",
+      "file": "17.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0)][(360.0)]",
+      "file": "18.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-90.05)][(0):(1)]",
+      "file": "19.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0):(120)][(0)]",
+      "file": "20.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?latitude[(95)]",
+      "file": "21.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
     },
     {
       "path": "search/index.csv?searchFor=etopo5",

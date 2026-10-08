@@ -34,7 +34,7 @@ from xpublish_erddap.catalog import (
     tree_datasets,
     unique_ids,
 )
-from xpublish_erddap.constraints import ConstraintError, parse_griddap_query
+from xpublish_erddap.constraints import ConstraintError, NoMatchError, parse_griddap_query
 from xpublish_erddap.errors import ErddapRoute
 
 logger = logging.getLogger("uvicorn")
@@ -284,6 +284,8 @@ def griddap_response(
             list(ed.dims),
             list(ed.data_vars),
         )
+    except NoMatchError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ConstraintError as exc:
         raise HTTPException(400, str(exc)) from exc
 
