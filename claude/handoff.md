@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-08, after #60)
+## Repo state (2026-10-08, after #61)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -80,11 +80,9 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
   #55–#67. **Shipped 2026-10-08:** #55–#59 (PRs #74–#77, #80), #78 (found on
   the way, PR #82), #64 (taken early, it continued #78; PR #83) and #60
-  (PR #86). **Next is #61** (cache per-dataset catalogs on the URL, not on
-  `name_dataset`; real cachey sizes; fix `hosting.md`'s `by_repo`): a real
-  wrong-answer bug for group-blind `name_dataset`, no decisions needed,
-  Sonnet is enough; do it before sending `hosting.md` to Earthmover. Then
-  #62, #63, #65, #66, #67.
+  (PR #86), #61 (PR #88: per-dataset catalogs cache on the URL's path
+  parameters + group, never on `name_dataset`; cachey gets `nbytes`). **Next
+  is #62**, then #63, #65, #66, #67 (#60 is still open on GitHub; EH closes it).
   After release: #68–#72. The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
