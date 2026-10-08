@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib import parse
@@ -45,6 +46,20 @@ GOLDEN = Path(__file__).parent / "golden"
 SNAPSHOT = "snapshot.nc"
 MANIFEST = "manifest.json"
 HTTP_OK = 200
+#: CoastWatch answers 503 "There was a (temporary?) problem" under load. Never
+#: ERDDAP's answer to a request, so it is retried rather than recorded.
+HTTP_BUSY = 503
+RETRIES = 4
+
+
+def get(client: httpx.Client, url: str) -> httpx.Response:
+    """``client.get(url)``, retrying a server that is only busy."""
+    for attempt in range(RETRIES):
+        resp = client.get(url)
+        if resp.status_code != HTTP_BUSY:
+            break
+        time.sleep(5 * (attempt + 1))
+    return resp
 
 
 def data_blocks(case: Case, ds: xr.Dataset) -> list:
@@ -85,7 +100,7 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
     version = client.get(f"{case.server}/version").text.strip()
     entries = []
     for i, path in enumerate(case.requests()):
-        resp = client.get(f"{case.server}/{path}")
+        resp = get(client, f"{case.server}/{path}")
         ok = resp.status_code == HTTP_OK
         name = f"{i:02d}.{ext_of(path)}" if ok else f"{i:02d}.error"
         (out / name).write_bytes(resp.content)
@@ -99,7 +114,7 @@ def capture(case: Case, client: httpx.Client, root: Path) -> None:
         )
         print(f"   {resp.status_code} {path}")
     for i, path in enumerate(case.catalog):
-        resp = client.get(f"{case.server}/{path}")
+        resp = get(client, f"{case.server}/{path}")
         ok = resp.status_code == HTTP_OK
         name = f"c{i:02d}.{ext_of(path)}" if ok else f"c{i:02d}.error"
         (out / name).write_bytes(resp.content)

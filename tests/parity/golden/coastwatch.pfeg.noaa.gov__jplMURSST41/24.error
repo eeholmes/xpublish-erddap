@@ -1,0 +1,4 @@
+Error {
+    code=400;
+    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[(notadate)]\": Start=NaN (invalid format?) isn't allowed.";
+}

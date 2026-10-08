@@ -206,7 +206,7 @@ def check_axes(ds: xr.Dataset, dims: tuple[str, ...]) -> list[AxisProblem]:
         if values.size < _MIN_AXIS_LEN:
             continue
         numeric = (
-            values.astype("datetime64[ns]").astype("int64")
+            values.astype("datetime64[us]").astype("int64")
             if np.issubdtype(values.dtype, np.datetime64)
             else values.astype("float64")
         )
