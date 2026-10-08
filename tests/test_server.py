@@ -34,9 +34,9 @@ def erddap(xpublish_server):
 
 def test_griddap_initialize(erddap):
     """erddapy discovers dimensions and variables from the DDS and csvp."""
-    assert erddap.dim_names == ["time", "lat", "lon"]
+    assert erddap.dim_names == ["time", "latitude", "longitude"]
     assert erddap.variables == ["air"]
-    for dim in ("time", "lat", "lon"):
+    for dim in ("time", "latitude", "longitude"):
         assert f"{dim}>=" in erddap.constraints
         assert f"{dim}_step" in erddap.constraints
 
@@ -47,18 +47,18 @@ def test_to_xarray_with_coordinate_constraints(erddap, dataset):
         {
             "time>=": "2013-01-05T00:00:00Z",
             "time<=": "2013-01-08T00:00:00Z",
-            "lat>=": 40.0,
-            "lat<=": 50.0,
-            "lon>=": 240.0,
-            "lon<=": 250.0,
+            "latitude>=": 40.0,
+            "latitude<=": 50.0,
+            "longitude>=": 240.0,
+            "longitude<=": 250.0,
         },
     )
     ds = erddap.to_xarray()
 
-    assert set(ds.sizes) == {"time", "lat", "lon"}
+    assert set(ds.sizes) == {"time", "latitude", "longitude"}
     assert ds.time.size == 13
-    assert ds.lat.max() <= 50.0
-    assert ds.lat.min() >= 40.0
+    assert ds.latitude.max() <= 50.0
+    assert ds.latitude.min() >= 40.0
 
     # ERDDAP's stop value is the nearest matching step, so the window ends at
     # 2013-01-08T00:00Z -- not at the end of that day, as a pandas slice would.
@@ -78,14 +78,14 @@ def test_to_pandas_csv(erddap):
     """The csv response parses into a long-form DataFrame."""
     erddap.response = "csv"
     erddap.constraints.update(
-        {"lat>=": 45.0, "lat<=": 47.5, "lon>=": 240.0, "lon<=": 242.5},
+        {"latitude>=": 45.0, "latitude<=": 47.5, "longitude>=": 240.0, "longitude<=": 242.5},
     )
     df = erddap.to_pandas()
 
     assert list(df.columns) == [
         "time (UTC)",
-        "lat (degrees_north)",
-        "lon (degrees_east)",
+        "latitude (degrees_north)",
+        "longitude (degrees_east)",
         "air (degK)",
     ]
     assert len(df) > 0
@@ -104,7 +104,7 @@ def test_griddap_initialize_on_the_split_dataset(xpublish_server):
     e.dataset_id = "mixed_level"
     # expand_dims puts the new dimension first, and the catalog preserves
     # the source's dimension order
-    assert e.dim_names == ["level", "time", "lat", "lon"]
+    assert e.dim_names == ["level", "time", "latitude", "longitude"]
     assert e.variables == ["air_levels"]
 
 

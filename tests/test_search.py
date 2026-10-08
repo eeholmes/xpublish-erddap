@@ -72,7 +72,8 @@ def test_variable_detail_follows_erddap():
     assert "v00 (Sea Height, m)\n" in summary
     assert "sst\n" in summary
     assert (
-        "cdm_data_type = Grid\nVARIABLES (all of which use the dimensions [lat][lon]):" in summary
+        "cdm_data_type = Grid\nVARIABLES (all of which use the dimensions [latitude][longitude]):"
+        in summary
     )
 
 

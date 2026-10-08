@@ -359,12 +359,213 @@ def _signature(da: xr.DataArray) -> tuple[str, ...]:
     return tuple(str(d) for d in da.dims)
 
 
+# -- ERDDAP's variable names --------------------------------------------------
+#: ``EDV.LAT_UNITS_VARIANTS`` and ``LON_UNITS_VARIANTS``.
+_LAT_UNITS = ("degrees_north", "degree_north", "degreeN", "degree_N", "degreesN", "degrees_N")
+_LON_UNITS = (
+    "degrees_east",
+    "degree_east",
+    "degreeE",  # codespell:ignore
+    "degree_E",
+    "degreesE",
+    "degrees_E",
+)
+
+#: Names ERDDAP accepts as lat/lon on name alone; we also want degree units.
+_BARE_XY = {"x", "y", "xax", "yax"}
+
+
+def _could_be_degrees(units: str, *, east: bool) -> bool:
+    """``EDV.couldBeLonUnits`` / ``couldBeLatUnits``, for non-empty units."""
+    low = units.lower()
+    if east and ("north" in low or "south" in low):
+        return False
+    if not east and ("east" in low or "west" in low):
+        return False
+    variants = _LON_UNITS if east else _LAT_UNITS
+    words = ("degrees east", "degree west", "degrees west") if east else ("degrees north",)
+    return (
+        low in ("deg", "degree", "degrees")
+        or "decimal degrees" in low
+        or any(w in low for w in words)
+        or low.startswith("ddd.d" if east else "dd.d")
+        or low in variants
+    )
+
+
+def _named(name: str, *, east: bool) -> bool:
+    """The name half of ``EDV.probablyLon`` / ``probablyLat``."""
+    low = name.lower()
+    if east:
+        return (
+            low.startswith("lon") or "longitude" in low or low in ("x", "xax")
+        ) and not low.startswith(
+            ("lone", "longl"),
+        )
+    return (
+        low.startswith("lat") or "latitude" in low or low in ("y", "yax")
+    ) and not low.startswith(
+        ("latin", "lata", "late", "lath", "lato", "latt"),
+    )
+
+
+def _probably(name: str, units: str, *, east: bool) -> bool:
+    """``EDV.probablyLon`` / ``probablyLat``, with bare ``x``/``y`` needing units.
+
+    ERDDAP takes an axis named ``x`` or ``y`` with no units as longitude or
+    latitude; a projected grid's metre axes often have none (#60), so here
+    they need degree units.
+    """
+    if not _named(name, east=east):
+        return False
+    if not units:
+        return name.lower() not in _BARE_XY
+    return _could_be_degrees(units, east=east)
+
+
+def recognised_axis(name: str, da: xr.DataArray) -> str | None:
+    """``latitude``, ``longitude`` or ``time`` if axis ``name`` is clearly that axis.
+
+    Lat/lon: ``standard_name``, CF degree units (``EDV.LAT_UNITS_VARIANTS``),
+    or ERDDAP's own name-and-units test (``EDV.probablyLat``/``probablyLon``,
+    which ``EDD.suggestDestinationName`` uses to rename axes in
+    GenerateDatasetsXml). An axis whose ``standard_name`` says it is something
+    else (``grid_latitude`` on a rotated grid) is not lat/lon, nor is one
+    whose name and units disagree (``lat`` in ``degrees_east``). Time: a
+    datetime axis. A numeric axis with CF time units is not renamed, since we
+    serve its numbers as they are and ERDDAP's ``time`` is always UTC
+    timestamps; a timedelta axis (``lead_time``) is not time.
+    """
+    if np.issubdtype(da.dtype, np.datetime64):
+        return "time"
+    if da.dtype.kind not in "iuf":
+        return None
+    standard_name = str(da.attrs.get("standard_name", ""))
+    units = str(da.attrs.get("units", "")).strip()
+    for target, east, variants in (
+        ("latitude", False, _LAT_UNITS),
+        ("longitude", True, _LON_UNITS),
+    ):
+        if standard_name == target:
+            return target
+        if standard_name:
+            continue  # says it is something else
+        if units in variants and not _named(name, east=not east):
+            return target
+        if _probably(name, units, east=east):
+            return target
+    return None
+
+
+def is_variable_name_safe(name: str) -> bool:
+    """``String2.isVariableNameSafe``: a letter or ``_``, then letters, digits, ``_``.
+
+    ERDDAP's letters are ISO 8859-1 letters; ours are ASCII, which is what
+    our constraint parser reads.
+    """
+    return re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name) is not None
+
+
+def safe_variable_name(name: str) -> str:
+    """The name ERDDAP's GenerateDatasetsXml would give a variable.
+
+    ``EDD.suggestDestinationName``'s last step: every unsafe character becomes
+    ``_``, a name not starting with a letter gets ``a_`` in front, runs of
+    ``_`` collapse and trailing ones go (``sst-anom`` -> ``sst_anom``,
+    ``1st`` -> ``a_1st``).
+    """
+    out = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    if not out[:1].isascii() or not out[:1].isalpha():
+        out = f"a_{out}"
+    out = re.sub(r"_+", "_", out).rstrip("_")
+    return out or "a"
+
+
+def served_names(
+    ds: xr.Dataset,
+    dims: tuple[str, ...],
+    data_vars: list[str],
+    *,
+    dataset_id: str,
+    rename_axes: bool | dict[str, str] = True,
+) -> tuple[dict[str, str], list[str]] | None:
+    """The names one hypercube is served under: ``(renames, refused)``.
+
+    ``renames`` maps source names to served names, for ``Dataset.rename``.
+    Recognised axes get ERDDAP's names (``recognised_axis``), or with a dict
+    ``rename_axes`` the names it gives; ``False`` keeps them all. A name ERDDAP
+    cannot serve (``sst-anom``) gets ``safe_variable_name``. A served name
+    already taken is not used: an axis keeps its own name, a data variable
+    that cannot be served is ``refused``. ``None`` means the whole hypercube
+    must be refused (an axis with an unservable name).
+    """
+    taken = set(dims) | set(data_vars)
+    renames: dict[str, str] = {}
+
+    def claim(source: str, target: str) -> bool:
+        if target in taken:
+            return False
+        taken.discard(source)
+        taken.add(target)
+        renames[source] = target
+        return True
+
+    for dim in dims:
+        if isinstance(rename_axes, dict):
+            target = rename_axes.get(dim)
+        else:
+            target = recognised_axis(dim, ds[dim]) if rename_axes else None
+        if target is None or target == dim:
+            continue
+        if not is_variable_name_safe(target):
+            logger.warning(
+                "ERDDAP: dataset %r -- cannot serve axis %r as %r, not a valid name",
+                dataset_id,
+                dim,
+                target,
+            )
+        elif not claim(dim, target):
+            logger.warning(
+                "ERDDAP: dataset %r -- serving axis %r under its own name, "
+                "as %r is taken by another variable",
+                dataset_id,
+                dim,
+                target,
+            )
+
+    refused = []
+    for name in (*dims, *data_vars):
+        if name in renames or is_variable_name_safe(name):
+            continue
+        target = safe_variable_name(name)
+        if claim(name, target):
+            continue
+        if name in dims:
+            logger.warning(
+                "ERDDAP: refusing dataset %r -- axis %r is not a valid ERDDAP name and %r is taken",
+                dataset_id,
+                name,
+                target,
+            )
+            return None
+        logger.warning(
+            "ERDDAP: dataset %r -- leaving out variable %r: "
+            "not a valid ERDDAP name and %r is taken",
+            dataset_id,
+            name,
+            target,
+        )
+        refused.append(name)
+    return renames, refused
+
+
 def build_catalog(
     source_id: str,
     ds: xr.Dataset,
     *,
     metadata: dict | None = None,
     strict_axes: bool = True,
+    rename_axes: bool | dict[str, str] = True,
 ) -> list[ErddapDataset]:
     """Split one xarray Dataset into ERDDAP-compatible datasets.
 
@@ -381,6 +582,11 @@ def build_catalog(
         strict_axes: when true (the default, matching ERDDAP), datasets whose
             axes are not strictly monotonic are dropped from the catalog with
             a logged warning rather than served with silently wrong results.
+        rename_axes: serve recognised latitude, longitude and time axes as
+            ``latitude``, ``longitude`` and ``time``, as ERDDAP does (the
+            default); ``False`` keeps source names; a dict maps source axis
+            names to served names instead. See ``served_names``. DatasetIDs
+            come from the source names either way, so this does not move them.
 
     Returns:
         One ``ErddapDataset`` per dimension signature, largest group first.
@@ -402,19 +608,33 @@ def build_catalog(
     )
     out: list[ErddapDataset] = []
     base_sig = ordered[0][0] if ordered else ()
-    for sig, names in ordered:
-        if sig == base_sig:
+    for source_sig, names in ordered:
+        if source_sig == base_sig:
             # the largest group keeps the source id, so the common case is stable
             dataset_id = sanitize_id(source_id)
         else:
-            extra = [d for d in sig if d not in base_sig]
-            suffix = "_".join(extra) if extra else "_".join(sig)
+            extra = [d for d in source_sig if d not in base_sig]
+            suffix = "_".join(extra) if extra else "_".join(source_sig)
             dataset_id = sanitize_id(f"{source_id}_{suffix}")
 
-        keep = [n for n in names if all(d in ds.dims for d in sig)]
+        keep = [n for n in names if all(d in ds.dims for d in source_sig)]
         sub = ds[keep]
         # keep only the coordinates that are this hypercube's axes
-        sub = sub.drop_vars([c for c in sub.coords if c not in sig], errors="ignore")
+        sub = sub.drop_vars([c for c in sub.coords if c not in source_sig], errors="ignore")
+
+        named = served_names(sub, source_sig, keep, dataset_id=dataset_id, rename_axes=rename_axes)
+        if named is None:
+            continue
+        renames, refused = named
+        if refused:
+            keep = [n for n in keep if n not in refused]
+            if not keep:
+                continue
+            sub = sub.drop_vars(refused)
+        # lazy: the served names point at the same source arrays
+        sub = sub.rename(renames)
+        keep = [renames.get(n, n) for n in keep]
+        sig = tuple(renames.get(d, d) for d in source_sig)
 
         attrs = dict(ds.attrs)
         # xpublish tags every dataset with its id; not a real attribute

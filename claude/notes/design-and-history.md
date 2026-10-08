@@ -166,14 +166,6 @@ ERDDAP.
   reads `.dtype` instead. **A local tutorial dataset would never have shown
   this**, so always test against a lazily opened remote store.
 
-- **Axis names as ERDDAP serves them (EH, 2026-10-07; #59, not built yet).**
-  ERDDAP always calls the geographic axes `latitude`/`longitude` and the time
-  axis `time`, and clients depend on it (plotdap reads the dims by those
-  names). So recognised lat/lon/time axes are to be renamed **by default**,
-  with an `ErddapPlugin` option to turn it off or change the mapping, and the
-  rule documented in `docs/hosting.md`. Only clearly geographic axes (units or
-  `standard_name`), so projected x/y in metres keep their names.
-
 ## `strict_axes=True`: refuse data that is non-monotonic
 
 The CEFI monthly store has six duplicated months appended to its time axis.
@@ -314,3 +306,46 @@ jplMURSST41 (now a parity case, daily at 09Z):
 request with 503, so a 503 is never a real answer. The jplMURSST41 case has
 `metadata=False`: its metadata differs for an unrelated reason (the Byte `mask`
 variable with a `_FillValue` becomes Float32 when xarray masks it).
+
+## Axes get ERDDAP's names; unsafe names are made safe (#59)
+
+EH decided (2026-10-07) to rename recognised latitude, longitude **and time**
+axes by default, with an option to turn it off or map names. Built in
+`catalog.served_names`, applied in `build_catalog` with a lazy
+`Dataset.rename`, so every response follows without format code knowing.
+`ErddapPlugin(rename_axes=True | False | {source: served})`. Rules for hosts in
+`docs/hosting.md` section 7. Decisions, with reasons:
+
+- **DatasetIDs come from source names.** A split dataset's suffix is the
+  source dimension (`s_z`, and `s_t` would stay `s_t`), so the option does not
+  move datasets, and ids already handed out (the test server) stay put.
+- **Recognition is ERDDAP's rule, tightened in two places.** Lat/lon: CF
+  `standard_name`, CF degree units, or `EDV.probablyLat`/`probablyLon` (name
+  plus unit compatibility, which GenerateDatasetsXml uses). So a unitless `lat`
+  is renamed (ERDDAP would, and the fixtures `grid_dataset` and test_search's
+  have such axes). Tightened: a bare `x`/`y`/`xax`/`yax` needs degree units
+  (ERDDAP accepts them unitless; projected metres often are, see #60), and a
+  non-matching `standard_name` (`grid_latitude`) or contradictory name and
+  units (`lat` in `degrees_east`) means no rename. The issue said "units or
+  standard_name" only; going with ERDDAP's name rule as well was deliberate,
+  because `_axis_units` already *calls* a unitless `lat` `degrees_north`, and
+  leaving its name alone would be inconsistent.
+- **Time is datetime64 only.** The issue also listed "CF time units"; a
+  numeric axis with `days since ...` that xarray did not decode is left alone,
+  because we serve its numbers as they are and ERDDAP's `time` is always epoch
+  seconds/ISO in UTC, which clients parse as such. Revisit if such stores
+  appear (converting them would be the real fix).
+- **Unsafe variable names are renamed, not refused** (issue item 16 asked to
+  decide). Port of `String2.isVariableNameSafe` (ASCII letters only; ERDDAP
+  allows ISO 8859-1, our constraint parser does not) and the last step of
+  `EDD.suggestDestinationName`: `sst-anom` -> `sst_anom`, `1st` -> `a_1st`.
+  Refusing would hide data the source plainly has; this is the name an ERDDAP
+  admin would get from GenerateDatasetsXml. A clash with an existing name
+  leaves the variable out (logged); an unservable axis refuses the dataset.
+- **Target taken**: the axis keeps its source name, logged as a warning.
+
+Checked: parity unchanged (real ERDDAP datasets already use these names), R
+tests (rerddap, rerddapXtracto tutorials) with the new names, and an ad hoc
+plotdap `add_griddap` on `air` now builds a plot (the committed plotdap test
+is #67). The collaborator kit (`collaborator-test/`, local) still uses
+`lat`/`lon` and must be updated when the test server is redeployed with this.

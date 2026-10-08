@@ -7,7 +7,7 @@ print(i)
 cat("\n-- griddap() --\n")
 res <- griddap("cefi_nep_hindcast_daily", url = url,
                time = c("2024-07-01", "2024-07-05"),
-               lat = c(45, 47), lon = c(230, 232),
+               latitude = c(45, 47), longitude = c(230, 232),
                fields = "tos")
 cat("rows:", nrow(res$data), "\n")
 print(head(res$data, 4))

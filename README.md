@@ -176,6 +176,14 @@ coordinate-value requests still look correct, because nearest-match lands on the
 first occurrence, while index ranges spanning the break silently return a series
 that jumps backwards in time. Pass `strict_axes=False` to override.
 
+**Axes have ERDDAP's names.** ERDDAP calls the geographic axes `latitude` and
+`longitude` and the time axis `time`, and client code is written against those
+names. A store with `lat`/`lon`/`t` axes is served with ERDDAP's names
+(`rename_axes=True`, the default); `rename_axes=False` keeps the source names,
+and a dict gives your own mapping. Variable names ERDDAP cannot serve
+(`sst-anom`) are served as ERDDAP would name them (`sst_anom`). The rules are in
+[`docs/hosting.md`](docs/hosting.md#7-axis-and-variable-names).
+
 ## Demos
 
 `demo/serve_air.py` serves xarray's tutorial dataset; `demo/serve_cefi.py`

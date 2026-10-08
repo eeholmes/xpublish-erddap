@@ -167,6 +167,54 @@ pointing at the dataset's OPeNDAP endpoint, because a host like Flux already
 serves `/opendap` beside it (issue
 [#2](https://github.com/eeholmes/xpublish-erddap/issues/2)).
 
+### 7. Axis and variable names
+
+ERDDAP names the geographic axes `latitude` and `longitude` and the time axis
+`time`, and client code relies on it: rerddap and erddapy users write
+`latitude = c(40, 50)` or `"latitude>="`, and plotdap reads the axes by those
+names. So by default the plugin **serves recognised axes under ERDDAP's names**
+in every response (`.dds`, `.das`, `.ncml`, `.nc`, csv/json headers, info,
+constraints). A store whose axes are `t`, `lat`, `lon` is served as `time`,
+`latitude`, `longitude`; the source names are then unknown variables, as they
+would be on an ERDDAP server whose admin renamed them. DatasetIDs (including
+the suffix of a split dataset) still come from the source names, so turning
+this on or off does not move a dataset.
+
+An axis is recognised only when it is clearly that axis:
+
+- **latitude / longitude**: `standard_name` `latitude`/`longitude`; or CF
+  degree units (`degrees_north`, `degrees_east` and the variants ERDDAP
+  accepts); or ERDDAP's own test, a lat/lon-like name (`lat`, `latitude`,
+  `nav_lon`, ...) with no units or degree units (`EDV.probablyLat`/
+  `probablyLon`, used by ERDDAP's GenerateDatasetsXml). Not recognised:
+  projected `x`/`y` in metres (ERDDAP would take a unitless `x`/`y`; we need
+  degree units for those), an axis whose `standard_name` says something else
+  (`grid_latitude`), or one whose name and units disagree.
+- **time**: a datetime axis (`t`, `valid_time`, ...). A timedelta axis
+  (`lead_time`) is not time, and neither is a numeric axis with CF time units
+  that xarray did not decode, since it would be served as raw numbers under a
+  name that promises UTC timestamps.
+
+If the target name is already taken by another variable in the dataset, the
+axis keeps its own name and a warning is logged.
+
+To change it:
+
+```python
+ErddapPlugin(rename_axes=False)  # serve source names
+ErddapPlugin(rename_axes={"lat": "latitude", "lon": "longitude"})  # exactly these
+```
+
+A dict replaces recognition: only the axes it names are renamed.
+
+**Variable names ERDDAP cannot serve** are made safe either way. ERDDAP allows
+a letter or `_` followed by letters, digits and `_` (`String2.isVariableNameSafe`).
+A variable called `sst-anom` or `1st` would be listed but could never be
+requested (`?sst-anom[0]` reads as `sst`), so it is served under the name
+ERDDAP's GenerateDatasetsXml would give it: `sst_anom`, `a_1st`
+(`EDD.suggestDestinationName`). If that name is taken too, the variable is left
+out with a warning (an axis that cannot be named leaves the whole dataset out).
+
 ## Settings at a glance
 
 ```python
@@ -175,6 +223,7 @@ ErddapPlugin(
     max_response_mb=500,  # refuse larger data requests with ERDDAP's 413
     metadata={...},  # global attributes for every dataset (ERDDAP's addAttributes)
     strict_axes=True,  # drop datasets with non-monotonic axes, as ERDDAP does
+    rename_axes=True,  # (7) serve lat/lon/time axes as latitude/longitude/time
     catalog_max_age_s=None,  # (5) also rebuild catalogs after this many seconds
 )
 ```
