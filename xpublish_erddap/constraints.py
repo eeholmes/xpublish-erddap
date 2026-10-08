@@ -22,6 +22,7 @@ from datetime import UTC, datetime, timedelta
 import numpy as np
 import pandas as pd
 
+from xpublish_erddap.catalog import nice_doubles
 from xpublish_erddap.formats import java_number
 
 __all__ = [
@@ -127,20 +128,27 @@ def _axis_is_time(values: np.ndarray) -> bool:
     return np.issubdtype(np.asarray(values).dtype, np.datetime64)
 
 
-def _to_comparable(value: str, values: np.ndarray):
-    """Coerce a coordinate-value token to something comparable with the axis."""
-    if _axis_is_time(values):
-        text = value.strip()
-        # ERDDAP also accepts epoch seconds for time
-        try:
-            return np.datetime64(pd.Timestamp(float(text), unit="s").tz_localize(None))
-        except (TypeError, ValueError):
-            pass
+def _destination_double(text: str, values: np.ndarray) -> float:
+    """A ``(value)`` as ERDDAP's destination double; NaN if it cannot be read.
+
+    ``EDV.destinationToDouble``: a time axis takes ISO 8601 or epoch seconds
+    and works in epoch seconds. Kept a float, never ``datetime64[ns]``, which
+    wraps silently past 2262 and would let a far date land inside the axis.
+    """
+    text = text.strip()
+    try:
+        return float(text)
+    except ValueError:
+        if not _axis_is_time(values):
+            return float("nan")
+    try:
         ts = pd.Timestamp(text)
-        if ts.tzinfo is not None:
-            ts = ts.tz_convert("UTC").tz_localize(None)
-        return np.datetime64(ts)
-    return float(value)
+    except (ValueError, OverflowError):
+        return float("nan")
+    if ts is pd.NaT:
+        return float("nan")
+    # A naive time is UTC, as in ERDDAP.
+    return ts.timestamp()
 
 
 #: ``MustBe.THERE_IS_NO_DATA`` followed by ``EDStatic.messages.queryError``.
@@ -174,7 +182,7 @@ def _iso_seconds(seconds: float) -> str:
 
 def _axis_seconds(values: np.ndarray) -> np.ndarray:
     """A time axis as epoch seconds (ERDDAP's destination values)."""
-    return values.astype("datetime64[ns]").astype("int64") / 1e9
+    return values.astype("datetime64[us]").astype("int64") / 1e6
 
 
 def check_in_range(
@@ -205,7 +213,10 @@ def check_in_range(
         digits, numeric = 13, _axis_seconds(arr)
     else:
         digits = _DIGITS_FOR_DOUBLE_AXES if arr.dtype == np.float64 else 5
-        numeric = arr.astype("float64")
+        # float32 values become 7-digit doubles, so the margin (and its text)
+        # is ERDDAP's: erdMH1chla8day says -90.00000333294744, raw floats give
+        # -90.00000508655744.
+        numeric = nice_doubles(arr)
     low, high = float(np.min(numeric)), float(np.max(numeric))
     if len(numeric) >= 2:  # noqa: PLR2004
         rough = abs((numeric[-1] - numeric[0]) / (len(numeric) - 1)) / 2
@@ -238,26 +249,15 @@ def check_in_range(
         raise NoMatchError(_NO_MATCH + first + msg)
 
 
-def _seconds_of(target, values: np.ndarray) -> float:
-    """``target`` (from ``_to_comparable``) as the axis's destination double."""
-    if _axis_is_time(values):
-        return float(np.datetime64(target, "ns").astype("int64")) / 1e9
-    return float(target)
-
-
-def _nearest_index(values: np.ndarray, target) -> int:
-    """Index of the axis element nearest ``target``.
+def _nearest_index(values: np.ndarray, target: float) -> int:
+    """Index of the axis element nearest ``target``, a destination double.
 
     On an exact tie ERDDAP picks the *larger* coordinate value, whichever way
     the axis runs (checked against real servers; see issue #11).
     """
     arr = np.asarray(values)
-    if _axis_is_time(arr):
-        numeric = arr.astype("datetime64[ns]").astype("int64")
-        diffs = np.abs(numeric - np.datetime64(target, "ns").astype("int64"))
-    else:
-        numeric = arr.astype("float64")
-        diffs = np.abs(numeric - float(target))
+    numeric = _axis_seconds(arr) if _axis_is_time(arr) else arr.astype("float64")
+    diffs = np.abs(numeric - target)
     tied = np.flatnonzero(diffs == diffs.min())
     return int(tied[np.argmax(numeric[tied])])
 
@@ -292,16 +292,13 @@ def _resolve_token(
         if offset is None:
             return n - 1
         if paren:
-            # (last-d): d is in *value* space, per ERDDAP docs
+            # (last-d): d is in *value* space (seconds for time), as in
+            # ERDDAP's convertLast, which also writes the result as Java does.
             arr = np.asarray(values)
-            if _axis_is_time(arr):
-                target = arr[-1] - np.timedelta64(int(float(offset)), "s")
-            else:
-                target = arr.astype("float64")[-1] - float(offset)
-            seconds = _seconds_of(target, arr)
-            # ERDDAP's convertLast turns it into the value's text, in Java's form.
-            check_in_range(arr, seconds, java_number(seconds), role=role, where=where)
-            return _nearest_index(values, target)
+            last = _axis_seconds(arr[-1:])[0] if _axis_is_time(arr) else float(arr[-1])
+            target = float(last) - float(offset)
+            check_in_range(arr, target, java_number(target), role=role, where=where)
+            return _nearest_index(arr, target)
         idx = n - 1 - int(float(offset))
         if not 0 <= idx < n:
             msg = f"index {idx} out of range for axis of length {n}"
@@ -309,8 +306,13 @@ def _resolve_token(
         return idx
 
     if paren:
-        target = _to_comparable(inner, values)
-        check_in_range(values, _seconds_of(target, values), inner, role=role, where=where)
+        target = _destination_double(inner, values)
+        if np.isnan(target):
+            # EDDGrid.parseAxisBrackets: a 400, before the range checks.
+            head = f"Query error: {where}: " if where else "Query error: "
+            msg = f"{head}{role}=NaN (invalid format?) isn't allowed."
+            raise ConstraintError(msg)
+        check_in_range(values, target, inner, role=role, where=where)
         return _nearest_index(values, target)
 
     try:

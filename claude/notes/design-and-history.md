@@ -261,6 +261,19 @@ coastwatch datasets, 2026-10-08, time and double axes). If ERDDAP fixes it, the
 scheduled capture job will show the drift and the `greater` branch in
 `check_in_range` should follow.
 
-Not covered: ERDDAP also accepts `(last+d)`; ours does not parse it. A
-non-numeric `(abc)` is still an uncaught `ValueError` (a 500), where ERDDAP says
-`Start=NaN (invalid format?)`.
+Two things that look fussy but are needed (found in review, 2026-10-08):
+
+- **Values are ERDDAP's destination doubles, never `datetime64[ns]`.** Time is
+  epoch seconds as a float (axis via `datetime64[us]`). The ns form wraps
+  silently past 2262: `(2577-08-21T23:34:33)` wrapped to 1993-02-01 and was
+  served with 200, and `(3000-01-01)` was called "less than the minimum".
+  `_nearest_index` works on the same doubles.
+- **A float32 axis's margin uses `nice_doubles`** (ERDDAP's 7-digit doubles),
+  not the raw floats: erdMH1chla8day's live text is `(and even
+  -90.00000333294744)`; raw floats give `-90.00000508655744`.
+
+An unreadable value (`(abc)`, `(NaN)`, a bad date) is a **400**, `Start=NaN
+(invalid format?) isn't allowed.`, ERDDAP's wording, checked before the range.
+
+Not covered: `(last+d)` and exponents in `last-d` (`last-1e11`) do not parse;
+that is #58's `last` parsing.

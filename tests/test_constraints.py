@@ -237,3 +237,41 @@ def test_error_names_the_variable_and_constraint(axes):
     with pytest.raises(NoMatchError) as err:
         parse_griddap_query("lon[(300)]", axes, ["time", "lat", "lon"], ["tos"])
     assert 'For variable=lon axis#2=lon Constraint="[(300)]"' in str(err.value)
+
+
+def test_far_dates_do_not_wrap_into_the_axis(axes):
+    # 2**64 ns after 1993-02-01: datetime64[ns] wraps it back onto the axis
+    assert "greater than" in off("(2577-08-21T23:34:33)", axes["time"])
+    assert "greater than" in off("(3000-01-01)", axes["time"])
+    assert 'Start="1500-01-01" is less than' in off("(1500-01-01)", axes["time"])
+    assert "less than" in off("(last-100000000000)", axes["time"])
+
+
+def test_last_minus_fractional_seconds(axes):
+    # ERDDAP keeps d a double; half a day back from the last day is a tie,
+    # which goes to the larger value
+    assert parse_selector("(last-43200)", axes["time"]).start == 99
+    assert parse_selector("(last-43200.5)", axes["time"]).start == 98
+
+
+@pytest.mark.parametrize("value", ["abc", "NaN", "2020-13-45"])
+def test_unreadable_value_is_a_400_like_erddap(axes, value):
+    is_time = value.startswith("2020")
+    axis, start = (axes["time"], "1993-01-05") if is_time else (axes["lat"], "20")
+    selector = f"({start}):({value})"
+    with pytest.raises(ConstraintError) as err:
+        parse_selector(selector, axis, where="For variable=tos axis#1=lat")
+    assert not isinstance(err.value, NoMatchError)
+    assert str(err.value) == (
+        f'Query error: For variable=tos axis#1=lat Constraint="[{selector}]": '
+        "Stop=NaN (invalid format?) isn't allowed."
+    )
+
+
+def test_float32_margin_uses_erddaps_seven_digit_doubles():
+    # erdMH1chla8day latitude: 4320 float32 values, 89.979164 down to -89.97917.
+    # Live ERDDAP (2026-10-08): "... axis minimum=-89.97917 (and even -90.00000333294744)."
+    lat = np.linspace(89.979164, -89.97917, 4320).astype("float32")
+    lat[0], lat[-1] = np.float32(89.979164), np.float32(-89.97917)
+    msg = off("(-95)", lat)
+    assert "axis minimum=-89.97917 (and even -90.00000333294744)." in msg

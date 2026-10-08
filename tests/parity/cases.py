@@ -142,6 +142,8 @@ CASES = [
             "griddap/{id}.csv?ROSE[(-90.05)][(0):(1)]",
             "griddap/{id}.csv?ROSE[(0):(120)][(0)]",
             "griddap/{id}.csv?latitude[(95)]",
+            # an unreadable value is a 400, not a 404
+            "griddap/{id}.csv?ROSE[(abc)][(0)]",
         ],
         # This server has one griddap dataset, so a search that should list
         # every dataset must list this one.

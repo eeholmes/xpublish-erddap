@@ -137,6 +137,12 @@
       "content_type": "text/plain;charset=UTF-8"
     },
     {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(abc)][(0)]",
+      "file": "22.error",
+      "status": 400,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
       "path": "search/index.csv?searchFor=etopo5",
       "file": "c00.csv",
       "catalog": true,

@@ -58,8 +58,8 @@ Attributes {
     Float64 geospatial_lon_resolution 0.08333410511692521;
     String geospatial_lon_units "degrees_east";
     String history "2012-02-28T00:00:00Z Downloaded from NOAA/NCEI/MMG by J. Potemra.
-2026-10-08T15:59:06Z https://pae-paha.pacioos.hawaii.edu/thredds/dodsC/etopo5
-2026-10-08T15:59:06Z http://localhost:8080/erddap/griddap/etopo5_EDDGridCopy.das";
+2026-10-08T16:27:08Z https://pae-paha.pacioos.hawaii.edu/thredds/dodsC/etopo5
+2026-10-08T16:27:08Z http://localhost:8080/erddap/griddap/etopo5_EDDGridCopy.das";
     String id "etopo5";
     String infoUrl "https://www.ngdc.noaa.gov/mgg/global/etopo5.HTML";
     String institution "NOAA Marine Geology and Geophysics (MGG)";
