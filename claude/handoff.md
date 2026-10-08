@@ -39,24 +39,30 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Collaborator test kit, local only, deliberately not in git:**
   `collaborator-test/` on this hub (hidden by `.git/info/exclude`); EH shares
   it by Slack. Updated for #59's names and #57's 404 on 2026-10-08 and
-  re-checked: 10/10 Python, 7/7 R. EH must re-share it: the copy collaborators
-  have uses `lat`/`lon` and fails against the server now. Do not commit it
-  unless EH asks.
+  re-checked: 10/10 Python, 7/7 R (again after the `bbe53e0` redeploy). EH
+  must re-share it: the copy collaborators have uses `lat`/`lon` and fails
+  against the server now. Do not commit it unless EH asks.
 - **Shipped 2026-10-08** (closed; decisions and reasons in
   `notes/design-and-history.md`): #55 hygiene (PR #74; a bare `pytest` now
   collects `tests/` only), #56 skip a failing source (PR #75), #57 values
   off an axis are a 404 (PR #76), #58 ERDDAP's own time/`last`/index parsing,
   `xpublish_erddap/javaparse.py` (PR #77), #59 ERDDAP's axis names and safe
-  variable names (PR #80). #78 opened on the way.
+  variable names (PR #80); then #78 integer variables keep their type when
+  xarray masks them (PR #82) and #64 unsigned, 64-bit and packed types
+  (PR #83), with ERDDAP's DAS charset, csv text quoting and NcML entities
+  fixed on the way. Test server redeployed to `bbe53e0` (PR #84).
 - **Shipped 2026-10-07:** #34, #18 (per-group root, `docs/hosting.md`), #3,
   #27/#4 (`search.py`, ported), #35, #36 (`errors.py`), #45/#46; 2026-10-06:
   #32, #33, #40.
 - **CI, 13 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
-  `package`, `rerddap`, pre-commit.ci. 546 passed, 42 skipped, 2 xfailed on
-  Linux/macOS/min-deps; Windows 530/59/1 (skips the live-server tests). The
-  skips are mostly parity media-type checks on error responses, expected.
-  Parity has 4 cases now; `jplMURSST41` (coastwatch) is query parsing only
-  (`metadata=False` until #78).
+  `package`, `rerddap`, pre-commit.ci. 635 passed, 42 skipped, 4 xfailed on
+  Linux/macOS/min-deps; Windows 619/59/3 (skips the live-server tests). The
+  skips are mostly parity media-type checks on error responses, expected; the
+  xfails are strict known differences (`KNOWN_MEDIA`: ERDDAP 2.29/2.31 serve
+  `.das` as `text/csv`). Parity has 6 cases, all recaptured 2026-10-08,
+  including `CRW_baa_max_7d_v1_0` (Byte with fill cells) and PacIOOS
+  `dhw_5km` (unsigned bytes; its data blocks come from ERDDAP's `.nc`
+  because netCDF-C's DAP client fails on them).
 - The repo uses **branches and PRs**. A task stays on its branch until the
   definition of done on its issue is met. EH often says "merge #N when CI is
   green"; merged branches are deleted on GitHub and on the hub.
@@ -65,10 +71,11 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Audit done 2026-10-07 (#50, #52); its findings are issues #55–#72**, in
   the order to do them. Each says its order, dependencies, definition of done
   and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
-  #55–#67. **#55–#59 shipped 2026-10-08** (PRs #74–#77, #80), including the three
-  blockers (#56 one bad store, #57 values off an axis, #58 ERDDAP's own
-  time/`last` parsing in `javaparse.py`); next is #78 (integer variables
-  with a `_FillValue` served as Float32, found on the way), then #60.
+  #55–#67. **Shipped 2026-10-08:** #55–#59 (PRs #74–#77, #80), #78 (found on
+  the way, PR #82) and #64 (taken early, it continued #78; PR #83). **Next is
+  #60** (cftime and timedelta axes, projected x/y): EH has to decide whether
+  cftime axes are refused (Sonnet is enough) or served (Opus); check what
+  ERDDAP does first. Then #61, #62, #63, #65, #66, #67.
   After release: #68–#72. The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
@@ -94,6 +101,11 @@ run the R tests: `notes/dev-environment.md`.
 - **Test against lazily opened data**; never materialize a remote array.
 - **Refuse bad axes instead of serving wrong answers** (`strict_axes`).
 - **Check pass/skip counts in CI logs**, not just the colour.
+- **To show a new test fails on `main`, use a worktree** (`git worktree add`),
+  and commit first. `git checkout main -- xpublish_erddap` over uncommitted
+  work destroyed #64's code once (rebuilt from the session, 2026-10-08).
+- **CI does not install zarr** (or icechunk): build test data in memory
+  (`xr.decode_cf` gives what a default open gives).
 - **When ERDDAP's behaviour decides a question, read ERDDAP's source**
   (github.com/ERDDAP/erddap), port it, cite the class and method, and check
   it against a live server (EH asked for this on 2026-10-07). Test the
@@ -134,8 +146,6 @@ run the R tests: `notes/dev-environment.md`.
   `xpublish-erddap` is free on PyPI and conda-forge (checked 2026-10-07).
   Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
   xpublish ecosystem PR) each need EH's yes.
-- **#50 and #52 met their definition of done** (report posted, EH chose to
-  open every finding as an issue). Still open; suggest closing both.
 - **#53, #54** (EH's): research ERDDAP proxying us via `EDD*FromErddap`, and
   direct Icechunk support in ERDDAP itself.
 - **Earthmover:** send `docs/hosting.md`; ask how Flux registers a service,
@@ -147,7 +157,8 @@ run the R tests: `notes/dev-environment.md`.
   (stride, selector count); 400 where ERDDAP gives 500 for an unknown
   variable; `/erddap/nope` paths get FastAPI's 404. Values off an axis (404,
   #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
-  text. See `design-and-history.md`.
+  text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
+  (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
 - **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
   CoastWatch Python tutorials need it, see its latest comment), #5
   (`categorize`, now cheap: `search.categories` exists), #6, #7, #10, #14.
