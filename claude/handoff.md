@@ -65,9 +65,11 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Audit done 2026-10-07 (#50, #52); its findings are issues #55–#72**, in
   the order to do them. Each says its order, dependencies, definition of done
   and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
-  #55–#67, with **#56, #57, #58 blocking** (one bad store breaks the
-  server-wide root; values off an axis and a raw `+` in a time offset both
-  return wrong data with 200). After release: #68–#72. The ordered table is
+  #55–#67. **#55–#58 shipped 2026-10-08** (PRs #74–#77), including the three
+  blockers (#56 one bad store, #57 values off an axis, #58 ERDDAP's own
+  time/`last` parsing in `javaparse.py`); next is #59. #78 (integer variables
+  with a `_FillValue` served as Float32) was found on the way: pre-release,
+  after #59. After release: #68–#72. The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
 
@@ -137,10 +139,11 @@ run the R tests: `notes/dev-environment.md`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
   `_xpublish_id` and reopen stores now and then, so new commits show up
   without a restart (a live demo of #3).
-- **Known differences kept on purpose:** constraint-error wording; 400 where
-  ERDDAP gives 404 for an **index** off an axis, or 500 (unknown variable);
-  `/erddap/nope` paths get FastAPI's 404. See `design-and-history.md`. (A
-  **value** off an axis is snapped to the end with 200: a bug, #57.)
+- **Known differences kept on purpose:** some constraint-error wording
+  (stride, selector count); 400 where ERDDAP gives 500 for an unknown
+  variable; `/erddap/nope` paths get FastAPI's 404. Values off an axis (404,
+  #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
+  text. See `design-and-history.md`.
 - **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
   CoastWatch Python tutorials need it, see its latest comment), #5
   (`categorize`, now cheap: `search.categories` exists), #6, #7, #10, #14.
