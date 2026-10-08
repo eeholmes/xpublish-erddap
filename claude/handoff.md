@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-07)
+## Repo state (2026-10-08)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -33,30 +33,26 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `/datasets/{id}/erddap`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
   (ocean-icechunks org). How to redeploy and check: `notes/flux-sim-server.md`.
+  **It is behind `main`:** it lacks #56–#58 (redeploying needs EH's
+  `aws login --remote` on `greenfield`).
 - **Collaborator test kit, local only, deliberately not in git:**
   `collaborator-test/` on this hub (hidden by `.git/info/exclude`); EH shares
   it by Slack. Re-checked after every redeploy on 2026-10-07: 10/10 Python,
   7/7 R. Do not commit it unless EH asks.
-- **Shipped 2026-10-07** (all closed; decisions and reasons in
-  `notes/design-and-history.md`):
-  - #34 (PR #42): route helpers at module level.
-  - #18 (PR #43): per-dataset/per-group root; `name_dataset`; `docs/hosting.md`.
-  - #3 (PR #44): catalogs rebuilt when `_xpublish_id` changes;
-    `catalog_max_age_s`.
-  - #27, #4 (PR #47): ERDDAP's dataset table (CoastWatch's 15 columns, EH's
-    choice), extended summary, ranked `searchFor`, every advanced-search
-    filter, all **ported from ERDDAP's source** (`xpublish_erddap/search.py`).
-  - #35 (PR #48): ruff 100 cols, hooks bumped, zizmor with SHA-pinned
-    actions, a `package` CI job; pre-commit.ci enabled by EH.
-  - #36 (PR #49): errors are ERDDAP's plain-text body (`errors.py`); both
-    clients show it to users.
-  - #45/#46: the `rerddap` job hung in `apt-get update` (runner mirror); it
-    now has `timeout-minutes: 20`.
-  - Earlier (2026-10-06): #32, #33, #40 (ocean-icechunks stores on the server).
+- **Shipped 2026-10-08** (closed; decisions and reasons in
+  `notes/design-and-history.md`): #55 hygiene (PR #74; a bare `pytest` now
+  collects `tests/` only), #56 skip a failing source (PR #75), #57 values
+  off an axis are a 404 (PR #76), #58 ERDDAP's own time/`last`/index parsing,
+  `xpublish_erddap/javaparse.py` (PR #77). #78 opened on the way.
+- **Shipped 2026-10-07:** #34, #18 (per-group root, `docs/hosting.md`), #3,
+  #27/#4 (`search.py`, ported), #35, #36 (`errors.py`), #45/#46; 2026-10-06:
+  #32, #33, #40.
 - **CI, 13 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
-  `package`, `rerddap`, pre-commit.ci. 324 passed, 22 skipped, 2 xfailed on
-  Linux/macOS/min-deps; Windows 308/39/1 (skips the live-server tests). The
-  22 skips include 12 parity media-type checks on error responses, expected.
+  `package`, `rerddap`, pre-commit.ci. 504 passed, 42 skipped, 2 xfailed on
+  Linux/macOS/min-deps; Windows 488/59/1 (skips the live-server tests). The
+  skips are mostly parity media-type checks on error responses, expected.
+  Parity has 4 cases now; `jplMURSST41` (coastwatch) is query parsing only
+  (`metadata=False` until #78).
 - The repo uses **branches and PRs**. A task stays on its branch until the
   definition of done on its issue is met. EH often says "merge #N when CI is
   green"; merged branches are deleted on GitHub and on the hub.
@@ -96,7 +92,14 @@ run the R tests: `notes/dev-environment.md`.
 - **Check pass/skip counts in CI logs**, not just the colour.
 - **When ERDDAP's behaviour decides a question, read ERDDAP's source**
   (github.com/ERDDAP/erddap), port it, cite the class and method, and check
-  it against a live server (EH asked for this on 2026-10-07).
+  it against a live server (EH asked for this on 2026-10-07). Test the
+  port on more than one axis type: #57's first version was right for float64
+  and wrong for float32.
+- **Read query values with `javaparse.py`** (ERDDAP's lenient parsers), never
+  pandas or `datetime64[ns]` (it wraps past 2262). A raw `+` arrives as a
+  space on purpose; do not change `unquote_plus`.
+- **CoastWatch drops requests under load (503).** `capture.py` retries them;
+  retry a probe before calling a 503 a finding.
 
 ## Notes
 
@@ -128,7 +131,7 @@ run the R tests: `notes/dev-environment.md`.
   Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
   xpublish ecosystem PR) each need EH's yes.
 - **#50 and #52 met their definition of done** (report posted, EH chose to
-  open every finding as an issue). Suggest closing both; EH closes issues.
+  open every finding as an issue). Still open; suggest closing both.
 - **EH's decision (2026-10-07), not yet built:** serve latitude, longitude
   **and time** axes under ERDDAP's names by default, with an option to turn it
   off (#59).
