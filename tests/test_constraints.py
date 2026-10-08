@@ -225,7 +225,10 @@ def test_indices_are_still_indices(axes):
 def test_error_names_the_variable_and_constraint(axes):
     with pytest.raises(NoMatchError) as err:
         parse_griddap_query(
-            "tos[(1993-01-02)][(45):1:(99)][0]", axes, ["time", "lat", "lon"], ["tos"]
+            "tos[(1993-01-02)][(45):1:(99)][0]",
+            axes,
+            ["time", "lat", "lon"],
+            ["tos"],
         )
     assert str(err.value).startswith(
         "Your query produced no matching results. Query error: "
