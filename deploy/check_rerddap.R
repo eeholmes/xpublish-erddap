@@ -20,7 +20,7 @@ stopifnot("tos" %in% i$variables$variable_name)
 res <- timed("griddap() tos subset", griddap(
   "cefi_nep_hindcast_daily", url = url,
   time = c("2024-07-01", "2024-07-03"),
-  lat = c(45, 46), lon = c(230, 231),
+  latitude = c(45, 46), longitude = c(230, 231),
   fields = "tos"
 ))
 stopifnot(nrow(res$data) > 0, any(is.finite(res$data$tos)))
@@ -32,7 +32,7 @@ stopifnot("oxy" %in% j$variables$variable_name)
 res <- timed("griddap() oxy subset", griddap(
   "gobai_o2_monthly", url = url,
   time = c("2020-01-15", "2020-03-15"),
-  pres = c(10, 20), lat = c(0, 5), lon = c(180, 185),
+  pres = c(10, 20), latitude = c(0, 5), longitude = c(180, 185),
   fields = "oxy"
 ))
 stopifnot(nrow(res$data) > 0, any(is.finite(res$data$oxy)))

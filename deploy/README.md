@@ -47,10 +47,10 @@ e.constraints.update(
         "time<=": "2020-03-15",
         "pres>=": 10,
         "pres<=": 20,
-        "lat>=": 0,
-        "lat<=": 5,
-        "lon>=": 180,
-        "lon<=": 185,
+        "latitude>=": 0,
+        "latitude<=": 5,
+        "longitude>=": 180,
+        "longitude<=": 185,
     }
 )
 e.variables = ["oxy"]
@@ -62,7 +62,7 @@ library(rerddap)
 url <- "https://18-119-42-78.sslip.io/erddap/"
 info("cefi_nep_hindcast_daily", url = url)
 griddap("cefi_nep_hindcast_daily", url = url,
-        time = c("2024-07-01", "2024-07-03"), lat = c(45, 46), lon = c(230, 231),
+        time = c("2024-07-01", "2024-07-03"), latitude = c(45, 46), longitude = c(230, 231),
         fields = "tos")
 ```
 
@@ -104,11 +104,11 @@ Things to know:
 
   coastwatch.noaa.gov drops connections under load, so an OHC request can
   fail and work on a retry.
-- **rerddap and the decadal forecasts:** their `lead` axis holds dates but is
-  not called `time`, and rerddap only accepts date strings for an axis called
-  `time`. Give `lead` in seconds since 1970 instead
-  (`lead = c(16977600, 16977600)` is 1970-07-16T12:00Z). erddapy and
-  hand-built URLs take dates there.
+- **Axis names are ERDDAP's** (#59): the stores' `lat`, `lon` are served as
+  `latitude`, `longitude`, and a date axis as `time`. So the decadal
+  forecasts' `lead` (dates) is `time` here, and rerddap takes dates for it;
+  the seasonal reforecast's `lead` (month numbers) stays `lead`. The OPeNDAP
+  endpoints keep the source names, as does the axes column above.
 - **Requests over 500 MB** are refused with ERDDAP's "Your query produced too
   much data" error. Ask for a smaller subset.
 - **The OPeNDAP endpoints** (`/datasets/{id}/opendap`) are stock

@@ -36,24 +36,24 @@ SUBSETS = {
         {
             "time>=": "2024-07-01T12:00:00Z",
             "time<=": "2024-07-03T12:00:00Z",
-            "lat>=": 45.0,
-            "lat<=": 46.0,
-            "lon>=": 230.0,
-            "lon<=": 231.0,
+            "latitude>=": 45.0,
+            "latitude<=": 46.0,
+            "longitude>=": 230.0,
+            "longitude<=": 231.0,
         },
     ),
-    # A date-valued axis that is not called time, and an ensemble axis.
+    # An ensemble axis, and a date-valued axis served as time (source: lead).
     "cefi_nwa_decadal_forecast_monthly_i196501": (
         "tos",
         {
             "member>=": 1,
             "member<=": 2,
-            "lead>=": "1970-07-16T12:00:00Z",
-            "lead<=": "1970-08-16T12:00:00Z",
-            "lat>=": 40.0,
-            "lat<=": 40.3,
-            "lon>=": -68.0,
-            "lon<=": -67.7,
+            "time>=": "1970-07-16T12:00:00Z",
+            "time<=": "1970-08-16T12:00:00Z",
+            "latitude>=": 40.0,
+            "latitude<=": 40.3,
+            "longitude>=": -68.0,
+            "longitude<=": -67.7,
         },
     ),
     "gobai_o2_monthly": (
@@ -63,10 +63,10 @@ SUBSETS = {
             "time<=": "2020-03-15T00:00:00Z",
             "pres>=": 10.0,
             "pres<=": 20.0,
-            "lat>=": 0.0,
-            "lat<=": 5.0,
-            "lon>=": 180.0,
-            "lon<=": 185.0,
+            "latitude>=": 0.0,
+            "latitude<=": 5.0,
+            "longitude>=": 180.0,
+            "longitude<=": 185.0,
         },
     ),
     # A group of a store published whole (real data, held in the store).
@@ -77,13 +77,18 @@ SUBSETS = {
             "time<=": "2020-03-01T00:00:00Z",
             "zlev>=": 0.0,
             "zlev<=": 0.0,
-            "lat>=": 40.0,
-            "lat<=": 41.0,
-            "lon>=": 290.0,
-            "lon<=": 291.0,
+            "latitude>=": 40.0,
+            "latitude<=": 41.0,
+            "longitude>=": 290.0,
+            "longitude<=": 291.0,
         },
     ),
 }
+
+#: Source axis name -> the name ERDDAP serves it under (#59), for reading the
+#: store directly; written out here rather than taken from the plugin.
+SERVED = {"lat": "latitude", "lon": "longitude"}
+SERVED_EXTRA = {"cefi_nwa_decadal_forecast_monthly_i196501": {"lead": "time"}}
 
 #: ERDDAP datasetID -> (store id, group) where it is not a store's root.
 GROUPS = {"oisst_monthly": ("oisst", "monthly")}
@@ -235,7 +240,9 @@ def main(base: str) -> int:  # noqa: C901
                 store_id, group = GROUPS.get(dataset_id, (dataset_id, ""))
                 tree = open_store(store_id)
                 node = tree[group] if group else tree
-                ref = node.to_dataset()[var].sel(
+                names = SERVED | SERVED_EXTRA.get(dataset_id, {})
+                ref = node.to_dataset()[var]
+                ref = ref.rename({k: v for k, v in names.items() if k in ref.dims}).sel(
                     {d: erd[d].values for d in erd.dims},
                 )
                 np.testing.assert_allclose(

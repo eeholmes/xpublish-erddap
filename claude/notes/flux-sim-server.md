@@ -201,3 +201,20 @@ Python and 7/7 R. What the server gained:
 
 The AWS session for `greenfield` expires; when `sts get-caller-identity` says
 so, EH runs `! env -u AWS_REGION aws login --remote --profile litellm-poc`.
+
+## Redeploy on 2026-10-08 (`f928540`, after #56–#59)
+
+Same SSM steps. The server now serves ERDDAP's axis names (#59): `lat`/`lon`
+are `latitude`/`longitude` everywhere, and the decadal forecasts' `lead`
+(dates) is `time`, which also ends the old rerddap workaround (seconds since
+1970 for `lead`). The seasonal reforecast's `lead` (month numbers) is still
+`lead`. OPeNDAP endpoints keep source names.
+
+The scripts needed the new names: `deploy/check_clients.py` (its direct-read
+check renames the store's axes with its own `SERVED` map, not the plugin's),
+`deploy/check_rerddap.R`, `deploy/README.md`, and the local collaborator kit.
+The kit's too-large request also had to stay inside GOBAI's axes: since #57 a
+range past an axis (`pres` to 2000, max 1975) is a 404 before the size check.
+Results: `check_clients.py` 0 unexpected failures, `check_rerddap.R` all ok,
+kit 10/10 Python, 7/7 R, both kit examples run (`example_python.py` needs
+matplotlib, which `~/venvs/xpe` lacks; run it with the hub's python3).
