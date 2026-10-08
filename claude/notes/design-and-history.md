@@ -417,4 +417,3 @@ Sources: `OpendapHelper.getAtomicType`/`dasToStringBuilder`,
 - **Capture:** netCDF-C's DAP client fails on dhw_5km's Byte variables
   ("NetCDF: DAP failure"), so `capture.block_reader` falls back to ERDDAP's
   own `.nc` for a data block; the snapshot keeps `_Unsigned` in encoding.
-
