@@ -133,3 +133,57 @@ def test_flux_like_host_can_drop_org_and_ref(tos_only):
     assert ids(client, "/NOAA-PMEL/cefi-store/main/regrid/main/erddap") == [
         "cefi_store_regrid_main",
     ]
+
+
+def group_blind_client(tos_only, **plugin_args):
+    """Two groups with different variables, under a name that ignores the group."""
+    tree = xr.DataTree.from_dict(
+        {
+            "/regrid": tos_only,
+            "/raw": tos_only.rename({"tos": "chl"}),
+        },
+    )
+    plugin = ErddapPlugin(
+        name_dataset=lambda params, group: params["repo"],
+        **plugin_args,
+    )
+    host = FluxLikeRest({"org/store": tree}, plugins={"erddap": plugin})
+    return TestClient(host.app)
+
+
+def test_groups_with_one_name_each_serve_their_own_catalog(tos_only):
+    """Caches follow the URL, not name_dataset: /regrid must not answer for /raw (#61)."""
+    client = group_blind_client(tos_only)
+    for group, variable in [("regrid", "tos"), ("raw", "chl"), ("regrid", "tos")]:
+        root = f"/org/store/main/{group}/erddap"
+        resp = client.get(f"{root}/griddap/store.das")
+        assert resp.status_code == 200, resp.text
+        assert variable in resp.text
+
+
+def test_alternating_refs_do_not_rebuild_every_request(tos_only, monkeypatch):
+    """A name that drops the ref must not make refs evict each other (#61)."""
+    builds = []
+    original = ErddapPlugin.build
+
+    def counting(self, source_id, tree):
+        builds.append(source_id)
+        return original(self, source_id, tree)
+
+    monkeypatch.setattr(ErddapPlugin, "build", counting)
+    client = group_blind_client(tos_only)
+    for ref in ["main", "v1"] * 3:
+        assert client.get(f"/org/store/{ref}/regrid/erddap/griddap/store.das").status_code == 200
+    assert len(builds) == 2
+
+
+def test_cache_is_told_the_catalog_size(tos_only):
+    """cachey counts an unsized tuple as ~56 B; give it a real estimate (#61)."""
+    tree = xr.DataTree.from_dict({"/regrid": tos_only})
+    host = FluxLikeRest({"org/store": tree}, plugins={"erddap": ErddapPlugin()})
+    client = TestClient(host.app)
+    assert (
+        client.get("/org/store/main/regrid/erddap/griddap/org_store_main_regrid.das").status_code
+        == 200
+    )
+    assert host.cache.total_bytes > 10 * 56 * len(host.cache.data)
