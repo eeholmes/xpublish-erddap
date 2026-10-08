@@ -95,9 +95,11 @@ ERDDAP.
   `Unsupported fileType=.x` (tables, 404), `Query error: fileType=.x isn't
   supported by this dataset.` (griddap, 400), search's no-match text with
   "Try using fewer search words." when the search has a space. Kept on
-  purpose: our constraint-error wording, and 400 where ERDDAP says 404 for an
-  out-of-range **index** or 500 for an unknown variable. (A **value** off an
-  axis is a 404 with ERDDAP's wording since #57; see below.) Parity compares the full
+  purpose: some constraint-error wording (stride, selector count), and 400
+  where ERDDAP gives 500 for an unknown variable. A **value** off an axis is a
+  404 and index and `last` errors are 400s, all with ERDDAP's text (#57, #58;
+  see below; the old note said ERDDAP gives 404 for an index, but CoastWatch
+  gives 400, 2026-10-08). Parity compares the full
   error text wherever the golden is ERDDAP's own body (all IOOS cases;
   OceanWatch's are proxy pages). Paths outside our routes (`/erddap/nope`)
   still get FastAPI's 404.
@@ -163,6 +165,14 @@ ERDDAP.
   11869×815×341 array from Flux (413 Request Entity Too Large). `formats.dtype_of`
   reads `.dtype` instead. **A local tutorial dataset would never have shown
   this**, so always test against a lazily opened remote store.
+
+- **Axis names as ERDDAP serves them (EH, 2026-10-07; #59, not built yet).**
+  ERDDAP always calls the geographic axes `latitude`/`longitude` and the time
+  axis `time`, and clients depend on it (plotdap reads the dims by those
+  names). So recognised lat/lon/time axes are to be renamed **by default**,
+  with an `ErddapPlugin` option to turn it off or change the mapping, and the
+  rule documented in `docs/hosting.md`. Only clearly geographic axes (units or
+  `standard_name`), so projected x/y in metres keep their names.
 
 ## `strict_axes=True`: refuse data that is non-monotonic
 
