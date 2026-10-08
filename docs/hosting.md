@@ -62,6 +62,7 @@ the group path (`""` for a store's root), and returns a name:
 
 ```python
 def by_repo(params: dict[str, str], group: str) -> str:
+    # Drops org and ref: fine, because the plugin never caches on this name
     return f"{params['repo']}/{group}" if group else params["repo"]
 
 
@@ -154,8 +155,14 @@ ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
   per-dataset root asks only for its own.
 - Catalogs live in xpublish's shared `cachey` cache (`deps.cache`) under
   `erddap_entries/...` and `erddap_catalog/...` keys, one entry per dataset,
-  replaced when its id changes, so old catalogs are not kept. Under memory
-  pressure cachey may evict one; it is then rebuilt.
+  replaced when its id changes, so old catalogs are not kept. A per-dataset
+  root keys its entry on the URL's identity (its path parameters and group
+  path), **not** on `name_dataset`'s result, so a name that ignores the group
+  or the ref cannot make two roots share a catalog; `name_dataset` only
+  chooses the datasetID. Each ref or group gets its own entry, which stays
+  until cachey evicts it. The plugin tells cachey each catalog's approximate
+  size (axes plus attributes), so eviction works under memory pressure; an
+  evicted catalog is rebuilt.
 - There is no invalidation endpoint (ERDDAP's `setDatasetFlag.txt`): without
   auth (issue [#8](https://github.com/eeholmes/xpublish-erddap/issues/8)),
   anyone could force rebuilds.

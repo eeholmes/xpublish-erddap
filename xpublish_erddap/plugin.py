@@ -532,18 +532,34 @@ def name_from_path(params: dict[str, str], group: str) -> str:
 CACHE_COST = 99999
 
 
+def catalog_nbytes(entries) -> int:
+    """About how much memory ``entries`` (a list or dict of datasets) hold.
+
+    Axis values plus a rough 200 B per attribute. Without it cachey counts a
+    catalog as ~56 B, when it is ~0.1 MB, and never evicts it.
+    """
+    nbytes = 1024
+    for entry in entries.values() if isinstance(entries, dict) else entries:
+        nbytes += sum(axis.nbytes for axis in entry.axes.values())
+        nbytes += 200 * (
+            len(entry.globals_) + sum(len(entry.ds[name].attrs) + 1 for name in entry.ds.variables)
+        )
+    return nbytes
+
+
 def memo(cache, key: str, stamp: object, build: Callable[[], object]) -> object:
     """``build()``, cached under ``key`` until ``stamp`` changes.
 
     One entry per key, replaced when the stamp changes, so superseded catalogs
-    (and the datasets they hold) are not kept.
+    (and the datasets they hold) are not kept. cachey is told the catalog's
+    size, not left to guess it.
     """
     hit = cache.get(key) if cache is not None else None
     if hit is not None and hit[0] == stamp:
         return hit[1]
     value = build()
     if cache is not None:
-        cache.put(key, (stamp, value), CACHE_COST)
+        cache.put(key, (stamp, value), CACHE_COST, nbytes=catalog_nbytes(value))
     return value
 
 
@@ -653,15 +669,22 @@ class ErddapPlugin(Plugin):
             period = int(time.time() // self.catalog_max_age_s)
         return (tree_version(tree), period)
 
-    def entries(self, cache, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
+    def entries(
+        self,
+        cache,
+        source_id: str,
+        tree: xr.DataTree,
+        key: str | None = None,
+    ) -> list[ErddapDataset]:
         """``build(source_id, tree)``, cached while ``tree``'s stamp holds.
 
-        Shared by both roots: under ``xpublish.Rest`` a dataset has the same
-        source id in each.
+        Cached under ``key``, default ``source_id``: the server-wide root uses
+        the xpublish dataset id, a per-dataset root the URL's identity (#61),
+        since ``name_dataset`` may give two groups, or two refs, one name.
         """
         return memo(
             cache,
-            f"erddap_entries/{source_id}",
+            f"erddap_entries/{key or source_id}",
             self.stamp(tree),
             lambda: self.build(source_id, tree),
         )
@@ -735,11 +758,15 @@ class ErddapPlugin(Plugin):
                 for key, value in request.path_params.items()
                 if key not in ROUTE_PARAMS
             }
-            source_id = self.name_dataset(params, get_group_path(request))
-            entries = self.entries(cache, source_id, tree)
+            group = get_group_path(request)
+            source_id = self.name_dataset(params, group)
+            # Keyed on what the URL names, never on name_dataset's result,
+            # which a host may make blind to the group or the ref (#61).
+            key = "/".join([*(f"{k}={v}" for k, v in params.items()), group])
+            entries = self.entries(cache, source_id, tree, f"url/{key}")
             return memo(
                 cache,
-                f"erddap_catalog/{source_id}",
+                f"erddap_catalog/url/{key}",
                 self.stamp(tree),
                 lambda: unique_ids(entries),
             )
