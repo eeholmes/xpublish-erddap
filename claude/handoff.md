@@ -28,28 +28,32 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
-  account, running `main` at `1ea2888` (redeployed 2026-10-07). 12 stores,
+  account, running `main` at `f928540` (redeployed 2026-10-08). 12 stores,
   22 datasets in the server-wide root, plus one root per store at
   `/datasets/{id}/erddap`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
   (ocean-icechunks org). How to redeploy and check: `notes/flux-sim-server.md`.
-  **It is behind `main`:** it lacks #56–#58 (redeploying needs EH's
-  `aws login --remote` on `greenfield`).
+  Since #59 it serves ERDDAP's axis names (`latitude`, `longitude`; the
+  decadal forecasts' date-valued `lead` is `time`). Redeploying needs EH's
+  `aws login --remote` (profile `litellm-poc`, which `greenfield` sources).
 - **Collaborator test kit, local only, deliberately not in git:**
   `collaborator-test/` on this hub (hidden by `.git/info/exclude`); EH shares
-  it by Slack. Re-checked after every redeploy on 2026-10-07: 10/10 Python,
-  7/7 R. Do not commit it unless EH asks.
+  it by Slack. Updated for #59's names and #57's 404 on 2026-10-08 and
+  re-checked: 10/10 Python, 7/7 R. EH must re-share it: the copy collaborators
+  have uses `lat`/`lon` and fails against the server now. Do not commit it
+  unless EH asks.
 - **Shipped 2026-10-08** (closed; decisions and reasons in
   `notes/design-and-history.md`): #55 hygiene (PR #74; a bare `pytest` now
   collects `tests/` only), #56 skip a failing source (PR #75), #57 values
   off an axis are a 404 (PR #76), #58 ERDDAP's own time/`last`/index parsing,
-  `xpublish_erddap/javaparse.py` (PR #77). #78 opened on the way.
+  `xpublish_erddap/javaparse.py` (PR #77), #59 ERDDAP's axis names and safe
+  variable names (PR #80). #78 opened on the way.
 - **Shipped 2026-10-07:** #34, #18 (per-group root, `docs/hosting.md`), #3,
   #27/#4 (`search.py`, ported), #35, #36 (`errors.py`), #45/#46; 2026-10-06:
   #32, #33, #40.
 - **CI, 13 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
-  `package`, `rerddap`, pre-commit.ci. 504 passed, 42 skipped, 2 xfailed on
-  Linux/macOS/min-deps; Windows 488/59/1 (skips the live-server tests). The
+  `package`, `rerddap`, pre-commit.ci. 546 passed, 42 skipped, 2 xfailed on
+  Linux/macOS/min-deps; Windows 530/59/1 (skips the live-server tests). The
   skips are mostly parity media-type checks on error responses, expected.
   Parity has 4 cases now; `jplMURSST41` (coastwatch) is query parsing only
   (`metadata=False` until #78).
@@ -61,11 +65,11 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - **Audit done 2026-10-07 (#50, #52); its findings are issues #55–#72**, in
   the order to do them. Each says its order, dependencies, definition of done
   and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
-  #55–#67. **#55–#58 shipped 2026-10-08** (PRs #74–#77), including the three
+  #55–#67. **#55–#59 shipped 2026-10-08** (PRs #74–#77, #80), including the three
   blockers (#56 one bad store, #57 values off an axis, #58 ERDDAP's own
-  time/`last` parsing in `javaparse.py`); next is #59. #78 (integer variables
-  with a `_FillValue` served as Float32) was found on the way: pre-release,
-  after #59. After release: #68–#72. The ordered table is
+  time/`last` parsing in `javaparse.py`); next is #78 (integer variables
+  with a `_FillValue` served as Float32, found on the way), then #60.
+  After release: #68–#72. The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
 
@@ -132,9 +136,6 @@ run the R tests: `notes/dev-environment.md`.
   xpublish ecosystem PR) each need EH's yes.
 - **#50 and #52 met their definition of done** (report posted, EH chose to
   open every finding as an issue). Still open; suggest closing both.
-- **EH's decision (2026-10-07), not yet built:** serve latitude, longitude
-  **and time** axes under ERDDAP's names by default, with an option to turn it
-  off (#59).
 - **#53, #54** (EH's): research ERDDAP proxying us via `EDD*FromErddap`, and
   direct Icechunk support in ERDDAP itself.
 - **Earthmover:** send `docs/hosting.md`; ask how Flux registers a service,
