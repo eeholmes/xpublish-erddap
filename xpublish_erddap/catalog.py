@@ -105,7 +105,6 @@ class ErddapDataset:
     dims: tuple[str, ...]
     data_vars: tuple[str, ...]
     globals_: dict = field(default_factory=dict)
-    supplied_globals: tuple[str, ...] = ()
 
     @property
     def axes(self) -> dict[str, np.ndarray]:
@@ -146,14 +145,6 @@ class ErddapDataset:
             return np.array([secs.min(), secs.max()])
         nice = nice_doubles(values)
         return np.array([np.nanmin(nice), np.nanmax(nice)]).astype(values.dtype)
-
-    def missing_required_globals(self) -> list[str]:
-        """Required ERDDAP globals that the *source* did not supply.
-
-        These are filled with placeholders so the dataset still loads, but a
-        real deployment should provide them (ERDDAP's ``addAttributes``).
-        """
-        return [k for k in REQUIRED_GLOBALS if k not in self.supplied_globals]
 
 
 def _fill_attrs(da: xr.DataArray) -> dict:
@@ -429,7 +420,6 @@ def build_catalog(
         # xpublish tags every dataset with its id; not a real attribute
         attrs.pop("_xpublish_id", None)
         attrs.update(metadata or {})
-        supplied = tuple(k for k in REQUIRED_GLOBALS if k in attrs)
         attrs.update(coverage_globals(sub, sig))
         attrs.setdefault("title", attrs.get("title", dataset_id))
         for key, value in _FALLBACK_GLOBALS.items():
@@ -462,7 +452,6 @@ def build_catalog(
                 dims=sig,
                 data_vars=tuple(keep),
                 globals_=attrs,
-                supplied_globals=supplied,
             ),
         )
     return out

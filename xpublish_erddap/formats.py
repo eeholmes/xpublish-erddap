@@ -1,7 +1,8 @@
 """Serialize a subset xarray Dataset into ERDDAP's response formats.
 
 Only the formats erddapy and rerddap actually request are implemented:
-``.dds``, ``.das``, ``.csvp``, ``.csv``, ``.csv0``, ``.json``, ``.nc``.
+``.dds``, ``.das``, ``.csvp``, ``.csv``, ``.csv0``, ``.json``, ``.nc``,
+``.ncml``.
 The HTML interfaces (``.html``, ``.graph``) are deliberately out of scope.
 
 ERDDAP's exact spelling matters here. erddapy parses the DDS with
@@ -22,7 +23,6 @@ import xarray as xr
 from xpublish_erddap.catalog import ErddapDataset, coverage_globals, nice_doubles
 
 __all__ = [
-    "CONTENT_TYPES",
     "NCML_NS",
     "TIME_UNITS",
     "das_response",
@@ -40,19 +40,6 @@ TIME_UNITS = "seconds since 1970-01-01T00:00:00Z"
 #: NcML namespace. erddapy >=3.2 parses the ``.ncml`` response with this exact
 #: URI -- note the ``https`` scheme, which older NcML documents spell ``http``.
 NCML_NS = "https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2"
-
-CONTENT_TYPES = {
-    "das": "text/plain",
-    "dds": "text/plain",
-    "csv": "text/csv",
-    "csv0": "text/csv",
-    "csvp": "text/csv",
-    "tsv": "text/tab-separated-values",
-    "json": "application/json",
-    "nc": "application/x-netcdf",
-    "ncml": "application/xml",
-    "htmlTable": "text/html",
-}
 
 _DAP_TYPES = {
     np.dtype("int8"): "Byte",

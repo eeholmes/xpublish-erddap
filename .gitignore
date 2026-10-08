@@ -6,3 +6,5 @@ build/
 dist/
 _version.py
 .ipynb_checkpoints/
+.coverage
+coverage.xml

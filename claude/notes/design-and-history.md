@@ -31,6 +31,8 @@ ERDDAP.
       catalog.py      one Dataset -> N ERDDAP datasets; metadata inference; check_axes
       constraints.py  ERDDAP griddap query -> integer (start, stop, stride)
       formats.py      nc csv csvp csv0 json das dds ncml
+      errors.py       ERDDAP plain-text error bodies
+      search.py       dataset table, ranked searchFor, advanced-search filters
 
 - **`app_router` first (and now a `dataset_router` too, #18).** ERDDAP is organized around a catalog:
   clients point at one server root and address many flat datasetIDs. The
@@ -157,7 +159,7 @@ ERDDAP.
   outside parentheses, because ISO 8601 values contain colons.
 - **Never materialize data just to learn its type.** The first CEFI run
   returned a 500: `dds_response` called `.values` to get a dtype and pulled an
-  11869×815×341 array from Flux (413 Request Entity Too Large). `_dtype_of()`
+  11869×815×341 array from Flux (413 Request Entity Too Large). `formats.dtype_of`
   reads `.dtype` instead. **A local tutorial dataset would never have shown
   this**, so always test against a lazily opened remote store.
 
