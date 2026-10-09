@@ -369,11 +369,22 @@ def test_indices_are_digits_within_the_axis(axes, selector, message):
     )
 
 
-@pytest.mark.parametrize("value", ["notadate", "1_500_000_000", "2019:01:01", "NaN", ""])
+@pytest.mark.parametrize("value", ["notadate", "1_500_000_000", "2019:01:01", "NaN"])
 def test_unreadable_times_are_a_400(axes, value):
     with pytest.raises(ConstraintError) as err:
         parse_selector(f"({value})", axes["time"])
     assert "NaN (invalid format?) isn't allowed." in str(err.value)
+
+
+@pytest.mark.parametrize(
+    ("selector", "role"),
+    [("()", "Start"), ("(  ):1:(5)", "Start"), ("0:1:()", "Stop")],
+)
+def test_empty_parentheses_are_missing_values(axes, selector, role):
+    """``EDDGrid.parseAxisBrackets``, checked on erddap.ioos.us etopo5: ``[()]``."""
+    with pytest.raises(ConstraintError) as err:
+        parse_selector(selector, axes["lat"], where="For variable=tos axis#1=lat")
+    assert str(err.value).endswith(f": The {role} value inside () is missing.")
 
 
 def test_epoch_seconds_and_numbers_on_a_time_axis(axes):

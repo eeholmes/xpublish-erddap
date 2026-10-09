@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 import xarray as xr
 import xpublish
+from error_body import message
 from fastapi.testclient import TestClient
 
 from xpublish_erddap import ErddapPlugin
@@ -188,3 +189,57 @@ def test_one_value_axis_info_says_only_value():
     assert rows["latitude"].endswith('"nValues=1, onlyValue=34.5"')
     assert rows["level"].endswith('"nValues=1, onlyValue=5.0"')
     assert rows["longitude"].endswith('"nValues=3, evenlySpaced=true, averageSpacing=1.0"')
+
+
+# -- the grammar: what ERDDAP refuses and accepts -----------------------------------
+# Messages and positions are as erddap.ioos.us (ERDDAP 2.31) answers the same
+# shapes on etopo5_EDDGridCopy (ROSE[latitude][longitude]); the positions here
+# are those of this dataset's longer queries.
+FULL = "sst[0:1:1][0:1:1][0:1:1]"  # 24 characters
+
+
+def query_message(response) -> str:
+    return message(response).removeprefix("Bad Request: ")
+
+
+def query_error(client, query: str, ext: str = "csv") -> str:
+    r = client.get(f"/erddap/griddap/g.{ext}?{query}")
+    assert r.status_code == 400, (query, r.status_code, r.text[:200])
+    return query_message(r)
+
+
+# an empty start or stop, and a stride that is not an integer
+# (EDDGrid.parseAxisBrackets, String2.parseInt)
+@pytest.mark.parametrize(
+    ("selector", "text"),
+    [
+        ("[:1:2]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
+        ("[:2]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
+        ("[:]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
+        ("[0:]", 'Stop="" is invalid.  It must be an integer between 0 and 2.'),
+        ("[0:1:]", 'Stop="" is invalid.  It must be an integer between 0 and 2.'),
+        ("[0::2]", "Stride= is invalid."),
+        ("[0:0:2]", "Stride=0 is invalid."),
+        ("[0:-1:2]", "Stride=-1 is invalid."),
+        ("[0:abc:2]", "Stride=abc is invalid."),
+        ("[()]", "The Start value inside () is missing."),
+        ("[0:1:()]", "The Stop value inside () is missing."),
+    ],
+)
+def test_empty_and_bad_parts_of_a_range_are_refused(client, selector, text):
+    got = query_error(client, f"sst{selector}[0][0]")
+    assert got == (f'Query error: For variable=sst axis#0=time Constraint="{selector}": {text}')
+
+
+def test_an_empty_bracket_is_the_whole_axis(client):
+    r = client.get("/erddap/griddap/g.csv?sst[][][]")
+    assert r.status_code == 200
+    assert r.text == client.get("/erddap/griddap/g.csv?sst").text
+
+
+@pytest.mark.parametrize(("stride", "rows"), [("1.4", 3), ("1.5", 2), ("2.5", 1), ("0x2", 2)])
+def test_a_stride_is_rounded_as_string2_parseint_does(client, stride, rows):
+    """erddap.ioos.us: ``[0:1.5:2]`` serves indices 0 and 2, as stride 2 does."""
+    r = client.get(f"/erddap/griddap/g.csv?time[0:{stride}:2]")
+    assert r.status_code == 200
+    assert len(r.text.splitlines()) == 2 + rows

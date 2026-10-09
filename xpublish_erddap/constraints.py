@@ -35,8 +35,7 @@ __all__ = [
     "split_selectors",
 ]
 
-#: ``[start:stop]`` has two parts; ``[start:stride:stop]`` has three.
-_RANGE_PARTS = 2
+#: ``[start:stride:stop]`` has three parts (``[start:stop]`` two).
 _STRIDED_PARTS = 3
 
 
@@ -301,7 +300,6 @@ def _resolve_token(
     token: str,
     values: np.ndarray,
     *,
-    default: int,
     role: str = "Start",
     where: str = "",
 ) -> int:
@@ -315,8 +313,6 @@ def _resolve_token(
     """
     token = token.strip()
     n = len(values)
-    if token == "":
-        return default
     head = f"Query error: {where}: " if where else "Query error: "
 
     if token.startswith(("last", "(last")):
@@ -324,6 +320,9 @@ def _resolve_token(
 
     if token.startswith("("):
         inner = token[1:-1].strip()
+        if not inner:
+            msg = f"{head}The {role} value inside () is missing."
+            raise ConstraintError(msg)
         target = _destination_double(inner, values)
         if np.isnan(target):
             # A 400, before the range checks.
@@ -353,36 +352,31 @@ def parse_selector(
     axis (#57).
     """
     n = len(values)
+    head = "Query error: "
     if where:
         where = f'{where} Constraint="[{selector}]"'
+        head = f"Query error: {where}: "
     start_kw = {"role": "Start", "where": where}
     stop_kw = {"role": "Stop", "where": where}
     parts = [p.strip() for p in _split_top_level(selector, ":")]
     if selector.strip() == "":
         return DimSelection(0, n - 1, 1)
     if len(parts) == 1:
-        idx = _resolve_token(parts[0], values, default=0, **start_kw)
+        idx = _resolve_token(parts[0], values, **start_kw)
         return DimSelection(idx, idx, 1)
-    if len(parts) == _RANGE_PARTS:
-        start = _resolve_token(parts[0], values, default=0, **start_kw)
-        stop = _resolve_token(parts[1], values, default=n - 1, **stop_kw)
-        stride = 1
-    elif len(parts) == _STRIDED_PARTS:
-        start = _resolve_token(parts[0], values, default=0, **start_kw)
-        stride_text = parts[1].strip() or "1"
-        try:
-            stride = int(stride_text)
-        except ValueError as exc:
-            msg = f"stride must be an integer, got {stride_text!r}"
-            raise ConstraintError(msg) from exc
-        stop = _resolve_token(parts[2], values, default=n - 1, **stop_kw)
-    else:
-        msg = f"too many ':' separated parts in selector [{selector}]"
-        raise ConstraintError(msg)
+    stride = 1
+    if len(parts) >= _STRIDED_PARTS:
+        # ERDDAP reads the stride first (String2.parseInt, which rounds), and
+        # whatever follows the second colon is the stop, colons and all
+        stride_text = parts[1]
+        stride = javaparse.parse_int(stride_text)
+        if stride < 1 or stride == javaparse.INT_MAX:
+            msg = f"{head}Stride={stride_text} is invalid."
+            raise ConstraintError(msg)
+        parts = [parts[0], ":".join(parts[2:])]
+    start = _resolve_token(parts[0], values, **start_kw)
+    stop = _resolve_token(parts[1], values, **stop_kw)
 
-    if stride < 1:
-        msg = f"stride must be >= 1, got {stride}"
-        raise ConstraintError(msg)
     if start > stop:
         if not allow_reversed:
             msg = f"start > stop in [{selector}]: give the range in axis order"
