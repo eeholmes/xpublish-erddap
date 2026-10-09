@@ -9,7 +9,6 @@ third level.
 
 import io
 
-import erddapy
 import numpy as np
 import pandas as pd
 import pytest
@@ -19,6 +18,8 @@ from fastapi.testclient import TestClient
 
 from xpublish_erddap import ErddapPlugin
 from xpublish_erddap.search import CATEGORY_ATTRIBUTES, DATASET_COLUMNS
+
+erddapy = pytest.importorskip("erddapy")
 
 SST_NAME = "sea_surface_temperature"
 NOT_FOUND = 'Error {\n    code=404;\n    message="Not Found: (no details)";\n}\n'

@@ -252,8 +252,10 @@ def with_depth(ds: xr.Dataset) -> xr.DataTree:
 
 def test_a_new_commit_is_listed_after_the_check_interval(counted, grid_dataset):
     provider, client, now = counted()
-    assert "s0_2" not in client.get(LISTINGS[0]).text
+    assert "s0_depth" not in client.get(LISTINGS[0]).text
     provider.trees["s0"] = with_depth(grid_dataset)
+    # committed, but the check interval has not passed: still not listed
+    assert "s0_depth" not in client.get(LISTINGS[0]).text
     now[0] += 10
     assert "s0_depth" in client.get(LISTINGS[0]).text
 
