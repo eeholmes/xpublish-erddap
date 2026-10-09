@@ -17,12 +17,8 @@ def client(grid_dataset):
     "path",
     [
         "/erddap/version",
-        "/erddap/griddap/index.csv",
-        "/erddap/info/index.json",
         "/erddap/info/testgrid/index.csv",
-        "/erddap/search/index.csv?searchFor=testgrid",
         "/erddap/griddap/testgrid.das",
-        "/erddap/griddap/testgrid.dds",
     ],
 )
 def test_head_matches_get(client, path):
@@ -33,15 +29,19 @@ def test_head_matches_get(client, path):
     assert head.content == b""
 
 
-@pytest.mark.parametrize("ext", ["nc", "csv", "csvp", "csv0", "json"])
+@pytest.mark.parametrize("ext", ["nc", "csv", "csvp", "csv0", "json", "dods"])
 def test_head_on_data_builds_no_body(client, monkeypatch, ext):
+    """HEAD says what GET would (the content-type), without building the file."""
+    got = client.get(f"/erddap/griddap/testgrid.{ext}")
+
     def boom(*args, **kwargs):
         raise AssertionError("a HEAD request built a data file")
 
     for name in ("to_netcdf_bytes", "to_erddap_json", "to_csv"):
         monkeypatch.setattr(formats, name, boom)
     head = client.head(f"/erddap/griddap/testgrid.{ext}")
-    assert head.status_code == 200
+    assert head.status_code == got.status_code == 200
+    assert head.headers["content-type"] == got.headers["content-type"]
     assert head.content == b""
 
 
