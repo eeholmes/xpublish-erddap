@@ -156,6 +156,18 @@ def test_axis_only_json_pads_with_null(client):
     assert r.json()["table"]["rows"][-1] == [None, 140.0]
 
 
+# -- NcML entities (XML.encodeAsXML, already in place since #64) ---------------------
+def test_ncml_escapes_percent_as_a_numeric_entity():
+    ds = gridded(2, 2, 2)
+    ds.attrs["comment"] = '100% <ice> & "snow"'
+    ds["sst"].attrs["long_name"] = "0 is 0% ice"
+    rest = xpublish.Rest({"pct": ds}, plugins={"erddap": ErddapPlugin()})
+    ncml = TestClient(rest.app).get("/erddap/griddap/pct.ncml").text
+    assert 'name="comment" value="100&#37; &lt;ice&gt; &amp; &quot;snow&quot;"' in ncml
+    assert 'name="long_name" value="0 is 0&#37; ice"' in ncml
+    assert "%" not in ncml.replace("&#37;", "")
+
+
 # -- .json: infinite numbers (String2.toJson(double)) -------------------------------
 def test_json_writes_null_for_infinite_numbers():
     ds = gridded(1, 2, 2)
