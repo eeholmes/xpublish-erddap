@@ -296,6 +296,9 @@ def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
 # --------------------------------------------------------------------------
 
 
+_PAD = object()  # a cell past the end of a shorter axis
+
+
 def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
     """Yield (column_names, units, types, row_iterator) in ERDDAP's long form."""
     axis_names = [d for d in ed.dims if d in sub.dims]
@@ -310,11 +313,13 @@ def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
         arrays = [np.asarray(sub[c].values) for c in cols]
 
         def rows():
-            # ERDDAP lists each axis in its own column, side by side, padding
-            # the shorter ones with blanks -- not their cartesian product
-            for tup in itertools.zip_longest(*arrays, fillvalue=None):
+            # ERDDAP lists each axis in its own column, side by side, not
+            # their cartesian product. ``Table.makeColumnsSameSize`` pads the
+            # shorter ones with NaN: ``NaN`` in csv, ``null`` in json; a time
+            # column's NaN is a blank, as everywhere.
+            for tup in itertools.zip_longest(*arrays, fillvalue=_PAD):
                 yield [
-                    "" if v is None else format_value(v, is_time=is_t)
+                    ("" if is_t else None) if v is _PAD else format_value(v, is_time=is_t)
                     for v, is_t in zip(tup, times, strict=True)
                 ]
 

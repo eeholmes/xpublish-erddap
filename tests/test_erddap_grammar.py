@@ -137,6 +137,25 @@ def test_data_nc_vertical_coverage_describes_the_subset():
     assert (attrs["geospatial_vertical_min"], attrs["geospatial_vertical_max"]) == (0.0, 10.0)
 
 
+# -- axis-only tables of unequal lengths (Table.makeColumnsSameSize) ------------
+def test_axis_only_csv_pads_numbers_with_nan_and_time_with_blank(client):
+    r = client.get("/erddap/griddap/g.csv?time[0:1:2],longitude[0:1:4],latitude[0:1:3]")
+    assert r.text.splitlines()[2:] == [
+        "2020-01-01T00:00:00Z,100.0,10.0",
+        "2020-01-02T00:00:00Z,110.0,20.0",
+        "2020-01-03T00:00:00Z,120.0,30.0",
+        ",130.0,40.0",
+        ",140.0,NaN",
+    ]
+
+
+def test_axis_only_json_pads_with_null(client):
+    r = client.get("/erddap/griddap/g.json?time[0:1:2],longitude[0:1:4]")
+    assert r.json()["table"]["rows"][-2:] == [[None, 130.0], [None, 140.0]]
+    r = client.get("/erddap/griddap/g.json?latitude[0:1:3],longitude[0:1:4]")
+    assert r.json()["table"]["rows"][-1] == [None, 140.0]
+
+
 def test_one_value_axis_info_says_only_value():
     rest = xpublish.Rest({"one": one_value_axes()}, plugins={"erddap": ErddapPlugin()})
     text = TestClient(rest.app).get("/erddap/info/one/index.csv").text
