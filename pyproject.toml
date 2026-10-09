@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=77", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,20 +8,35 @@ description = "ERDDAP-compatible griddap router for Xpublish"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["xarray", "xpublish", "erddap", "griddap", "icechunk", "zarr"]
-license = { file = "LICENSE.txt" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "Eli Holmes", email = "eli.holmes@noaa.gov" }]
+maintainers = [{ name = "Eli Holmes", email = "eli.holmes@noaa.gov" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: BSD License",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
 ]
 dynamic = ["version", "dependencies"]
 
 [project.optional-dependencies]
-test = ["pytest", "httpx", "pandas"]
-demo = ["pydap", "uvicorn"]
+# Everything `pytest tests` needs, so that none of it skips: erddapy and
+# netCDF4 gate the client tests, pooch and netCDF4 fetch the xarray tutorial
+# data, uvicorn runs tests/server.py. Keep in step with requirements-dev.txt.
+test = ["erddapy", "httpx", "netCDF4", "pooch", "pytest", "pytest-xprocess", "uvicorn"]
+demo = ["netCDF4", "pooch", "pydap", "uvicorn"]
+
+[project.urls]
+Homepage = "https://github.com/eeholmes/xpublish-erddap"
+Source = "https://github.com/eeholmes/xpublish-erddap"
+Issues = "https://github.com/eeholmes/xpublish-erddap/issues"
+Documentation = "https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md"
 
 [project.entry-points."xpublish.plugin"]
 erddap = "xpublish_erddap.plugin:ErddapPlugin"
