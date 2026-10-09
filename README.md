@@ -301,7 +301,7 @@ CRAN). The newest versions move with each release; the CI logs say which ran.
 `tests/test_tutorials.py` and `tests/test_tutorials.R` run the users' own
 tutorial steps (CoastWatch satellite course, erddapy docs) against stand-in
 datasets; `tests/test_store_mount.py` serves the plugin below a per-store
-path, as Earthmover Flux would.
+path; a regression test for `app.mount()` and `root_path`.
 
 `tests/test_parity.py` compares our responses with captures from real ERDDAP
 servers, committed under `tests/parity/golden/`; known differences are listed

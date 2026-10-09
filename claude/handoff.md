@@ -223,7 +223,7 @@ run the R tests: `notes/dev-environment.md`.
   commits are not frequent), 16 at once (`catalog_workers`). Its state lives
   with the router, not cachey (1 MB default evicted it; not thread-safe).
   N=200, 50 ms provider: 10.6 s -> 0.02-0.06 s. Benchmark
-  `tests/benchmark_server_catalog.py`; details in `design-and-history.md`.
+  `benchmarks/benchmark_server_catalog.py`; details in `design-and-history.md`.
 - **Next, as EH planned it (2026-10-09), before the move to
   xpublish-community:** re-share the collaborator kit (it passes against the
   redeployed server; the copy collaborators have still uses `lat`/`lon`). Possibly, after the move and with EH's yes: an upstream
