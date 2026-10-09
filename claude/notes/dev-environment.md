@@ -33,6 +33,16 @@ pip install -U erddapy && pip install -e . && pip install -r requirements-dev.tx
 pip's warning that `ioos-metrics` needs `bs4` is unrelated; that package was
 on the hub already.
 
+**The hub's R packages are older than CI's (#67, related to #10).** The hub has
+rerddap 1.2.1, rerddapXtracto 1.2.3 and plotdap 1.1.0; CRAN, and so CI, has
+rerddap 1.3.0, rerddapXtracto 1.2.5 and plotdap 1.2.0. 1.3.0 added
+`rerddap:::estimate_griddap_size` (so that test cannot run on the hub's
+library). To run R as CI does, install the CRAN versions into a user library
+outside the system (`install.packages(c("rerddap", "rerddapXtracto",
+"plotdap"), lib = "/tmp/rlib", dependencies = FALSE)`, source builds took a
+few minutes) and put it first with `.libPaths(c("/tmp/rlib", .libPaths()))`
+at the top of a wrapper script that `source()`s the test file.
+
 **The erddapy version matters most.** erddapy >= 3.2 finds datasets through
 `.ncml`; 3.1 uses DDS + csvp. A local pass with 3.1 does not test what CI and
 most users run (#10).

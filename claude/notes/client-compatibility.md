@@ -44,6 +44,23 @@ for data-variable requests. For axis-only requests (`?latitude[(30):1:(20)]`)
 ERDDAP 2.22 refuses the reversed range, and 2.31 accepts one but crashes on
 two, so we refuse it with a 400.
 
+## rerddap's `check_time_range` compares strings (#67)
+
+`griddap(info, time = c("2018-01-01", ...))` halts with "time bounds are out
+of range" when a **date-only bound equals the first time** of a dataset whose
+first time is stamped later that day (`2018-01-01T12:00:00Z`): rerddap compares
+the strings, so `"2018-01-01" < "2018-01-01T12:00:00Z"`. Real ERDDAP does the
+same, so this is not ours to fix; it looks like a server bug and is not. Tests
+that start at the first time give a full timestamp (`2018-01-01T12:00:00Z`),
+or `"last"`.
+
+Two more rerddap behaviours the #67 tests work around, neither ours:
+`griddap(..., fields = "none")` over the default nc fails inside rerddap
+(`ncdf4_get` indexes the first variable of a file that has none), so the test
+uses `fmt = "csv"`; and `time = c("last-2", "last")` is written `(last-2)`,
+which on a time axis is ERDDAP's `last-d` in seconds, so it returns only the
+final time. The test uses the latitude axis for `last-d`.
+
 ## Client versions are part of the contract
 
 erddapy changed how it discovers datasets between 3.1 and 3.2 (item 6). Local

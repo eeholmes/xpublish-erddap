@@ -1,9 +1,9 @@
 # xpublish-erddap
 
 [![tests](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml/badge.svg)](https://github.com/eeholmes/xpublish-erddap/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/eeholmes/xpublish-erddap/blob/main/LICENSE.txt)
 
-**Prototype.** An ERDDAP-compatible `griddap` router for [Xpublish](https://github.com/xpublish-community/xpublish),
+An ERDDAP-compatible `griddap` router for [Xpublish](https://github.com/xpublish-community/xpublish),
 so that existing **[erddapy](https://ioos.github.io/erddapy/)** and
 **[rerddap](https://docs.ropensci.org/rerddap/)** code keeps working when the data
 moves to Zarr/Icechunk.
@@ -18,8 +18,6 @@ Icechunk / Zarr / any xarray Dataset
   -> xpublish + xpublish-erddap
   -> erddapy / rerddap, unmodified
 ```
-
-This is a proof of concept.
 
 
 ## Motivation
@@ -47,6 +45,20 @@ Working end to end against both clients, on synthetic data and on real NOAA CEFI
 model output served from Icechunk via Earthmover Flux. Not production software:
 no auth, no tabledap, a partial file-type list, and the catalog is built eagerly
 at first request.
+
+## Installation
+
+```shell
+python -m pip install xpublish-erddap
+```
+
+This installs the plugin with its dependencies (`xpublish`, `fastapi`,
+`xarray`, `pandas`, `numpy`, `scipy`); it needs Python 3.11 or newer.
+Xpublish finds the plugin through its `xpublish.plugin` entry point, or you
+can pass `ErddapPlugin()` explicitly as below. To read Zarr or Icechunk
+stores, also install what xarray needs for them (`zarr`, `icechunk`). Until
+the first release is on PyPI, install from GitHub:
+`python -m pip install git+https://github.com/eeholmes/xpublish-erddap.git`.
 
 ## Usage
 
@@ -109,26 +121,31 @@ plugins use. Earthmover Flux puts the Icechunk snapshot in that id, so new
 commits appear on the next request. Plain `xpublish.Rest` uses the dataset id,
 which never changes: for a store that changes in place, put a version in
 `_xpublish_id` or set `ErddapPlugin(catalog_max_age_s=600)` to rebuild at least
-every 10 minutes. Details: [docs/hosting.md](docs/hosting.md).
+every 10 minutes. Details: [docs/hosting.md](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md).
 
 **Running the plugin in a host such as Earthmover Flux?** See
-[docs/hosting.md](docs/hosting.md) for the choices it makes about routing,
+[docs/hosting.md](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md) for the choices it makes about routing,
 naming and URLs, and what to change if yours differs.
 
 ### Limiting response size
 
 Responses are built in memory, so a request for a whole variable can be
-gigabytes. `ErddapPlugin(max_response_mb=500)` refuses any data request (`.nc`,
-`.csv`, `.json`, ...) whose values would exceed 500 MB. It answers the way a real
-ERDDAP server does, with a 413 "Your query produced too much data" error, and it
-decides from the query before reading any data. The estimate is the size of the values themselves;
-text formats come out several times larger. Metadata requests (`.das`, `.dds`,
-`.ncml`, info, search) are never limited.
+gigabytes. By default (`max_response_mb=500`) the plugin refuses any data
+request (`.nc`, `.csv`, `.json`, ...) whose values would exceed 500 MB. It
+answers the way a real ERDDAP server does, with a 413 "Your query produced too
+much data" error, and it decides from the query before reading any data. The
+estimate is the size of the values themselves; text formats come out several
+times larger. Metadata requests (`.das`, `.dds`, `.ncml`, info, search) are never
+limited.
 
-With no limit set (the default), one limit still applies, copied from real
-ERDDAP servers: they refuse any `.nc` response over 2 GB, so this package does
-too, and client code sees the same error either way. A public server should
-set its own, lower limit.
+Set another number to move the limit, for example
+`ErddapPlugin(max_response_mb=100)` on a small server. ERDDAP itself has no
+fixed default: it refuses what would not fit in 75% of its Java heap
+(`Math2.ensureMemoryAvailable`). `ErddapPlugin(max_response_mb=None)` means no
+limit of your own; one limit still applies, copied from real ERDDAP servers,
+which refuse any `.nc` response over 2 GB (`EDDGrid.saveAsNc`), so client code
+sees the same error either way. Use `None` only where a request for a whole
+variable is safe.
 
 ## What is implemented
 
@@ -185,7 +202,7 @@ names. A store with `lat`/`lon`/`t` axes is served with ERDDAP's names
 (`rename_axes=True`, the default); `rename_axes=False` keeps the source names,
 and a dict gives your own mapping. Variable names ERDDAP cannot serve
 (`sst-anom`) are served as ERDDAP would name them (`sst_anom`). The rules are in
-[`docs/hosting.md`](docs/hosting.md#7-axis-and-variable-names).
+[`docs/hosting.md`](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md#7-axis-and-variable-names).
 
 **Data is served as if ERDDAP's rules had been followed.** An ERDDAP server
 accepts a dataset only once it is formatted the way ERDDAP requires, so much
@@ -213,7 +230,7 @@ and `demo/demo_cefi.R` exercise the R client.
 
 ## Reuse and citation
 
-This work is released under the [BSD 3-Clause License](LICENSE.txt), matching
+This work is released under the [BSD 3-Clause License](https://github.com/eeholmes/xpublish-erddap/blob/main/LICENSE.txt), matching
 the other Xpublish plugins (`xpublish-opendap`, `xpublish-edr`, `xpublish-wms`),
 so that it can be contributed to
 [xpublish-community](https://github.com/xpublish-community). You are free to use,

@@ -2,6 +2,7 @@
 
 import io
 import xml.etree.ElementTree as ET
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -94,6 +95,35 @@ def test_coordinate_value_subsetting(client):
         "longitude (degrees_east)",
         "tos (degC)",
     ]
+
+
+def test_fully_percent_encoded_csv_request(client):
+    """Brackets, colons and commas arrive as %5B %5D %3A %2C and mean the same (#52).
+
+    Code that builds URLs with ``urllib.parse.quote(safe="")`` sends every
+    reserved character encoded; nothing else tested decoding.
+    """
+    plain = (
+        "/erddap/griddap/testgrid.csv"
+        "?tos[(2020-01-02T00:00:00Z):1:(2020-01-03T00:00:00Z)]"
+        "[(42.5):1:(47.5)][(232.0):1:(236.0)],sos[(2020-01-02T00:00:00Z):1:(2020-01-03T00:00:00Z)]"
+        "[(42.5):1:(47.5)][(232.0):1:(236.0)]"
+    )
+    path, query = plain.split("?")
+    encoded = path + "?" + quote(query, safe="")
+    assert "%5B" in encoded
+    assert "%3A" in encoded
+    assert "%2C" in encoded
+    assert "[" not in encoded
+
+    response = client.get(encoded)
+    assert response.status_code == 200
+    expected = client.get(plain)
+    assert expected.status_code == 200
+    assert response.text == expected.text
+    df = pd.read_csv(io.StringIO(response.text), skiprows=[1])
+    assert len(df) == 2 * 3 * 2
+    assert list(df.columns)[-2:] == ["tos", "sos"]
 
 
 def test_index_subsetting_matches_coordinate_subsetting(client):

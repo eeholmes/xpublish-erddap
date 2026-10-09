@@ -57,6 +57,49 @@ def test_single_dataset_rest_serves_its_dataset(grid_dataset):
     assert client.get(f"/erddap/griddap/dataset.csv?{TOS}").status_code == 200
 
 
+def test_returned_urls_are_percent_encoded(tos_only):
+    """A group called "my group" must not put a space in the URLs we hand back."""
+    tree = xr.DataTree.from_dict({"/my group": tos_only})
+    host = FluxLikeRest({"o/r": tree}, plugins={"erddap": ErddapPlugin()})
+    client = TestClient(host.app)
+    root = "/o/r/main/my group/erddap"
+    for table in ("griddap", "info"):
+        body = client.get(f"{root}/{table}/index.csv").text
+        assert "http://testserver/o/r/main/my%20group/erddap/griddap/o_r_main_my_group," in body
+        assert " group/" not in body
+    # and the encoded URL it hands back is one the server answers
+    assert (
+        client.get("/o/r/main/my%20group/erddap/info/o_r_main_my_group/index.csv").status_code
+        == 200
+    )
+
+
+def test_async_datatree_dependency_keeps_the_per_dataset_root(grid_dataset):
+    """An async host cannot have the server-wide root, but its dataset root works.
+
+    The server-wide root calls ``deps.datatree`` itself and would get an
+    unawaited coroutine (a 500), so it steps aside; FastAPI awaits the
+    dependency for the per-dataset root.
+    """
+
+    class AsyncRest(xpublish.Rest):
+        def setup_datasets(self, datasets: dict) -> str:
+            prefix = super().setup_datasets(datasets)
+            sync_datatree = self._get_datatree_func
+
+            async def datatree(dataset_id: str) -> xr.DataTree:
+                return sync_datatree(dataset_id)
+
+            self._get_datatree_func = datatree
+            return prefix
+
+    rest = AsyncRest({"a": grid_dataset}, plugins={"erddap": ErddapPlugin()})
+    client = TestClient(rest.app)
+    assert client.get("/erddap/version").status_code == 404
+    assert ids(client, "/datasets/a/erddap") == ["a", "a_depth"]
+    assert client.get(f"/datasets/a/erddap/griddap/a.csv?{TOS}").status_code == 200
+
+
 def test_dataset_naming_is_configurable(grid_dataset):
     """A host can name datasets its own way (docs/hosting.md)."""
     plugin = ErddapPlugin(name_dataset=lambda params, group: "sst_analysis")
