@@ -173,6 +173,12 @@ def test_erddapy_download_file_rejects_unknown_types(xpublish_server):
         _small_crw(xpublish_server).download_file("notatype")
 
 
+@pytest.mark.skipif(
+    "erddapy" not in xr.backends.list_engines(),
+    reason="erddapy's xarray backend does not load with the lowest-version xarray "
+    "(it imports T_PathFileOrDataStore, which that xarray lacks): an erddapy/xarray "
+    "mismatch, not ours. The min-deps job is the only one that skips this.",
+)
 def test_xarray_engine_erddapy(xpublish_server):
     """xr.open_dataset(url, engine="erddapy") opens a griddap .nc URL."""
     e = _small_crw(xpublish_server)
