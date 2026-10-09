@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-08, after #61)
+## Repo state (2026-10-09, after #62)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -81,8 +81,12 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   #55–#67. **Shipped 2026-10-08:** #55–#59 (PRs #74–#77, #80), #78 (found on
   the way, PR #82), #64 (taken early, it continued #78; PR #83) and #60
   (PR #86), #61 (PR #88: per-dataset catalogs cache on the URL's path
-  parameters + group, never on `name_dataset`; cachey gets `nbytes`). **Next
-  is #62**, then #63, #65, #66, #67 (#60 is still open on GitHub; EH closes it).
+  parameters + group, never on `name_dataset`; cachey gets `nbytes`). **Shipped
+  2026-10-09:** #62 (PR #89: every route answers HEAD, a data HEAD validates
+  but builds no file; `info/{id}/index.html` is a minimal page, EH's choice,
+  because rerddapXtracto's `safe_info()` and rerddap's `browse()` need it to
+  exist). **Next is #63**, then #65, #66, #67 (#60 is still open on GitHub; EH
+  closes it).
   After release: #68–#72. The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
