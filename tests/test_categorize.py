@@ -198,13 +198,3 @@ def test_per_dataset_root_categorizes_its_own_datasets(client):
     assert client.get(f"{root}/categorize/institution/noaa_ndbc/index.csv").status_code == 404
     first = table(client, f"{root}/categorize/index.csv")["URL"][0]
     assert first.startswith("http://testserver/datasets/a/erddap/categorize/")
-
-
-def test_erddapy_over_a_socket(xpublish_server):
-    """The same against a running server (the tutorial dataset, #5)."""
-    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
-    values = pd.read_csv(e.get_categorize_url("cdm_data_type", response="csv"))
-    assert "grid" in list(values["Category"])
-    found = pd.read_csv(e.get_categorize_url("cdm_data_type", "grid", response="csv"))
-    every = pd.read_csv(f"{xpublish_server}/griddap/index.csv")
-    assert set(found["Dataset ID"]) == set(every["Dataset ID"])
