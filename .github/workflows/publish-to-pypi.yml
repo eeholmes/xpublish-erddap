@@ -9,6 +9,8 @@ permissions: {}
 jobs:
   packages:
     runs-on: ubuntu-latest
+    # Must match the environment name in PyPI's trusted-publisher settings.
+    environment: pypi
 
     permissions:
       contents: read
