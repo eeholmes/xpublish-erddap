@@ -82,8 +82,8 @@ Attributes {
     Float64 geospatial_lon_min -179.875;
     Float64 geospatial_lon_resolution 0.25;
     String geospatial_lon_units "degrees_east";
-    String history "2026-10-09T03:51:29Z (local files)
-2026-10-09T03:51:29Z https://coastwatch.noaa.gov/erddap/griddap/noaacwBLENDEDNRTcurrentsDaily.das";
+    String history "2026-10-09T17:29:41Z (local files)
+2026-10-09T17:29:41Z https://coastwatch.noaa.gov/erddap/griddap/noaacwBLENDEDNRTcurrentsDaily.das";
     String infoUrl "https://coastwatch.noaa.gov";
     String institution "NOAA NESDIS CoastWatch";
     String license "Data courtesy of NOAA; Sentinel data courtesy of Copernicus Program; Generated using AVISO+ products. The data may be used and redistributed for free but is not intended

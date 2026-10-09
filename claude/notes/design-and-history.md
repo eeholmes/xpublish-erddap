@@ -570,3 +570,35 @@ FastAPI's JSON 404 did not.
 and returns NULL. Its only early exit, `check_interp`, refuses servers whose
 `/version` is below 2.10, and we report 2.23 because other clients need it.
 No status code avoids the wait; only serving interpolate (#98) does.
+
+## `.dods` is served, with a ported encoder (#2)
+
+The bare griddap URL is an OPeNDAP URL on ERDDAP, and about 14 of the ~25
+CoastWatch Python tutorials use it (`xr.open_dataset(".../griddap/<id>")`);
+netCDF-C fetches `.dds`, `.das`, then `.dods`. The plan was to reuse
+xpublish-opendap's encoder with our own constraints. On 2026-10-09 the
+session found `opendap-protocol` 1.1.1 (the encoder, last commit 2021) does
+not import in a new Python 3.12 venv (`pkg_resources`; no setuptools, or
+setuptools 84), has no byte padding, and needs dask. **EH chose to port it**:
+`formats.dods_response` packs XDR as `dods_encode` does, with ERDDAP's
+layout from `DodsFiles.saveAsDODS` (axes first for the whole dataset or an
+axis request; each grid's array then its maps; bytes padded to 4; shorts as
+ints; longs as doubles; `convertToNaN` false, so a NaN xarray made of a fill
+goes back to the fill). It streams a block of the store at a time.
+
+- **Matched byte for byte** with real ERDDAP on every parity case (`dods`
+  is now in `DATA_TYPES`), including a Byte with fills and two variables.
+- **netCDF-C and pydap ask for `ROSE.ROSE[1080][0]`** (DAP2 Grid.Array
+  names). ERDDAP accepts `grid.grid` for data and `grid.axis` for an axis
+  (`EDDGrid.parseDataDapQuery`, `isAxisDapQuery`, `parseAxisDapQuery`);
+  ported in `constraints.py`. Only that exact form is shortened.
+- **Kept difference:** ERDDAP has no case for unsigned types in a grid
+  `.dods` (dhw_5km): it sends the length, logs "unsupported source data
+  type" and stops, a truncated 200. We send the data. `KNOWN` in
+  `test_parity.py`.
+- **erddapy `response="opendap"`** must be set before `griddap_initialize()`
+  (which it then skips). Set after, erddapy builds a URL with value
+  constraints that netCDF-C refuses itself, whatever the server. The old
+  strict xfail did it in that order; the test now follows erddapy's order.
+- A DAP2 array length is an int32: `.dods` arrays of 2^31-1 values or more
+  get ERDDAP's 413 "(OPeNDAP limit)" (`Math2.ensureArraySizeOkay`).

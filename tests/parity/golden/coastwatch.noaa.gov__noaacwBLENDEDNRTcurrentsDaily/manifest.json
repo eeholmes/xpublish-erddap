@@ -63,6 +63,12 @@
       "file": "09.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.dods?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     }
   ]
 }

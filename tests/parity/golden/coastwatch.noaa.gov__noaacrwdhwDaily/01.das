@@ -93,8 +93,8 @@ Attributes {
     String grid_mapping_name "latitude_longitude";
     Float32 grid_mapping_semi_major_axis 6378137.0;
     String history "This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0).
-2026-10-09T03:51:34Z (local files)
-2026-10-09T03:51:34Z https://coastwatch.noaa.gov/erddap/griddap/noaacrwdhwDaily.das";
+2026-10-09T17:29:44Z (local files)
+2026-10-09T17:29:44Z https://coastwatch.noaa.gov/erddap/griddap/noaacrwdhwDaily.das";
     String id "Satellite_Daily_Global_5km_Degree_Heating_Week";
     String infoUrl "https://coralreefwatch.noaa.gov/product/5km/index.php";
     String institution "NOAA/NESDIS/STAR Coral Reef Watch Program";

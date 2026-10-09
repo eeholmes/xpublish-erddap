@@ -23,7 +23,13 @@ from urllib import parse
 
 import xarray as xr
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
 from xpublish.utils.api import DATASET_ID_ATTR_KEY
@@ -56,20 +62,7 @@ TABULAR = {"csv", "csvp", "csv0", "json"}
 
 #: File types of the catalog, info and search tables.
 TABLE_EXTENSIONS = {"csv", "json"}
-ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds"}
-
-#: Recognised but not served yet. Kept out of ALL_EXTENSIONS so no error
-#: message advertises them, but answered with 501 and a pointer instead of
-#: the generic "unsupported" 400. ``.dods`` will reuse xpublish-opendap's
-#: encoder (issue #2); until then, OPeNDAP clients should use the store's
-#: OPeNDAP endpoint.
-PLANNED_EXTENSIONS = {
-    "dods": (
-        "OPeNDAP binary (.dods) is planned but not implemented yet "
-        "(https://github.com/eeholmes/xpublish-erddap/issues/2). "
-        "For OPeNDAP access, use the dataset's OPeNDAP endpoint instead."
-    ),
-}
+ALL_EXTENSIONS = TABULAR | {"nc", "ncml", "das", "dds", "dods"}
 
 
 def _resolve(request: Request, dep, *args):
@@ -144,6 +137,28 @@ def check_size(ds: xr.Dataset, parsed, ext: str, limit_mb: float | None) -> None
         raise too_much_data(size_mb, f"this server's {limit_mb:g} MB limit")
     if ext == "nc" and size > NC_LIMIT_MB * BYTES_PER_MB:
         raise too_much_data(size_mb, "the .nc 2 GB limit")
+
+
+#: The most values one DAP2 array can hold: its length is sent as a 32-bit
+#: int (``Math2.ensureArraySizeOkay``, Java's array limit).
+DAP_ARRAY_LIMIT = 2**31 - 1
+
+
+def check_dap_array_size(ds: xr.Dataset, parsed) -> None:
+    """Refuse a ``.dods`` request with an array too long for DAP2, in ERDDAP's words."""
+    grids = [name for name in parsed.variables if name not in ds.dims]
+    if not grids:
+        return  # an axis is never that long
+    cells = 1
+    for dim in ds[grids[0]].dims:
+        cells *= parsed.selections[dim].size
+    if cells >= DAP_ARRAY_LIMIT:
+        raise HTTPException(
+            413,
+            "Your query produced too much data.  Try to request less data. [memory]  "
+            f"The request needs an array size ({cells}) bigger than Java ever allows "
+            f"({DAP_ARRAY_LIMIT}). [memory] (OPeNDAP limit)",
+        )
 
 
 # -- helpers the routes share ------------------------------------------------
@@ -340,8 +355,6 @@ def split_target(target: str) -> tuple[str, str]:
             f"missing fileType: use {target}.<type>, one of {', '.join(sorted(ALL_EXTENSIONS))}",
         )
     dataset_id, _, ext = target.rpartition(".")
-    if ext in PLANNED_EXTENSIONS:
-        raise HTTPException(501, PLANNED_EXTENSIONS[ext])
     if ext not in ALL_EXTENSIONS:
         # ERDDAP's wording (coastwatch.noaa.gov, 2026-10-07)
         raise HTTPException(400, f"Query error: fileType=.{ext} isn't supported by this dataset.")
@@ -390,6 +403,8 @@ def griddap_response(  # noqa: PLR0911, PLR0913
 
     if ext != "dds":
         check_size(ed.ds, parsed, ext, max_response_mb)
+    if ext == "dods":
+        check_dap_array_size(ed.ds, parsed)
 
     indexers = {d: sel.as_slice() for d, sel in parsed.selections.items()}
     sub: xr.Dataset = ed.ds.isel(indexers)
@@ -405,6 +420,11 @@ def griddap_response(  # noqa: PLR0911, PLR0913
         )
     if head and ext in HEAD_MEDIA:
         return Response(media_type=ERDDAP_JAVASCRIPT if jsonp else HEAD_MEDIA[ext])
+    if ext == "dods":
+        return StreamingResponse(
+            formats.dods_response(ed, sub, parsed.variables, all_axes=not parsed.expression),
+            media_type=DODS_MEDIA,
+        )
     if ext == "nc":
         data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
         return Response(
@@ -431,8 +451,13 @@ def griddap_response(  # noqa: PLR0911, PLR0913
     raise AssertionError(ext)  # pragma: no cover
 
 
+#: ``DodsFiles``: no Content-Disposition, unlike ``.nc``; the charset is
+#: what ERDDAP 2.22-2.31 send (the DDS before the data is ISO-8859-1).
+DODS_MEDIA = "application/octet-stream;charset=ISO-8859-1"
+
 #: Content types of the data files, for a HEAD request that builds none.
 HEAD_MEDIA = {
+    "dods": DODS_MEDIA,
     "nc": "application/x-netcdf",
     "json": ERDDAP_JSON,
     "csv": "text/csv",

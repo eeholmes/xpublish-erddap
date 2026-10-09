@@ -35,7 +35,14 @@ OUR_SERVER = "http://testserver/erddap"
 
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
-KNOWN: list[tuple[str, str]] = []
+KNOWN: list[tuple[str, str]] = [
+    (
+        r"^dhw_5km griddap/dhw_5km\.dods\?",
+        "ERDDAP's .dods (DodsFiles.saveAsDODS) has no case for unsigned types: it sends "
+        "the array's length, logs 'unsupported source data type' and stops, a truncated "
+        "200. Ours sends the data, as Byte (#2).",
+    ),
+]
 
 #: The same, for media-type differences.
 KNOWN_MEDIA: list[tuple[str, str]] = [

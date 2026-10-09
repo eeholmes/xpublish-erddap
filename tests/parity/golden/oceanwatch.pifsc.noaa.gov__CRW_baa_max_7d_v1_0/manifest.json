@@ -2,7 +2,7 @@
   "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
   "dataset_id": "CRW_baa_max_7d_v1_0",
   "erddap_version": "ERDDAP_version=2.22",
-  "captured": "2026-10-08",
+  "captured": "2026-10-09",
   "requests": [
     {
       "path": "griddap/CRW_baa_max_7d_v1_0.dds",
@@ -63,6 +63,12 @@
       "file": "09.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_baa_max_7d_v1_0.dods?bleaching_alert_area[(2019-09-01)][(21.45):1:(21.6)][(201.9):1:(202.1)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     }
   ]
 }

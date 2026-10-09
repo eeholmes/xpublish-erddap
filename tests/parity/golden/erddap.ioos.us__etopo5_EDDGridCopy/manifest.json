@@ -2,7 +2,7 @@
   "server": "https://erddap.ioos.us/erddap",
   "dataset_id": "etopo5_EDDGridCopy",
   "erddap_version": "ERDDAP_version=2.31",
-  "captured": "2026-10-08",
+  "captured": "2026-10-09",
   "requests": [
     {
       "path": "griddap/etopo5_EDDGridCopy.dds",
@@ -65,80 +65,110 @@
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/etopo5_EDDGridCopy.dods?ROSE[(-5.533):10:(0.033)][(330.908):10:(340.365)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
-      "file": "10.csv",
+      "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/etopo5_EDDGridCopy.csvp?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
-      "file": "11.csvp",
+      "file": "12.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/etopo5_EDDGridCopy.csv0?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
-      "file": "12.csv0",
+      "file": "13.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/etopo5_EDDGridCopy.json?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
-      "file": "13.json",
+      "file": "14.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/etopo5_EDDGridCopy.nc?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
-      "file": "14.nc",
+      "file": "15.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(20)][(-120)]",
-      "file": "15.error",
-      "status": 404,
-      "content_type": "text/plain;charset=UTF-8"
-    },
-    {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.05)][(0)]",
-      "file": "16.error",
-      "status": 404,
-      "content_type": "text/plain;charset=UTF-8"
-    },
-    {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.03)][(0)]",
-      "file": "17.csv",
+      "path": "griddap/etopo5_EDDGridCopy.dods?ROSE[(-0.5):1:(0.0)][(359.8):1:(359.9166666666667)]",
+      "file": "16.dods",
       "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0)][(360.0)]",
-      "file": "18.error",
-      "status": 404,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/etopo5_EDDGridCopy.dods?latitude",
+      "file": "17.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-90.05)][(0):(1)]",
-      "file": "19.error",
-      "status": 404,
-      "content_type": "text/plain;charset=UTF-8"
+      "path": "griddap/etopo5_EDDGridCopy.dods?ROSE.ROSE[1080][0]",
+      "file": "18.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     },
     {
-      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0):(120)][(0)]",
+      "path": "griddap/etopo5_EDDGridCopy.dods?ROSE.longitude[0:1:4]",
+      "file": "19.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(20)][(-120)]",
       "file": "20.error",
       "status": 404,
       "content_type": "text/plain;charset=UTF-8"
     },
     {
-      "path": "griddap/etopo5_EDDGridCopy.csv?latitude[(95)]",
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.05)][(0)]",
       "file": "21.error",
       "status": 404,
       "content_type": "text/plain;charset=UTF-8"
     },
     {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(90.03)][(0)]",
+      "file": "22.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0)][(360.0)]",
+      "file": "23.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(-90.05)][(0):(1)]",
+      "file": "24.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(0):(120)][(0)]",
+      "file": "25.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
+      "path": "griddap/etopo5_EDDGridCopy.csv?latitude[(95)]",
+      "file": "26.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    },
+    {
       "path": "griddap/etopo5_EDDGridCopy.csv?ROSE[(abc)][(0)]",
-      "file": "22.error",
+      "file": "27.error",
       "status": 400,
       "content_type": "text/plain;charset=UTF-8"
     },

@@ -9,7 +9,7 @@
   <attribute name="creator_name" value="JPL MUR SST project" />
   <attribute name="creator_type" value="group" />
   <attribute name="creator_url" value="https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1" />
-  <attribute name="date_created" value="2026-10-08T07:57:52Z" />
+  <attribute name="date_created" value="2026-10-09T07:57:52Z" />
   <attribute name="Easternmost_Easting" type="double" value="180.0" />
   <attribute name="file_quality_level" type="int" value="3" />
   <attribute name="gds_version_id" value="2.0" />
@@ -57,16 +57,16 @@ completeness, or usefulness, of this information." />
   <attribute name="standard_name_vocabulary" value="CF Standard Name Table v70" />
   <attribute name="summary" value="This is a merged, multi-sensor L4 Foundation Sea Surface Temperature (SST) analysis product from Jet Propulsion Laboratory (JPL). This daily, global, Multi-scale, Ultra-high Resolution (MUR) Sea Surface Temperature (SST) 1-km data set, Version 4.1, is produced at JPL under the NASA MEaSUREs program. For details, see https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1 . This dataset is part of the Group for High-Resolution Sea Surface Temperature (GHRSST) project. The data for the most recent 7 days is usually revised everyday.  The data for other days is sometimes revised." />
   <attribute name="testOutOfDate" value="now-3days" />
-  <attribute name="time_coverage_end" value="2026-10-07T09:00:00Z" />
+  <attribute name="time_coverage_end" value="2026-10-08T09:00:00Z" />
   <attribute name="time_coverage_start" value="2002-06-01T09:00:00Z" />
   <attribute name="title" value="Multi-scale Ultra-high Resolution (MUR) SST Analysis fv04.1, Global, 0.01°, 2002-present, Daily" />
   <attribute name="Westernmost_Easting" type="double" value="-179.99" />
-  <dimension name="time" length="8893" />
+  <dimension name="time" length="8894" />
   <dimension name="latitude" length="17999" />
   <dimension name="longitude" length="36000" />
   <variable name="time" shape="time" type="double">
     <attribute name="_CoordinateAxisType" value="Time" />
-    <attribute name="actual_range" type="double" value="1.022922E9 1.7913636E9" />
+    <attribute name="actual_range" type="double" value="1.022922E9 1.79145E9" />
     <attribute name="axis" value="T" />
     <attribute name="comment" value="Nominal time of analyzed fields" />
     <attribute name="ioos_category" value="Time" />
@@ -138,7 +138,7 @@ completeness, or usefulness, of this information." />
     <attribute name="_FillValue" type="double" value="-1.28" />
     <attribute name="colorBarMaximum" type="double" value="1.0" />
     <attribute name="colorBarMinimum" type="double" value="0.0" />
-    <attribute name="comment" value="ice fraction is a dimensionless quantity between 0 and 1; it has been interpolated by a nearest neighbor approach; EUMETSAT OSI-SAF files used: ice_conc_nh_polstere-100_amsr3_202610021200.nc, ice_conc_sh_polstere-100_amsr3_202610021200.nc." />
+    <attribute name="comment" value="ice fraction is a dimensionless quantity between 0 and 1; it has been interpolated by a nearest neighbor approach; EUMETSAT OSI-SAF files used: ice_conc_nh_polstere-100_amsr3_202610031200.nc, ice_conc_sh_polstere-100_amsr3_202610031200.nc." />
     <attribute name="ioos_category" value="Ice Distribution" />
     <attribute name="long_name" value="Sea Ice Area Fraction" />
     <attribute name="source" value="EUMETSAT OSI-SAF, copyright EUMETSAT" />

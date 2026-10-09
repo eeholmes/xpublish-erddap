@@ -21,7 +21,7 @@ METADATA = [
 ]
 
 #: File types a data request is compared in.
-DATA_TYPES = ["csv", "csvp", "csv0", "json", "nc"]
+DATA_TYPES = ["csv", "csvp", "csv0", "json", "nc", "dods"]
 
 
 @dataclass(frozen=True)
@@ -141,6 +141,11 @@ CASES = [
         # axes' half-spacing margin lets 90.03 through and not 90.05; a
         # bad "stop" and an axis-only request are refused the same way.
         extra=[
+            # .dods as netCDF-C asks for it (#2): the axes, then one cell by
+            # DAP2's Grid.Array name; and an axis by its Grid.Map name
+            "griddap/{id}.dods?latitude",
+            "griddap/{id}.dods?ROSE.ROSE[1080][0]",
+            "griddap/{id}.dods?ROSE.longitude[0:1:4]",
             "griddap/{id}.csv?ROSE[(20)][(-120)]",
             "griddap/{id}.csv?ROSE[(90.05)][(0)]",
             "griddap/{id}.csv?ROSE[(90.03)][(0)]",

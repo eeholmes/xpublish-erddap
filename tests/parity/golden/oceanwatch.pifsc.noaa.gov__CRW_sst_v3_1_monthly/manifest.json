@@ -2,7 +2,7 @@
   "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
   "dataset_id": "CRW_sst_v3_1_monthly",
   "erddap_version": "ERDDAP_version=2.22",
-  "captured": "2026-10-08",
+  "captured": "2026-10-09",
   "requests": [
     {
       "path": "griddap/CRW_sst_v3_1_monthly.dds",
@@ -65,44 +65,56 @@
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v3_1_monthly.dods?sea_surface_temperature[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v3_1_monthly.csv?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "10.csv",
+      "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v3_1_monthly.csvp?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "11.csvp",
+      "file": "12.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v3_1_monthly.csv0?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "12.csv0",
+      "file": "13.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v3_1_monthly.json?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "13.json",
+      "file": "14.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/CRW_sst_v3_1_monthly.nc?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "14.nc",
+      "file": "15.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v3_1_monthly.dods?sea_surface_temperature[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "16.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v3_1_monthly.csvp?latitude[(19.2):1:(19.3)]",
-      "file": "15.error",
+      "file": "17.error",
       "status": 500,
       "content_type": "text/html; charset=iso-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v3_1_monthly.csvp?latitude[(19.3):1:(19.2)]",
-      "file": "16.csvp",
+      "file": "18.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     }

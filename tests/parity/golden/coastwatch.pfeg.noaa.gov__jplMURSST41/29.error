@@ -1,4 +1,0 @@
-Error {
-    code=400;
-    message="Bad Request: Query error: Unexpected character after \"last\" in Start=last 0.";
-}

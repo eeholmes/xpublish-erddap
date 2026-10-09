@@ -16,6 +16,7 @@ import io
 import itertools
 import json
 import math
+from collections.abc import Iterator
 
 import numpy as np
 import pandas as pd
@@ -245,6 +246,141 @@ def dds_response(
         lines.append(f"  }} {name};")
     lines.append(f"}} {ed.dataset_id};")
     return "\n".join(lines) + "\n"
+
+
+#: How each served dtype goes into XDR (``PrimitiveArray.externalizeForDODS``).
+#: XDR has no 8- or 16-bit numbers: bytes go as raw bytes (padded, below),
+#: shorts as 32-bit ints. DAP2 has no 64-bit integers, so they go as doubles,
+#: as the DDS says (``_DAP_TYPES``). ERDDAP refuses unsigned types in a grid's
+#: ``.dods``; they are written here as their DDS type says.
+_XDR = {
+    np.dtype("int8"): "i1",
+    np.dtype("uint8"): "u1",
+    np.dtype("int16"): ">i4",
+    np.dtype("uint16"): ">u4",
+    np.dtype("int32"): ">i4",
+    np.dtype("uint32"): ">u4",
+    np.dtype("int64"): ">f8",
+    np.dtype("uint64"): ">f8",
+    np.dtype("float32"): ">f4",
+    np.dtype("float64"): ">f8",
+}
+
+#: Cells read from the store at a time while a ``.dods`` response streams.
+DODS_BLOCK_BYTES = 8 * 1024 * 1024
+
+
+def _xdr_strings(values: np.ndarray) -> bytes:
+    """Strings as XDR (``StringArray.externalizeForDODS``).
+
+    Each is a length, the ISO-8859-1 bytes (``?`` for anything else), and
+    padding to 4 bytes.
+    """
+    out = bytearray()
+    for value in values.ravel():
+        data = str(value).encode("latin-1", "replace")
+        out += len(data).to_bytes(4, "big") + data + b"\0" * (-len(data) % 4)
+    return bytes(out)
+
+
+def _xdr_values(values: np.ndarray, dtype: np.dtype) -> bytes:
+    if dtype not in _XDR:
+        return _xdr_strings(values)
+    with np.errstate(all="ignore"):
+        return np.ascontiguousarray(values.astype(dtype).astype(_XDR[dtype])).tobytes()
+
+
+def _xdr_length(n: int) -> bytes:
+    return n.to_bytes(4, "big") * 2  # DAP2 sends an array's length twice
+
+
+def _xdr_padding(n: int, dtype: np.dtype) -> bytes:
+    return b"\0" * (-n % 4) if dtype.itemsize == 1 and dtype in _XDR else b""
+
+
+def _dods_axis(da: xr.DataArray) -> bytes:
+    """An axis as a DAP2 array: time as epoch seconds, as in the DDS."""
+    values = np.asarray(da.values)
+    dtype = dtype_of(da)
+    if _is_time(da):
+        values = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
+        dtype = np.dtype("float64")
+    return _xdr_length(values.size) + _xdr_values(values, dtype) + _xdr_padding(values.size, dtype)
+
+
+def _raw_cells(ed: ErddapDataset, name: str, values: np.ndarray) -> np.ndarray:
+    """Cells as stored, not as xarray masked them (``convertToNaN`` false).
+
+    ERDDAP's ``.dods`` sends the fill value itself; the client reads the
+    ``_FillValue`` from the DAS. A NaN that xarray made of a fill goes back
+    to it, in the served type.
+    """
+    dtype = dtype_of(ed.ds[name])
+    if values.dtype.kind == "f":
+        attrs = ed.variable_attrs(name)
+        fill = attrs.get("_FillValue", attrs.get("missing_value"))
+        if fill is not None:
+            missing = np.isnan(values)
+            if missing.any():
+                values = np.where(missing, np.asarray(fill).reshape(-1)[0], values)
+    if dtype.kind not in "iu":
+        return values
+    with np.errstate(all="ignore"):
+        return values.astype(dtype)  # unsigned data stored signed wraps back
+
+
+def _blocks(da: xr.DataArray) -> Iterator[np.ndarray]:
+    """``da``'s values in row-major order, a slab of its first axis at a time.
+
+    So a large request never holds more than ``DODS_BLOCK_BYTES`` of it.
+    """
+    if da.ndim == 0 or da.size == 0:
+        yield np.asarray(da.values).ravel()
+        return
+    per_row = max(1, da.size // da.shape[0]) * max(1, da.dtype.itemsize)
+    step = max(1, DODS_BLOCK_BYTES // per_row)
+    first = da.dims[0]
+    for start in range(0, da.shape[0], step):
+        yield np.asarray(da.isel({first: slice(start, start + step)}).values).ravel()
+
+
+def dods_response(
+    ed: ErddapDataset,
+    sub: xr.Dataset,
+    variables: list[str],
+    *,
+    all_axes: bool = False,
+) -> Iterator[bytes]:
+    """OPeNDAP binary (``.dods``) for a subset, as ``DodsFiles.saveAsDODS`` writes it.
+
+    The DDS, a blank line, ``Data:`` on its own line, then each variable in
+    the DDS's order, in XDR: the axes on their own (an axis request, or the
+    whole dataset), then each grid's array followed by its maps. Values are
+    read a block at a time, so the response streams and the store is read
+    only for what was asked.
+
+    The XDR encoding is ported from ``opendap_protocol.dods_encode``
+    (MeteoSwiss, BSD-3-Clause), which xpublish-opendap uses, with ERDDAP's
+    padding of byte arrays to 4 bytes added.
+    """
+    yield (dds_response(ed, sub, variables, all_axes=all_axes) + "\nData:\n").encode(
+        "latin-1",
+        "replace",
+    )
+    for dim in ed.dims:
+        if all_axes or dim in variables:
+            yield _dods_axis(sub[dim])
+    for name in variables:
+        if name in ed.dims:
+            continue
+        da = sub[name]
+        dtype = dtype_of(ed.ds[name])
+        yield _xdr_length(da.size)
+        for block in _blocks(da):
+            yield _xdr_values(_raw_cells(ed, name, block), dtype)
+        yield _xdr_padding(da.size, dtype)
+        for dim in da.dims:
+            yield _dods_axis(sub[dim])
 
 
 def _das_attr_lines(attrs: dict, indent: str) -> list[str]:

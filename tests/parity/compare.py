@@ -55,6 +55,10 @@ def comparable(body: bytes, ext: str, server: str | tuple[str, ...]):
     """Turn a response body into the value we compare, by file type."""
     if ext == "nc":
         return _netcdf_summary(body, server)
+    if ext == "dods":
+        # the DDS as text, then the XDR data byte for byte
+        head, sep, data = body.partition(b"\nData:\n")
+        return normalise_text(head.decode("latin-1"), server), sep, data
     text = normalise_text(body.decode("utf-8", "replace"), server)
     if ext == "json":
         return json.loads(text)

@@ -1,7 +1,7 @@
 Attributes {
   time {
     String _CoordinateAxisType "Time";
-    Float64 actual_range 4.811184e+8, 1.7913744e+9;
+    Float64 actual_range 4.811184e+8, 1.7914608e+9;
     String axis "T";
     String coverage_content_type "coordinate";
     String ioos_category "Time";
@@ -87,8 +87,8 @@ Fri Sep 11 06:25:12 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_baa-max-7d
 Fri Sep 11 06:25:11 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_baa-max-7d_v3.1_20260910-0-360.nc ct5km_baa-max-7d_v3.1_20260910-0-360.nc
 Fri Sep 11 06:25:10 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_baa-max-7d_v3.1_20260910.nc ct5km_baa-max-7d_v3.1_20260910-0-360.nc
 This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0).
-2026-10-08T18:49:12Z (local files)
-2026-10-08T18:49:12Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_baa_max_7d_v1_0.das";
+2026-10-09T17:27:08Z (local files)
+2026-10-09T17:27:08Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_baa_max_7d_v1_0.das";
     String id "Satellite_Daily_Global_5km_7day_Maximum_Bleaching_Alert_Area_Composite";
     String infoUrl "https://coralreefwatch.noaa.gov/product/5km/index.php";
     String institution "NOAA/NESDIS/STAR Coral Reef Watch Program";
@@ -120,7 +120,7 @@ This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satell
     String standard_name_vocabulary "CF Standard Name Table v27";
     String summary "This is a product of NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0. Bleaching Alert Levels: 0 - No stress, 1 - Watch, 2 - Warning, 3 - Alert Level 1, 4 - Alert LEvel 2. For more information: https://coralreefwatch.noaa.gov/product/5km/index_5km_baa_max_r07d.php";
     String time_coverage_duration "P7D";
-    String time_coverage_end "2026-10-07T12:00:00Z";
+    String time_coverage_end "2026-10-08T12:00:00Z";
     String time_coverage_resolution "P7D";
     String time_coverage_start "1985-03-31T12:00:00Z";
     String title "Coral Bleaching Alert Area 7-day Maximum Composite, Coral Reef Watch - Daily, 1985-

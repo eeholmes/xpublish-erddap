@@ -129,8 +129,9 @@ naming and URLs, and what to change if yours differs.
 
 ### Limiting response size
 
-Responses are built in memory, so a request for a whole variable can be
-gigabytes. By default (`max_response_mb=500`) the plugin refuses any data
+Responses other than `.dods` are built in memory, so a request for a whole
+variable can be gigabytes. (`.dods` streams, reading a block of the store at a
+time, but is limited the same way.) By default (`max_response_mb=500`) the plugin refuses any data
 request (`.nc`, `.csv`, `.json`, ...) whose values would exceed 500 MB. It
 answers the way a real ERDDAP server does, with a 413 "Your query produced too
 much data" error, and it decides from the query before reading any data. The
@@ -143,15 +144,16 @@ Set another number to move the limit, for example
 fixed default: it refuses what would not fit in 75% of its Java heap
 (`Math2.ensureMemoryAvailable`). `ErddapPlugin(max_response_mb=None)` means no
 limit of your own; one limit still applies, copied from real ERDDAP servers,
-which refuse any `.nc` response over 2 GB (`EDDGrid.saveAsNc`), so client code
-sees the same error either way. Use `None` only where a request for a whole
+which refuse any `.nc` response over 2 GB (`EDDGrid.saveAsNc`) and any `.dods`
+array of 2^31 - 1 values or more (DAP2 sends its length as a 32-bit int), so
+client code sees the same error either way. Use `None` only where a request for a whole
 variable is safe.
 
 ## What is implemented
 
 | Endpoint | Purpose |
 | --- | --- |
-| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, ncml, csv, csvp, csv0, json, das, dds`; `.dods` is planned ([#2](https://github.com/eeholmes/xpublish-erddap/issues/2)) |
+| `/erddap/griddap/{id}.{ext}?{query}` | data; `ext` in `nc, ncml, csv, csvp, csv0, json, das, dds, dods`. With `.dds`, `.das` and `.dods` the bare griddap URL is an OPeNDAP URL, so `xr.open_dataset("<server>/erddap/griddap/<id>")` (netCDF-C or pydap) and erddapy's `response="opendap"` work, as on ERDDAP ([#2](https://github.com/eeholmes/xpublish-erddap/issues/2)) |
 | `/erddap/griddap/index.{csv,json}`, `/erddap/info/index.{csv,json}` | dataset catalog, in ERDDAP's 15 columns (as on coastwatch.noaa.gov); links to services this plugin does not offer are empty |
 | `/erddap/tabledap/index.{csv,json}` | empty catalog (rerddap needs it to classify a dataset) |
 | `/erddap/info/{id}/index.{csv,json}` | variable and attribute table |

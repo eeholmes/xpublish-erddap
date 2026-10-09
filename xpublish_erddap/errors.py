@@ -30,8 +30,8 @@ logger = logging.getLogger("uvicorn")
 #: ERDDAP's error media type, charset included, as real servers send it.
 ERROR_MEDIA_TYPE = "text/plain;charset=UTF-8"
 
-#: The prefixes ERDDAP puts before a message, by status. Other statuses (our
-#: 501 for ``.dods``, say) get none, as in ERDDAP.
+#: The prefixes ERDDAP puts before a message, by status. Other statuses get
+#: none, as in ERDDAP.
 REASONS = {
     400: "Bad Request",
     401: "Unauthorized",

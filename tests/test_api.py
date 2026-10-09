@@ -293,16 +293,6 @@ def test_ncml_matches_what_erddapy_parses(client):
         assert float(low) <= float(high)
 
 
-def test_dods_is_planned_not_advertised(client):
-    """Issue #2: .dods answers 501 with a pointer, and no error lists it."""
-    resp = client.get("/erddap/griddap/testgrid.dods")
-    assert resp.status_code == 501
-    assert "issues/2" in message(resp)
-    other = client.get("/erddap/griddap/testgrid.htmlTable")
-    assert other.status_code == 400
-    assert "dods" not in message(other)
-
-
 def test_float32_values_print_as_written(client):
     """ERDDAP writes a float32 0.1 as 0.1, not 0.10000000149011612."""
     rest = xpublish.Rest(
@@ -409,7 +399,7 @@ def test_unknown_table_filetypes_are_404(client):
 def test_missing_filetype_message_lists_every_type(client):
     detail = message(client.get("/erddap/griddap/testgrid"))
     assert "ncml" in detail
-    assert "dods" not in detail
+    assert "dods" in detail
 
 
 def test_integer_variable_with_nan_fill_still_serves_metadata():
@@ -512,11 +502,10 @@ def test_errors_have_erddaps_body(client):
     assert message(client.get("/erddap/info/testgrid/index.foo")) == (
         "Not Found: Unsupported fileType=.foo"
     )
-    # quotes are escaped, and a status ERDDAP has no prefix for gets none
+    # quotes are escaped
     assert message(client.get("/erddap/search/index.csv")).startswith(
         'Not Found: A .csv search request must include a query, for example, "?page=1',
     )
-    assert message(client.get("/erddap/griddap/testgrid.dods")).startswith("OPeNDAP binary")
 
 
 def test_unexpected_errors_are_erddap_500s(grid_dataset, monkeypatch):
