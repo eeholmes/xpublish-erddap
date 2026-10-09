@@ -83,9 +83,13 @@ def erddap_root(request: Request, prefix: str) -> str:
     per-store service such as ``.../regrid/main/erddap``) or behind a proxy
     started with ``--root-path``. Starlette puts that prefix in ``root_path``
     in both cases, but ``request.base_url`` includes it only in the second.
+
+    The ASGI path is decoded, so a group called ``my group`` would give a URL
+    with a space in it; the path is percent-encoded again here.
     """
     root_path = request.scope.get("root_path", "").rstrip("/")
-    return f"{request.url.scheme}://{request.url.netloc}{root_path}{prefix}"
+    path = parse.quote(f"{root_path}{prefix}")
+    return f"{request.url.scheme}://{request.url.netloc}{path}"
 
 
 #: ERDDAP counts megabytes in units of 2**20 bytes (``Math2.BytesPerMB``).
@@ -635,7 +639,14 @@ def has_server_root(deps: Dependencies) -> bool:
     mounted at the app root, where they would collide with the app router. A
     host that names a dataset with several path parameters (Flux:
     ``{org}/{repo}/{ref}``) cannot be asked for a dataset by one id either.
+
+    An ``async def`` ``datatree`` also rules it out: the server-wide root calls
+    it directly, from a worker thread, where it would only return an unawaited
+    coroutine. The per-dataset root hands it to FastAPI, which awaits it, so
+    that root works.
     """
+    if inspect.iscoroutinefunction(deps.datatree):
+        return False
     params = inspect.signature(deps.datatree).parameters.values()
     return sum(p.default is inspect.Parameter.empty for p in params) == 1
 

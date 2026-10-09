@@ -101,6 +101,12 @@ list datasets and look each one up by id. Otherwise it registers nothing:
 - In a host that names datasets with several parameters (`org`, `repo`, `ref`),
   a dataset cannot be looked up by one id.
 
+- If `deps.datatree` is an **`async def`**, the server-wide root is also left
+  out. It calls the dependency itself, from a worker thread, and would get an
+  unawaited coroutine (a 500) rather than a tree. The per-dataset root hands
+  the dependency to FastAPI, which awaits it, so that root works. An async
+  host that wants a server-wide catalog needs a synchronous `datatree`.
+
 **If you want an org-wide catalog** (one ERDDAP root listing many stores, closer
 to how ERDDAP servers are used today), that needs a way to enumerate stores and
 open one by name. That is a conversation, not a setting.
@@ -112,12 +118,31 @@ ERDDAP root, and clients follow them. **Our choice:** build them from the
 request: scheme and host from the request URL, then Starlette's `root_path`,
 then the request path less the route's own part.
 
-**What this needs from the host:** behind a proxy, the public scheme and host
-must reach the app (e.g. uvicorn `--proxy-headers` with `X-Forwarded-Proto`/
-`-Host`), and any path the proxy strips must be in `root_path`. Our AWS test
-server does this behind Caddy, and `deploy/check_clients.py` checks that every
-returned URL starts with the public base URL; it is a quick check to run
-against a deployment.
+Paths are percent-encoded: a group called `my group` comes back as
+`.../my%20group/erddap/...`, not with a space in it.
+
+**What this needs from the host, behind a proxy.** The URL's host comes from
+the request's `Host` header, and its scheme from the ASGI scope. uvicorn's
+`--proxy-headers` is narrower than it sounds (checked by running uvicorn 0.54
+with `Host: internal:9401`, `X-Forwarded-Host: public.example`,
+`X-Forwarded-Proto: https`, `X-Forwarded-Prefix: /pre`; the catalog came back
+as `https://internal:9401/erddap/...`):
+
+- It reads **`X-Forwarded-Proto` and `-For` only**, and only from addresses in
+  `forwarded_allow_ips` (default `127.0.0.1`). `X-Forwarded-Host` and
+  `X-Forwarded-Prefix` are ignored.
+- So the proxy must **pass the public `Host` through** (Caddy does by default;
+  nginx needs `proxy_set_header Host $host;`).
+- Set **`forwarded_allow_ips`** (`--forwarded-allow-ips`) to the proxy's
+  address, or the scheme stays `http` when the proxy is not on localhost.
+- A path the proxy strips (public `/services/erddap`, app at `/erddap`)
+  goes in **`--root-path`** (or `root_path=` for a mounted app); a
+  prefix-stripping proxy with `--root-path` is the right setup. The
+  `X-Forwarded-Prefix` header will not do it.
+
+Our AWS test server does this behind Caddy, and `deploy/check_clients.py`
+checks that every returned URL starts with the public base URL; it is a quick
+check to run against a deployment.
 
 ### 5. When a catalog is rebuilt (caching)
 
@@ -153,6 +178,15 @@ ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
   check its id (only changed ones are rebuilt). That is cheap when the host
   keeps stores open, and slow if it reopens a store on every call; the
   per-dataset root asks only for its own.
+- **Numbers** (tiny lazy datasets, in-process, a provider that takes 50 ms to
+  return a tree and reopens each time; issue
+  [#69](https://github.com/eeholmes/xpublish-erddap/issues/69)): the
+  server-wide root took **2.75 s per request at 50 datasets and 11 s at 200**,
+  even for one `.das`, because it checks every dataset's id each time. The
+  per-dataset root took 0.06 s at any number of datasets. With a provider that
+  caches its stores, a cold first request over 1000 stores took 56 s, past
+  common 60 s proxy timeouts. So: for many stores behind a slow provider,
+  serve the per-dataset roots and leave the server-wide one out (Flux does).
 - Catalogs live in xpublish's shared `cachey` cache (`deps.cache`) under
   `erddap_entries/...` and `erddap_catalog/...` keys, one entry per dataset,
   replaced when its id changes, so old catalogs are not kept. A per-dataset
@@ -221,6 +255,20 @@ requested (`?sst-anom[0]` reads as `sst`), so it is served under the name
 ERDDAP's GenerateDatasetsXml would give it: `sst_anom`, `a_1st`
 (`EDD.suggestDestinationName`). If that name is taken too, the variable is left
 out with a warning (an axis that cannot be named leaves the whole dataset out).
+
+### 8. Compression and CORS are the host's job
+
+A plugin can add routes but not middleware, so two things ERDDAP does are left
+to the host:
+
+- **gzip.** ERDDAP compresses a response when `Accept-Encoding` asks for it;
+  this plugin does not. Large csv/json/`.nc` responses are the ones that
+  benefit. Add Starlette's `GZipMiddleware` to the app, or turn on compression
+  in the proxy.
+- **CORS.** No `Access-Control-Allow-Origin` header is sent (as with
+  coastwatch.pfeg.noaa.gov; erddap.ioos.us does send one). If browser clients
+  (JavaScript on another origin) matter, add `CORSMiddleware` or the proxy's
+  header.
 
 ## Settings at a glance
 
