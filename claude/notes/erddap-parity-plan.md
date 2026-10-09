@@ -11,6 +11,10 @@ How to use what it built:
 - A new request shape: add it to `tests/parity/cases.py`, recapture that
   case, run `tests/test_parity.py`. A difference we keep on purpose goes in
   `KNOWN`/`KNOWN_MEDIA` with a reason (strict xfail).
+- `.dods` is in `DATA_TYPES` since #2: every data query is also compared as
+  OPeNDAP binary, the DDS as text and the XDR data byte for byte
+  (`compare.comparable`). All goldens were recaptured 2026-10-09 for it
+  (jplMURSST41 and CRW_baa metadata had drifted; nothing else changed).
 - To see *why* a comparison fails, diff `comparable()` (from
   `tests/parity/compare.py`) of our body against the golden file; pytest's
   own assertion output is hard to read for long responses. No helper script

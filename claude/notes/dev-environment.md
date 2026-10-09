@@ -84,6 +84,10 @@ worked; three things made it work:
   (they use `config.cache`); do not pass it.
 - **Give each agent its own scratch file names**: three agents sharing the
   scratchpad overwrote each other's `pr.md` (2026-10-09, caught in time).
+- **An agent's worktree can stay locked after the agent ends** (lock reason
+  "claude agent ... (pid N)"). If that pid is gone, `git worktree unlock`
+  then `git worktree remove`. Remove the worktree before `gh pr merge
+  --delete-branch`, or the local branch delete fails (2026-10-09, #103).
 
 ## Other limits of the hub
 
