@@ -420,6 +420,33 @@ _MOST = {
 }
 
 
+#: ERDDAP's vertical axes (``EDV.ALT_NAME``, ``EDV.DEPTH_NAME``) and the
+#: ``geospatial_vertical_positive`` each gives.
+_VERTICAL_POSITIVE = {"altitude": "up", "depth": "down"}
+
+
+def _vertical_globals(name: str, values: np.ndarray) -> dict:
+    """``geospatial_vertical_*`` of a subset's altitude or depth axis.
+
+    ``AxisDataAccessor`` and ``GridDataAccessor`` set units (``m``), positive
+    and the subset's min and max: a float (``Math2.doubleToFloatNaN``) for a
+    float axis, an int (``Math2.roundToInt``) for byte, short and int axes,
+    else a double. ``geospatial_vertical_resolution`` is not touched.
+    """
+    nice = nice_doubles(values)
+    lo, hi = float(np.nanmin(nice)), float(np.nanmax(nice))
+    if values.dtype == np.float32:
+        lo, hi = np.float32(lo), np.float32(hi)
+    elif values.dtype.kind in "iu" and values.dtype.itemsize <= 4:  # noqa: PLR2004
+        lo, hi = np.int32(round(lo)), np.int32(round(hi))
+    return {
+        "geospatial_vertical_units": "m",
+        "geospatial_vertical_positive": _VERTICAL_POSITIVE[name],
+        "geospatial_vertical_min": lo,
+        "geospatial_vertical_max": hi,
+    }
+
+
 def coverage_globals(
     ds: xr.Dataset,
     dims: tuple[str, ...],
@@ -448,6 +475,9 @@ def coverage_globals(
             first, last = np.datetime_as_string([values.min(), values.max()], unit="s")
             out["time_coverage_start"] = f"{first}Z"
             out["time_coverage_end"] = f"{last}Z"
+            continue
+        if subset and str(dim) in _VERTICAL_POSITIVE and values.dtype.kind in "iuf":
+            out.update(_vertical_globals(str(dim), values))
             continue
         recognised = recognised_axis(str(dim), ds[dim])
         for axis, served in (("lat", "latitude"), ("lon", "longitude")):

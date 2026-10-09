@@ -426,10 +426,10 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         dims = ed.dims
     else:
         # an axis-only request: the file holds just those axes, never the
-        # data, and (as in ERDDAP) bounding-box globals only for them
+        # data, and (as in ERDDAP) coverage globals only for them
         dims = tuple(v for v in variables if v in ed.dims)
         out = xr.Dataset(coords={d: sub[d] for d in dims})
-        globals_ = {k: v for k, v in globals_.items() if not _is_bbox_global(k)}
+        globals_ = {k: v for k, v in globals_.items() if not _is_coverage_global(k)}
     out = out.copy()
     out.attrs = _nc3_attrs({**globals_, **coverage_globals(out, dims, subset=True)})
     # the netCDF-4 library's stamp; ERDDAP lists it but does not write it
@@ -519,13 +519,27 @@ def _nc3_integer(da: xr.DataArray, dtype: np.dtype, attrs: dict) -> tuple[np.nda
     return values, _nc3_attrs(attrs)
 
 
-def _is_bbox_global(key: str) -> bool:
-    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in {
-        "Northernmost_Northing",
-        "Southernmost_Northing",
-        "Easternmost_Easting",
-        "Westernmost_Easting",
-    }
+#: What ``AxisDataAccessor`` removes from the globals of an axis-only
+#: request before setting them for the axes asked for: lat and lon (all of
+#: ``geospatial_lat_*``, ``geospatial_lon_*`` and the four "most" names), the
+#: vertical min, max, units and positive (not the resolution), and the time
+#: coverage.
+_COVERAGE_GLOBALS = {
+    "Northernmost_Northing",
+    "Southernmost_Northing",
+    "Easternmost_Easting",
+    "Westernmost_Easting",
+    "geospatial_vertical_min",
+    "geospatial_vertical_max",
+    "geospatial_vertical_units",
+    "geospatial_vertical_positive",
+    "time_coverage_start",
+    "time_coverage_end",
+}
+
+
+def _is_coverage_global(key: str) -> bool:
+    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in _COVERAGE_GLOBALS
 
 
 #: ERDDAP's ``XML.encodeAsXML`` (its ``HTML_ENTITIES`` below 128): the five

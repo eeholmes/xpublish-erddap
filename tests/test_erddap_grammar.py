@@ -80,6 +80,63 @@ def one_value_axes() -> xr.Dataset:
     )
 
 
+def with_altitude() -> xr.Dataset:
+    return xr.Dataset(
+        {"v": (("time", "altitude", "latitude"), np.ones((3, 3, 4), dtype="float32"))},
+        coords={
+            "time": ("time", np.array(["2020-01-01", "2020-01-02", "2020-01-03"], "M8[ns]")),
+            "altitude": ("altitude", np.array([0.0, 10.0, 20.0]), {"units": "m"}),
+            "latitude": ("latitude", np.linspace(10.0, 40.0, 4), {"units": "degrees_north"}),
+        },
+        attrs={
+            "geospatial_vertical_min": 0.0,
+            "geospatial_vertical_max": 20.0,
+            "geospatial_vertical_units": "m",
+            "geospatial_vertical_positive": "up",
+            "geospatial_vertical_resolution": 10.0,
+        },
+    )
+
+
+def globals_of_nc(client, query: str) -> dict:
+    r = client.get(f"/erddap/griddap/alt.nc?{query}")
+    assert r.status_code == 200, r.text
+    return xr.open_dataset(io.BytesIO(r.content), decode_times=False).attrs
+
+
+def test_axis_only_nc_drops_coverage_of_axes_not_asked_for():
+    """``AxisDataAccessor`` removes vertical and time coverage, then sets the axes asked for."""
+    rest = xpublish.Rest({"alt": with_altitude()}, plugins={"erddap": ErddapPlugin()})
+    client = TestClient(rest.app)
+    lat = globals_of_nc(client, "latitude[0:1:1]")
+    assert "geospatial_lat_min" in lat
+    for key in (
+        "geospatial_vertical_min",
+        "geospatial_vertical_max",
+        "geospatial_vertical_units",
+        "geospatial_vertical_positive",
+        "time_coverage_start",
+        "time_coverage_end",
+    ):
+        assert key not in lat, key
+    assert lat["geospatial_vertical_resolution"] == 10.0  # ERDDAP leaves it
+    alt = globals_of_nc(client, "altitude[1:1:2]")
+    assert (alt["geospatial_vertical_min"], alt["geospatial_vertical_max"]) == (10.0, 20.0)
+    assert alt["geospatial_vertical_positive"] == "up"
+    assert alt["geospatial_vertical_units"] == "m"
+    assert "geospatial_lat_min" not in alt
+    assert "time_coverage_start" not in alt
+    time = globals_of_nc(client, "time[1:1:2]")
+    assert time["time_coverage_start"] == "2020-01-02T00:00:00Z"
+    assert "geospatial_vertical_min" not in time
+
+
+def test_data_nc_vertical_coverage_describes_the_subset():
+    rest = xpublish.Rest({"alt": with_altitude()}, plugins={"erddap": ErddapPlugin()})
+    attrs = globals_of_nc(TestClient(rest.app), "v[0:1:2][0:1:1][0:1:3]")
+    assert (attrs["geospatial_vertical_min"], attrs["geospatial_vertical_max"]) == (0.0, 10.0)
+
+
 def test_one_value_axis_info_says_only_value():
     rest = xpublish.Rest({"one": one_value_axes()}, plugins={"erddap": ErddapPlugin()})
     text = TestClient(rest.app).get("/erddap/info/one/index.csv").text
