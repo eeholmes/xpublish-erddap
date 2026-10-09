@@ -21,7 +21,7 @@ import xarray as xr
 import xpublish
 from error_body import message
 from fastapi.testclient import TestClient
-from tutorial_data import _lazy
+from tutorial_data import FormulaArray, _lazy
 
 from xpublish_erddap import ErddapPlugin
 
@@ -103,16 +103,27 @@ def test_default_settings_refuse_a_whole_variable():
     )
 
 
-def test_none_means_no_limit_for_csv():
-    """With ``None`` the size check passes csv; the request is served.
+class ReadStarted(Exception):
+    """Raised by the first read: the request got past every size check."""
 
-    Strided to 100 x 100 values (10,000 csv rows) so it runs in well under a
-    second; the unstrided step is a million rows and took 28 s (#112).
+
+def test_none_means_no_limit_for_csv(monkeypatch):
+    """With ``None`` a whole-variable csv (3815 MB) passes the size check.
+
+    The default 500 MB limit refuses this request before any read
+    (``test_default_settings_refuse_a_whole_variable``), so reaching the read
+    shows ``None`` lifted the limit. The read stops before building anything
+    (raising from the formula is too late: the axes' meshgrid comes first, and
+    at this size it takes gigabytes), and the error comes back as a 500.
     """
-    r = client(readable, max_response_mb=None).get(
-        "/erddap/griddap/g.csv?v[0][0:10:999][0:10:999]",
-    )
-    assert r.status_code == 200
+
+    def read_started(*_):
+        raise ReadStarted
+
+    monkeypatch.setattr(FormulaArray, "_getitem", read_started)
+    r = client(max_response_mb=None).get("/erddap/griddap/g.csv?v")
+    assert r.status_code == 500
+    assert "ReadStarted" in detail(r)
 
 
 def test_metadata_requests_are_not_limited():
