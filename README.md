@@ -143,7 +143,9 @@ plugins use. Earthmover Flux puts the Icechunk snapshot in that id, so new
 commits appear on the next request. Plain `xpublish.Rest` uses the dataset id,
 which never changes: for a store that changes in place, put a version in
 `_xpublish_id` or set `ErddapPlugin(catalog_max_age_s=600)` to rebuild at least
-every 10 minutes. Details: [docs/hosting.md](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md).
+every 10 minutes. The server-wide `/erddap` checks the one dataset a data or
+`info` request is for on every request, and checks every dataset for its
+listings and search at most every 10 seconds (`catalog_check_s`). Details: [docs/hosting.md](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md).
 
 **Running the plugin in a host such as Earthmover Flux?** See
 [docs/hosting.md](https://github.com/eeholmes/xpublish-erddap/blob/main/docs/hosting.md) for the choices it makes about routing,

@@ -136,8 +136,8 @@ ERDDAP.
   for data changing under a fixed id: `catalog_max_age_s` (time buckets, off
   by default). Rejected for now: a `setDatasetFlag`-style endpoint (no auth,
   #8). One cache entry per key, replaced on change, so superseded catalogs and
-  their datasets are released. Cost: the server-wide root asks for every
-  dataset's tree each request. `deploy/server.py` pins stores at startup, so
+  their datasets are released. The server-wide root no longer asks for every
+  dataset's tree on each request; see the #69 section. `deploy/server.py` pins stores at startup, so
   the test server still needs a restart for new commits.
 - **Route handlers are module-level functions (#34).** `plugin.py`'s helpers
   (`lookup`, `table_response`, `index_response`, `search_response`,
@@ -234,10 +234,50 @@ a deleted store, an unresolvable listed id; until #60, a cftime calendar), logs 
 as ERDDAP does with datasets that fail to load. **Decision:** a source that
 fails after loading once *drops out*; it does not keep its last good entry.
 Serving a stale entry would hide that the store is unreachable, and the
-failure is not cached, so the dataset returns on the next request after it
-heals. The cost: one warning per request while it is down. The per-dataset
+failure is not cached. Since #69 a failed source is retried at the next
+full check (at most every `catalog_check_s`), or at once when a request names
+a datasetID not in the catalog, so it returns on the next request for it after
+it heals. The cost: one warning per retry while it is down. The per-dataset
 root (`/datasets/{id}/erddap`) is unchanged and answers with the error for its
 own dataset only.
+
+## The server-wide root checks one source per data request (#69, 2026-10-09)
+
+Before #69 every server-wide request, a single `.das` included, opened every
+dataset to read its `_xpublish_id`: 10.6 s per request at N=200 with a 50 ms
+provider. Now (`ErddapPlugin.server_catalog`, `ServerState`):
+
+- **`griddap/{id}` and `info/{id}` open only `{id}`'s source**, found through
+  the datasetID -> xpublish id map of the last catalog. This keeps #3's
+  guarantee exactly for data and metadata: a commit shows on the next
+  request. A datasetID not in the map triggers a full check if one is due,
+  and retries failed sources (#56).
+- **Listings, search and categorize check every source at most every
+  `catalog_check_s` (default 10 s)**, in `catalog_workers` (16) threads. This
+  is the trade-off: a listing can lag a commit by up to 10 s. Chosen because
+  ERDDAP itself only re-lists on `reloadEveryNMinutes`, and the data routes,
+  which are what client code reads, stay exact. EH confirmed 10 s
+  (2026-10-09): commits are not that frequent. `0` restores checking on
+  every listing request. One request checks at a time (`refreshing` lock,
+  non-blocking once a catalog exists); others serve the last catalog.
+- **Newly listed or delisted ids** (`dataset_ids`, called every request,
+  assumed cheap) take effect at once.
+- **State lives in the router's closure, not cachey.** Found while
+  benchmarking: xpublish's default cache is 1 MB, so the state (and before,
+  the per-source entries) was evicted and every request started cold; and
+  cachey raised `KeyError` under the parallel opens (not thread-safe). The
+  per-dataset root still uses cachey (#61), unchanged.
+- **Per-dataset work is memoized on `ErddapDataset.memo`**: axes,
+  `variable_attrs` (returned as a copy), search text, categories. Safe
+  because a dataset is rebuilt whenever its stamp changes.
+- **Axes are loaded in `build_catalog`** (on a shallow copy, so the host's
+  tree is untouched): index-less axes (`create_default_indexes=False`) were
+  re-read from the store on every request.
+- **Routes without a catalog are `async`** (`version`, `tabledap/index`,
+  `categorize/index`, `convert`), so they never wait for a worker thread.
+- Benchmark: `tests/benchmark_server_catalog.py` (not collected by pytest);
+  numbers in `docs/hosting.md` §5. CI guards the behaviour by counting opens
+  (`tests/test_catalog_cache.py`), not by timing.
 
 ## A value off an axis is refused, not snapped (#57)
 

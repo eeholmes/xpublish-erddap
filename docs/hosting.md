@@ -174,30 +174,66 @@ or a provider that reopens a branch but keeps its id), either put a version in
 ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
 ```
 
-**Costs to know:**
-- The server-wide `/erddap` asks for *every* dataset's tree on each request to
-  check its id (only changed ones are rebuilt). That is cheap when the host
-  keeps stores open, and slow if it reopens a store on every call; the
-  per-dataset root asks only for its own.
-- **Numbers** (tiny lazy datasets, in-process, a provider that takes 50 ms to
-  return a tree and reopens each time; issue
-  [#69](https://github.com/eeholmes/xpublish-erddap/issues/69)): the
-  server-wide root took **2.75 s per request at 50 datasets and 11 s at 200**,
-  even for one `.das`, because it checks every dataset's id each time. The
-  per-dataset root took 0.06 s at any number of datasets. With a provider that
-  caches its stores, a cold first request over 1000 stores took 56 s, past
-  common 60 s proxy timeouts. So: for many stores behind a slow provider,
-  serve the per-dataset roots and leave the server-wide one out (Flux does).
-- Catalogs live in xpublish's shared `cachey` cache (`deps.cache`) under
-  `erddap_entries/...` and `erddap_catalog/...` keys, one entry per dataset,
-  replaced when its id changes, so old catalogs are not kept. A per-dataset
-  root keys its entry on the URL's identity (its path parameters and group
+**The server-wide root checks less often** (#69). Asking the host for every
+dataset's tree on every request costs one store open per dataset, so it does
+this instead:
+
+- A request for one dataset (`griddap/{id}...`, `info/{id}/...`) asks only for
+  that dataset's tree. Data and metadata stay as fresh as `_xpublish_id`
+  says: a commit shows up on the next such request, as on a per-dataset root.
+- The routes that list datasets (`griddap/index`, `info/index`, search,
+  advanced search, categorize) check every dataset at most every
+  **`catalog_check_s`** seconds (default 10), opening up to
+  **`catalog_workers`** (default 16) at once, and serve the last catalog in
+  between. While one request checks, others are served the last catalog
+  rather than waiting. A listing can be up to that long behind a commit; for
+  comparison, ERDDAP itself reloads a dataset every `reloadEveryNMinutes`.
+- A dataset the host newly lists, or stops listing, shows up or goes at once.
+  A datasetID not in the catalog (a commit that added a variable on a new
+  axis, say) is found at the next check; asking for it triggers that check
+  if one is due, and retries any dataset that failed to open (#56).
+- `ErddapPlugin(catalog_check_s=0)` checks every dataset on every listing
+  request (still in parallel).
+- `catalog_workers` threads call your `datatree` getter at the same time, so
+  it must be safe to call from several threads (`xpublish.Rest`'s is).
+  Set `catalog_workers=1` if yours is not.
+
+**Numbers** (tiny lazy datasets, in-process, a provider that takes 50 ms to
+return a tree; `python tests/benchmark_server_catalog.py`, run on a
+JupyterHub, 2026-10-09):
+
+| | before #69 | now |
+| --- | --- | --- |
+| N=200, provider reopens: one `.das`, `griddap/index`, search | 10.6 s each | 0.06 s; 0.02 s |
+| N=200, provider reopens: a listing when a check is due | 10.6 s | 0.7 s |
+| N=1000, provider caches: cold first request | 56 s (audit) | 4.5 s |
+| N=1000, provider caches: `griddap/index`, search | | 0.1 s |
+| `/erddap/version` with 60 slow requests in flight | 1.5 s | 0.2-0.3 s |
+
+The per-dataset root takes 0.06 s at any number of datasets, as before. A
+cold first request still opens every dataset, so for thousands of stores
+behind a slow provider, the per-dataset roots remain the better choice (Flux
+serves only those).
+
+**Where catalogs live:**
+- A per-dataset root's catalogs live in xpublish's shared `cachey` cache
+  (`deps.cache`) under `erddap_entries/...` and `erddap_catalog/...` keys,
+  replaced when the id changes, so old catalogs are not kept. It keys its entry on the URL's identity (its path parameters and group
   path), **not** on `name_dataset`'s result, so a name that ignores the group
   or the ref cannot make two roots share a catalog; `name_dataset` only
   chooses the datasetID. Each ref or group gets its own entry, which stays
   until cachey evicts it. The plugin tells cachey each catalog's approximate
   size (axes plus attributes), so eviction works under memory pressure; an
   evicted catalog is rebuilt.
+- The server-wide root keeps its catalog with its router, not in `cachey`:
+  it is the root's record of what it serves (xpublish's default cache holds
+  1 MB, which a few hundred datasets would overflow), and its parallel opens
+  must not touch `cachey`, which is not thread-safe. A dataset that changes
+  replaces its old entries there too.
+- Each ERDDAP dataset computes its search text, categories and
+  `actual_range` once, and reads its axes from the store once, when it is
+  built (an axis without an index, from `create_default_indexes=False`, was
+  read again on every request before).
 - There is no invalidation endpoint (ERDDAP's `setDatasetFlag.txt`): the
   plugin does not authenticate callers (see
   [Access control](../README.md#access-control)), so such an endpoint would
@@ -320,6 +356,8 @@ ErddapPlugin(
     strict_axes=True,  # drop datasets with non-monotonic axes, as ERDDAP does
     rename_axes=True,  # (7) serve lat/lon/time axes as latitude/longitude/time
     catalog_max_age_s=None,  # (5) also rebuild catalogs after this many seconds
+    catalog_check_s=10,  # (5) server-wide root: how often listings check every dataset
+    catalog_workers=16,  # (5) server-wide root: datasets opened at once when checking
 )
 ```
 

@@ -17,8 +17,11 @@ import inspect
 import io
 import json
 import logging
+import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from urllib import parse
 
 import xarray as xr
@@ -586,8 +589,10 @@ def add_erddap_routes(
         # check_url_response()); the data route skips building its body.
         return router.api_route(path, methods=["GET", "HEAD"], **kwargs)
 
+    # Routes that need no catalog are async: they never wait for a worker
+    # thread, which slow catalog requests may all be holding (#69).
     @route(VERSION, response_class=PlainTextResponse)
-    def version() -> str:
+    async def version() -> str:
         """ERDDAP version banner."""
         return "ERDDAP_version=2.23\n"
 
@@ -620,7 +625,7 @@ def add_erddap_routes(
         )
 
     @route(TABLEDAP_INDEX)
-    def tabledap_index(ext: str) -> Response:
+    async def tabledap_index(ext: str) -> Response:
         """Empty tabledap catalog.
 
         rerddap calls this to decide whether a datasetID is tabledap or
@@ -683,7 +688,7 @@ def add_erddap_routes(
         return search_response(found, root_of(request, ADVANCED_SEARCH), ext, search.no_matches())
 
     @route(CATEGORIZE)
-    def categorize_index(request: Request, ext: str) -> Response:
+    async def categorize_index(request: Request, ext: str) -> Response:
         """The category attributes to browse by (``Erddap.doCategorize``, #5)."""
         return categorize_attributes(request, ext)
 
@@ -709,7 +714,7 @@ def add_erddap_routes(
         return categorize_datasets(request, attribute, value, ext, cat)
 
     @route(CONVERT)
-    def convert(converter: str) -> Response:
+    async def convert(converter: str) -> Response:
         """``convert/*``, as on an ERDDAP whose converters are switched off (#70)."""
         raise HTTPException(404, CONVERT_DISABLED)
 
@@ -797,6 +802,44 @@ def tree_version(tree: xr.DataTree) -> str | None:
     )
 
 
+@dataclass
+class ServerState:
+    """What the server-wide root knows between requests (#69).
+
+    One per app, made with its router. ``sources`` holds each xpublish
+    dataset's stamp and ERDDAP datasets as last built, ``failed`` the ones
+    that could not be opened, ``catalog`` all of them by datasetID and
+    ``owners`` the xpublish dataset each datasetID comes from. ``checked`` is
+    when every dataset was last checked (``time.monotonic``).
+
+    Kept here rather than in xpublish's cache: it is the root's record of
+    what it serves, not something to rebuild when evicted (the default cache
+    holds 1 MB, less than a catalog of a few hundred datasets), and cachey is
+    not safe to use from the threads that open datasets in parallel. A
+    rebuilt source replaces its old datasets, so superseded ones are released.
+    """
+
+    sources: dict[str, tuple[tuple, list[ErddapDataset]]] = field(default_factory=dict)
+    failed: set[str] = field(default_factory=set)
+    catalog: dict[str, ErddapDataset] = field(default_factory=dict)
+    owners: dict[str, str] = field(default_factory=dict)
+    checked: float | None = None
+    #: Held while state changes; never while a dataset is opened.
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    #: Held by the one request checking every dataset.
+    refreshing: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self) -> None:
+        """Rebuild ``catalog`` and ``owners`` from ``sources``."""
+        self.catalog = unique_ids([e for _, built in self.sources.values() for e in built])
+        self.owners = {
+            e.dataset_id: xpublish_id
+            for xpublish_id, (_, built) in self.sources.items()
+            for e in built
+            if e.dataset_id in self.catalog
+        }
+
+
 def has_server_root(deps: Dependencies) -> bool:
     """Whether a server-wide root can work: ``deps.datatree`` takes one dataset id.
 
@@ -876,6 +919,18 @@ class ErddapPlugin(Plugin):
     #: appended to under a fixed id); see ``docs/hosting.md``.
     catalog_max_age_s: float | None = None
 
+    #: The server-wide root checks every dataset's ``_xpublish_id`` at most
+    #: this often, in seconds, for the routes that list datasets (index,
+    #: search, categorize); between checks they serve the last catalog. A
+    #: ``griddap`` or ``info`` request always checks its own dataset, so data
+    #: is as fresh as ``_xpublish_id`` says. ``0`` checks every dataset on
+    #: every request, which costs one store open per dataset (#69).
+    catalog_check_s: float = 10
+
+    #: How many datasets the server-wide root opens at once when it checks
+    #: them all (in threads; the host's ``datatree`` must allow that).
+    catalog_workers: int = 16
+
     def build(self, source_id: str, tree: xr.DataTree) -> list[ErddapDataset]:
         """ERDDAP datasets for every group with variables in ``tree``."""
         entries: list[ErddapDataset] = []
@@ -909,9 +964,9 @@ class ErddapPlugin(Plugin):
     ) -> list[ErddapDataset]:
         """``build(source_id, tree)``, cached while ``tree``'s stamp holds.
 
-        Cached under ``key``, default ``source_id``: the server-wide root uses
-        the xpublish dataset id, a per-dataset root the URL's identity (#61),
-        since ``name_dataset`` may give two groups, or two refs, one name.
+        For a per-dataset root, cached under ``key``, the URL's identity
+        (#61), since ``name_dataset`` may give two groups, or two refs, one
+        name. The server-wide root keeps its own (``ServerState``).
         """
         return memo(
             cache,
@@ -924,23 +979,93 @@ class ErddapPlugin(Plugin):
         self,
         request: Request,
         deps: Dependencies,
+        state: ServerState,
+        dataset_id: str | None = None,
     ) -> dict[str, ErddapDataset]:
         """Every group of every published dataset, by ERDDAP datasetID (cached).
 
-        Each request asks the host for every dataset's current tree, to see
-        whether any has changed; only changed ones are rebuilt.
+        Asking the host for every dataset's tree on every request costs one
+        store open per dataset (#69), so this asks for:
+
+        - the source of ``dataset_id``, when a route serves one dataset
+          (``griddap``, ``info``): it is as fresh as a per-dataset root, the
+          next request after a new ``_xpublish_id`` sees it (#3);
+        - every dataset at most every ``catalog_check_s`` seconds, in
+          parallel, for the routes that list them and for a datasetID not yet
+          known. Between checks those routes serve the last catalog.
+
+        Datasets the host newly lists are always opened at once, and a
+        datasetID not in the catalog also retries the datasets that failed to
+        open, so one that heals is served on the next request for it (#56).
         """
-        cache = _resolve(request, deps.cache)
-        stamps, entries = [], []
-        for xpublish_id in _resolve(request, deps.dataset_ids):
+        ids = list(_resolve(request, deps.dataset_ids))
+
+        def opener(xpublish_id: str) -> Callable[[], xr.DataTree]:
+            return lambda: _resolve(request, deps.datatree, xpublish_id)
+
+        def due() -> bool:
+            return state.checked is None or (
+                time.monotonic() - state.checked >= self.catalog_check_s
+            )
+
+        listed = set(ids)
+        checked_all = False
+        with state.lock:
+            owner = state.owners.get(dataset_id) if dataset_id is not None else None
+        if (
+            due()
+            and (dataset_id is None or owner is None)
+            and state.refreshing.acquire(blocking=state.checked is None)
+        ):
+            # One full check at a time; while one runs, others serve the last
+            # catalog (or, before the first, wait for it).
+            try:
+                if due():
+                    started = time.monotonic()
+                    self.check_sources(state, [(i, opener(i)) for i in ids])
+                    state.checked = started
+                    checked_all = True
+            finally:
+                state.refreshing.release()
+
+        with state.lock:
+            known = set(state.sources) | state.failed
+            new = [i for i in ids if i not in known]
+            gone = known - listed
+            owner = state.owners.get(dataset_id) if dataset_id is not None else None
+            failed = sorted(state.failed & listed)
+        own: list[str] = []
+        if dataset_id is not None and not checked_all:
+            # this dataset's source, or for a datasetID not in the catalog the
+            # failed sources, one of which may have healed
+            if owner is None:
+                own = failed
+            elif owner in listed:
+                own = [owner]
+        if new or gone or own:
+            self.check_sources(state, [(i, opener(i)) for i in [*new, *own]], gone)
+        return state.catalog
+
+    def check_sources(
+        self,
+        state: ServerState,
+        sources: list[tuple[str, Callable[[], xr.DataTree]]],
+        gone: Iterable[str] = (),
+    ) -> None:
+        """Open ``sources`` (several at once), rebuild what changed, drop ``gone``."""
+
+        def check(xpublish_id: str, open_tree: Callable[[], xr.DataTree]):
             # One source that cannot be opened or built must not take the
             # others down (ERDDAP keeps serving the datasets that loaded). It
-            # is left out, and tried again on the next request, so it returns
+            # is left out, and tried again at the next check, so it returns
             # as soon as it heals; it does not keep a last good entry (#56).
             try:
-                tree = _resolve(request, deps.datatree, xpublish_id)
+                tree = open_tree()
                 stamp = self.stamp(tree)
-                built = self.entries(cache, xpublish_id, tree)
+                held = state.sources.get(xpublish_id)
+                if held is not None and held[0] == stamp:
+                    return xpublish_id, held
+                return xpublish_id, (stamp, self.build(xpublish_id, tree))
             except Exception as exc:  # noqa: BLE001 -- includes HTTPException
                 logger.warning(
                     "ERDDAP: leaving dataset %r out of the server-wide catalog -- %s: %s",
@@ -948,10 +1073,30 @@ class ErddapPlugin(Plugin):
                     type(exc).__name__,
                     getattr(exc, "detail", None) or exc,
                 )
-                continue
-            stamps.append((xpublish_id, stamp))
-            entries += built
-        return memo(cache, "erddap_catalog", tuple(stamps), lambda: unique_ids(entries))
+                return xpublish_id, None
+
+        workers = min(len(sources), self.catalog_workers)
+        if workers > 1:
+            with ThreadPoolExecutor(workers, thread_name_prefix="erddap-catalog") as pool:
+                results = list(pool.map(lambda s: check(*s), sources))
+        else:
+            results = [check(*s) for s in sources]
+
+        with state.lock:
+            changed = False
+            for xpublish_id in gone:
+                changed |= state.sources.pop(xpublish_id, None) is not None
+                state.failed.discard(xpublish_id)
+            for xpublish_id, built in results:
+                if built is None:
+                    changed |= state.sources.pop(xpublish_id, None) is not None
+                    state.failed.add(xpublish_id)
+                else:
+                    state.failed.discard(xpublish_id)
+                    changed |= state.sources.get(xpublish_id) is not built
+                    state.sources[xpublish_id] = built
+            if changed:
+                state.update()
 
     @hookimpl
     def app_router(self, deps: Dependencies) -> APIRouter:
@@ -965,8 +1110,13 @@ class ErddapPlugin(Plugin):
             # The dataset router answers at the same paths; see the class doc.
             return router
 
+        state = ServerState()
+
         def catalog(request: Request) -> dict[str, ErddapDataset]:
-            return self.server_catalog(request, deps)
+            # The one dataset a griddap or info request is for, if it is one
+            params = request.path_params
+            target = params.get("erddap_id") or params.get("target", "").rpartition(".")[0]
+            return self.server_catalog(request, deps, state, target or None)
 
         return add_erddap_routes(router, catalog, self.max_response_mb)
 

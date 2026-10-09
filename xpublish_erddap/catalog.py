@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import TypeVar
 
 import numpy as np
 import xarray as xr
@@ -30,6 +32,8 @@ __all__ = [
 ]
 
 logger = logging.getLogger("uvicorn")
+
+T = TypeVar("T")
 
 #: An axis needs at least two values before monotonicity means anything.
 _MIN_AXIS_LEN = 2
@@ -107,17 +111,35 @@ class ErddapDataset:
     dims: tuple[str, ...]
     data_vars: tuple[str, ...]
     globals_: dict = field(default_factory=dict)
+    #: What ``memo`` has computed. A dataset is built anew whenever its source
+    #: changes (#3), so nothing derived from it goes stale.
+    _memo: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def memo(self, key: object, build: Callable[[], T]) -> T:
+        """``build()``, computed once for this dataset (#69).
+
+        Search, categories and ``actual_range`` would otherwise be recomputed
+        on every request, for every dataset. Two threads may both build it;
+        they get the same answer.
+        """
+        if key not in self._memo:
+            self._memo[key] = build()
+        return self._memo[key]
 
     @property
     def axes(self) -> dict[str, np.ndarray]:
         """Axis name -> values, in dimension order."""
-        return {d: self.ds[d].values for d in self.dims}
+        return self.memo("axes", lambda: {d: self.ds[d].values for d in self.dims})
 
     def variable_attrs(self, name: str) -> dict:
         """Attributes for ``name``, with ERDDAP's required extras filled in.
 
-        Sorted as ERDDAP sorts them: alphabetically, ignoring case.
+        Sorted as ERDDAP sorts them: alphabetically, ignoring case. A new dict
+        each call, so a caller may change it.
         """
+        return dict(self.memo(("attrs", name), lambda: self._variable_attrs(name)))
+
+    def _variable_attrs(self, name: str) -> dict:
         attrs = dict(self.ds[name].attrs)
         # the type says it; the DAS and .nc add it back where ERDDAP does
         attrs.pop("_Unsigned", None)
@@ -849,6 +871,14 @@ def build_catalog(
         sub = sub.rename(renames)
         keep = [renames.get(n, n) for n in keep]
         sig = tuple(renames.get(d, d) for d in source_sig)
+
+        # Read the axes once, here: an axis without an index (a store opened
+        # with create_default_indexes=False) would otherwise be read from the
+        # store again on every request (#69). A shallow copy, so the host's
+        # tree is not changed; the data variables stay lazy.
+        sub = sub.copy()
+        for dim in sig:
+            sub[dim].variable.load()
 
         attrs = _dataset_globals(ds.attrs, metadata, sub, sig, dataset_id)
         sub.attrs = attrs

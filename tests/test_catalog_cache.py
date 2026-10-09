@@ -6,14 +6,20 @@ data's ``_xpublish_id``, which Earthmover Flux changes with every commit, and
 can also be given a maximum age.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
+import numpy as np
 import pytest
 import xarray as xr
 import xpublish
 from fastapi.testclient import TestClient
+from xarray.backends import BackendArray
+from xarray.core import indexing
 from xpublish import Plugin, hookimpl
 
 import xpublish_erddap.plugin as erddap_plugin
-from xpublish_erddap import ErddapPlugin
+from xpublish_erddap import ErddapPlugin, formats
+from xpublish_erddap.catalog import build_catalog
 
 ROOTS = ["/erddap", "/datasets/store/erddap"]
 
@@ -166,3 +172,166 @@ def test_failed_source_returns_once_it_heals(grid_dataset):
     provider.unlisted = []
     provider.trees["late"] = version(grid_dataset, 2, "l")
     assert client.get("/erddap/griddap/late.das").status_code == 200
+
+
+# --- what the server-wide root opens, and when (#69) -------------------------
+
+
+class Counting(Provider):
+    """A provider that records every tree it is asked for."""
+
+    opened: list = []
+
+    @hookimpl
+    def get_datatree(self, dataset_id: str, group: str):
+        self.opened.append(dataset_id)
+        return super().get_datatree(dataset_id, group)
+
+
+@pytest.fixture
+def counted(grid_dataset, monkeypatch):
+    """A provider with three stores, a client, and a settable monotonic clock."""
+    now = [1000.0]
+    monkeypatch.setattr(erddap_plugin.time, "monotonic", lambda: now[0])
+
+    def make(**kwargs):
+        trees = {f"s{i}": version(grid_dataset, 2, f"s{i}@v1") for i in range(3)}
+        provider = Counting(trees=trees, opened=[])
+        rest = xpublish.Rest({}, plugins={"provider": provider, "erddap": ErddapPlugin(**kwargs)})
+        return provider, TestClient(rest.app), now
+
+    return make
+
+
+LISTINGS = [
+    "/erddap/griddap/index.csv",
+    "/erddap/info/index.csv",
+    "/erddap/search/index.csv?searchFor=all",
+    "/erddap/search/advanced.csv?searchFor=all",
+    "/erddap/categorize/institution/index.csv",
+]
+
+
+def opens(provider, client, url):
+    provider.opened.clear()
+    resp = client.get(url)
+    assert resp.status_code == 200, resp.text
+    return sorted(provider.opened)
+
+
+def test_listings_reuse_the_catalog_between_checks(counted):
+    provider, client, now = counted()
+    assert opens(provider, client, LISTINGS[0]) == ["s0", "s1", "s2"]
+    for url in LISTINGS:
+        assert opens(provider, client, url) == [], url
+    now[0] += 10  # catalog_check_s
+    assert opens(provider, client, LISTINGS[0]) == ["s0", "s1", "s2"]
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["/erddap/griddap/s1.das", "/erddap/griddap/s1.csv?tos[0][0][0]", "/erddap/info/s1/index.csv"],
+)
+def test_one_dataset_opens_only_its_source(counted, url):
+    provider, client, _ = counted()
+    client.get(LISTINGS[0])
+    assert opens(provider, client, url) == ["s1"]
+
+
+def test_check_every_request_with_zero(counted):
+    provider, client, _ = counted(catalog_check_s=0)
+    client.get(LISTINGS[0])
+    assert opens(provider, client, LISTINGS[0]) == ["s0", "s1", "s2"]
+
+
+def with_depth(ds: xr.Dataset) -> xr.DataTree:
+    """A commit to ``s0`` adding a variable on a new axis, so a new datasetID."""
+    tree = ds[["tos", "thetao"]].isel(time=slice(0, 2))
+    return xr.DataTree(tree.assign_attrs({"_xpublish_id": "s0@v2"}))
+
+
+def test_a_new_commit_is_listed_after_the_check_interval(counted, grid_dataset):
+    provider, client, now = counted()
+    assert "s0_2" not in client.get(LISTINGS[0]).text
+    provider.trees["s0"] = with_depth(grid_dataset)
+    now[0] += 10
+    assert "s0_depth" in client.get(LISTINGS[0]).text
+
+
+def test_unknown_id_checks_every_dataset_when_due(counted, grid_dataset):
+    provider, client, now = counted()
+    client.get(LISTINGS[0])
+    provider.trees["s0"] = with_depth(grid_dataset)
+    # not due: an id not in the catalog costs no opens
+    provider.opened.clear()
+    assert client.get("/erddap/griddap/s0_depth.das").status_code == 404
+    assert provider.opened == []
+    now[0] += 10
+    assert client.get("/erddap/griddap/s0_depth.das").status_code == 200
+
+
+def test_datasets_listed_or_dropped_show_at_once(counted, grid_dataset):
+    provider, client, _ = counted()
+    client.get(LISTINGS[0])
+    provider.trees["s9"] = version(grid_dataset, 2, "s9@v1")
+    del provider.trees["s1"]
+    assert opens(provider, client, LISTINGS[0]) == ["s9"]
+    index = client.get(LISTINGS[0]).text
+    assert "s9" in index
+    assert "s1" not in index
+    assert client.get("/erddap/griddap/s1.das").status_code == 404
+
+
+def test_concurrent_cold_requests_open_each_dataset_once(counted):
+    provider, client, _ = counted()
+    with ThreadPoolExecutor(4) as pool:
+        codes = list(pool.map(lambda _: client.get(LISTINGS[0]).status_code, range(4)))
+    assert codes == [200] * 4
+    assert sorted(provider.opened) == ["s0", "s1", "s2"]
+
+
+class CountingArray(BackendArray):
+    """A lazy array, as a backend gives it, that counts reads of its values."""
+
+    def __init__(self, values):
+        self.values = values
+        self.shape = values.shape
+        self.dtype = values.dtype
+        self.reads = 0
+
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key,
+            self.shape,
+            indexing.IndexingSupport.BASIC,
+            self._read,
+        )
+
+    def _read(self, key):
+        self.reads += 1
+        return self.values[key]
+
+
+def test_index_less_axes_are_read_once(grid_dataset):
+    """``create_default_indexes=False`` leaves axes lazy; read them at build only."""
+    lat = CountingArray(grid_dataset["lat"].values)
+    source = grid_dataset[["tos"]].drop_vars("lat")
+    source = source.assign_coords(
+        xr.Coordinates({"lat": xr.Variable("lat", indexing.LazilyIndexedArray(lat))}, indexes={}),
+    )
+    assert "lat" not in source.indexes
+    (entry,) = build_catalog("s", source)
+    after_build = lat.reads
+    for _ in range(3):  # what requests read
+        entry.axes  # noqa: B018
+        entry.variable_attrs("latitude")
+        formats.das_response(entry, entry.ds)
+    assert lat.reads == after_build
+    # the host's dataset is left as it was
+    assert not isinstance(source["lat"].variable._data, np.ndarray)
+
+
+def test_cached_attributes_are_a_copy(grid_dataset):
+    (entry,) = build_catalog("s", grid_dataset[["tos"]])
+    entry.variable_attrs("tos")["units"] = "changed"
+    assert entry.variable_attrs("tos")["units"] == "degC"
