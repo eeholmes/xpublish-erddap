@@ -9,7 +9,7 @@ so that existing **[erddapy](https://ioos.github.io/erddapy/)** and
 moves to Zarr/Icechunk.
 
 The goal is *client compatibility*, not an ERDDAP replacement. There is no Data
-Access Form, no Make-A-Graph, and no tabledap — just the REST surface those two
+Access Form, no Make-A-Graph, and no tabledap yet — just the REST surface those two
 client libraries actually call, so users' scripts run unchanged against an
 Xpublish server.
 
@@ -43,7 +43,7 @@ working, unchanged. An example of a similar concept for OPeNDAP access to Icechu
 
 Working end to end against both clients, on synthetic data and on real NOAA CEFI
 model output served from Icechunk via Earthmover Flux. Not production software:
-no auth, no tabledap, a partial file-type list, and the catalog is built eagerly
+no auth, no tabledap yet, a partial file-type list, and the catalog is built eagerly
 at first request.
 
 ## Installation
@@ -222,6 +222,16 @@ date that does not exist in the Gregorian calendar (Feb 30 in daily
 such dates days or months off. A forecast lead time (`lead_time`, `step`) is
 served as numbers in its source units. The reasoning is in
 [#60](https://github.com/eeholmes/xpublish-erddap/issues/60).
+
+**tabledap is in scope, as a future extension.** Much ERDDAP client code is
+observational (gliders, buoys, cruises) and calls `protocol="tabledap"`, so
+serving it fits the goal of keeping that code working. It is a different data
+model, though: rows with filter predicates (`&time>=...&latitude<50`) rather
+than n-dimensional arrays, so it will need its own source type (Parquet,
+DuckDB, or CF-DSG Icechunk) rather than the griddap path. Until then
+`tabledap/index` answers as a server with no tabledap datasets. Tracked in
+[#99](https://github.com/eeholmes/xpublish-erddap/issues/99); decided in
+[#7](https://github.com/eeholmes/xpublish-erddap/issues/7).
 
 ## Demos
 
