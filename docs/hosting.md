@@ -227,7 +227,7 @@ out with a warning (an axis that cannot be named leaves the whole dataset out).
 ```python
 ErddapPlugin(
     name_dataset=...,  # (1) how a per-dataset root names its dataset
-    max_response_mb=500,  # refuse larger data requests with ERDDAP's 413
+    max_response_mb=500,  # the default; refuses larger data requests with ERDDAP's 413 (None: no limit)
     metadata={...},  # global attributes for every dataset (ERDDAP's addAttributes)
     strict_axes=True,  # drop datasets with non-monotonic axes, as ERDDAP does
     rename_axes=True,  # (7) serve lat/lon/time axes as latitude/longitude/time
