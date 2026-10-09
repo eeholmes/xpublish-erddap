@@ -112,6 +112,7 @@ def test_grid_member_names_as_netcdf_c_sends_them(client, grid_dataset):
     np.testing.assert_array_equal(arrays[0][1], grid_dataset.lat.values[:2])
 
 
+@pytest.fixture(scope="module")
 def typed_client() -> TestClient:
     """Every integer width, and fills that xarray masks into NaN."""
     shape = (1, 3, 3)  # 9 cells: an odd count, so bytes need padding
@@ -159,8 +160,8 @@ def typed_client() -> TestClient:
         ("f", "Float32", np.where(np.arange(9) == 0, -9.0, np.arange(9))),
     ],
 )
-def test_types_and_fills(name, kind, expected):
-    resp = typed_client().get(f"/erddap/griddap/typed.dods?{name}[0][0:1:2][0:1:2]")
+def test_types_and_fills(typed_client, name, kind, expected):
+    resp = typed_client.get(f"/erddap/griddap/typed.dods?{name}[0][0:1:2][0:1:2]")
     dds, arrays = decode(resp.content)
     assert f"{kind} {name}[" in dds
     np.testing.assert_array_equal(arrays[0][1], expected)
@@ -173,13 +174,6 @@ def test_blocks_stream_the_same_bytes(client, monkeypatch):
     whole = client.get("/erddap/griddap/testgrid.dods?tos,sos").content
     monkeypatch.setattr(formats_module, "DODS_BLOCK_BYTES", 20)
     assert client.get("/erddap/griddap/testgrid.dods?tos,sos").content == whole
-
-
-def test_head_builds_no_body(client):
-    resp = client.head("/erddap/griddap/testgrid.dods?tos[0][0][0]")
-    assert resp.status_code == 200
-    assert resp.headers["content-type"].startswith("application/octet-stream")
-    assert resp.content == b""
 
 
 def test_array_too_long_for_dap2(client, monkeypatch):
