@@ -7,7 +7,8 @@ Ported from ERDDAP's own source (github.com/ERDDAP/erddap, ``main`` read on
 default "original" search engine for ``searchFor`` (``Erddap.getSearchDatasetIDs``,
 ``EDD.searchRank``, ``EDD.searchString``; ``setup.xml``'s default). The same
 table answers ``search/index``, ``search/advanced``, ``griddap/index`` and
-``info/index``.
+``info/index``. ``Erddap.doCategorize`` (with ``categorizeOptionsTable`` and
+``sendCategoryPftOptionsTable``) is the browse-by-category API (#5).
 """
 
 from __future__ import annotations
@@ -49,6 +50,21 @@ DATASET_COLUMNS = [
 #: ``variableName`` is the variable's own name, not an attribute.
 GLOBAL_CATEGORIES = ("cdm_data_type", "institution", "keywords")
 VARIABLE_CATEGORIES = ("ioos_category", "long_name", "standard_name", "variableName")
+
+#: ERDDAP's default ``categoryAttributes``, in the order of ``setup.xml``
+#: (``development/jetty/config/``): ``global:cdm_data_type, global:institution,
+#: ioos_category, global:keywords, long_name, standard_name, variableName``.
+#: These are also the names in the URL (``EDConfig.categoryAttributesInURLs``,
+#: the same after ``String2.modifyToBeFileNameSafe``).
+CATEGORY_ATTRIBUTES = (
+    "cdm_data_type",
+    "institution",
+    "ioos_category",
+    "keywords",
+    "long_name",
+    "standard_name",
+    "variableName",
+)
 
 #: Protocols an advanced search may name, as on a server with WMS on. No dataset
 #: here is served by WMS, so ``protocol=WMS`` matches none; SOS and WCS are
@@ -495,7 +511,7 @@ def advanced_filter(
     ]
 
 
-def page_of(datasets: list, params: dict[str, str]) -> list:
+def page_params(params: dict[str, str]) -> tuple[int, int]:
     """ERDDAP's ``page`` and ``itemsPerPage`` (1-based; 1000 per page by default)."""
     try:
         page = max(1, int(params.get("page", 1)))
@@ -505,5 +521,59 @@ def page_of(datasets: list, params: dict[str, str]) -> list:
             400,
             "Query error: page and itemsPerPage must be integers.",
         ) from err
+    return page, per_page
+
+
+def page_of(datasets: list, params: dict[str, str]) -> list:
+    """Page ``page`` of ``datasets``, ``itemsPerPage`` to a page."""
+    page, per_page = page_params(params)
     start = (page - 1) * per_page
     return datasets[start : start + per_page]
+
+
+# -- categorize ---------------------------------------------------------------
+
+
+def category_values(datasets: list[ErddapDataset], attribute: str) -> list[str]:
+    """The values of one category, as ``Erddap.categoryInfo(attribute)`` lists them.
+
+    Every value any dataset has, sorted ignoring case. They are already file-name
+    safe and lower case (``LoadDatasets.categorizeGlobalAtts`` and
+    ``categorizeVariableAtts``), and ``_null`` stands for a missing attribute.
+    """
+    found: set[str] = set()
+    for ed in datasets:
+        found |= categories(ed).get(attribute, set())
+    return sorted(found)
+
+
+def category_datasets(
+    datasets: list[ErddapDataset],
+    attribute: str,
+    value: str,
+) -> list[ErddapDataset]:
+    """The datasets with ``value`` in ``attribute``, as ``Erddap.categoryInfo(attr, value)``.
+
+    ERDDAP then sorts them by title (``Erddap.sortByTitle``) before paging.
+    """
+    return by_title([ed for ed in datasets if value in categories(ed).get(attribute, set())])
+
+
+def category_table(
+    kind: str,
+    names: list[str],
+    base: str,
+    ext: str,
+    per_page: int,
+) -> tuple[list[str], list[list[str]]]:
+    """A table of options, each with the URL that opens it.
+
+    ``Erddap.categorizeOptionsTable`` (columns ``Categorize`` and ``URL``, one row
+    per attribute) and ``Erddap.sendCategoryPftOptionsTable`` (``Category`` and
+    ``URL``, one row per value). The URLs carry ``page=1&itemsPerPage=N``, as
+    ERDDAP's ``EDStatic.passThroughPIppQueryPage1`` writes them. ``base`` is the
+    URL up to the option: ``{root}/categorize`` or ``{root}/categorize/{attribute}``.
+    """
+    query = f"page=1&itemsPerPage={per_page}"
+    rows = [[name, f"{base}/{name}/index.{ext}?{query}"] for name in names]
+    return [kind, "URL"], rows

@@ -1,0 +1,21 @@
+Dataset {
+  Float64 time[time = 3414];
+  Float32 latitude[latitude = 720];
+  Float32 longitude[longitude = 1440];
+  GRID {
+    ARRAY:
+      Float64 u_current[time = 3414][latitude = 720][longitude = 1440];
+    MAPS:
+      Float64 time[time = 3414];
+      Float32 latitude[latitude = 720];
+      Float32 longitude[longitude = 1440];
+  } u_current;
+  GRID {
+    ARRAY:
+      Float64 v_current[time = 3414][latitude = 720][longitude = 1440];
+    MAPS:
+      Float64 time[time = 3414];
+      Float32 latitude[latitude = 720];
+      Float32 longitude[longitude = 1440];
+  } v_current;
+} noaacwBLENDEDNRTcurrentsDaily;

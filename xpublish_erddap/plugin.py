@@ -23,7 +23,7 @@ from urllib import parse
 
 import xarray as xr
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
 from xpublish.utils.api import DATASET_ID_ATTR_KEY
@@ -451,11 +451,14 @@ TABLEDAP_INDEX = "/tabledap/index.{ext}"
 INFO = "/info/{erddap_id}/index.{ext}"
 SEARCH = "/search/index.{ext}"
 ADVANCED_SEARCH = "/search/advanced.{ext}"
+CATEGORIZE = "/categorize/index.{ext}"
+CATEGORIZE_ATTRIBUTE = "/categorize/{attribute}/index.{ext}"
+CATEGORIZE_VALUE = "/categorize/{attribute}/{value}/index.{ext}"
 GRIDDAP = "/griddap/{target}"
 
 #: Path parameters of the routes above, plus the host's group path: any other
 #: path parameter names the dataset.
-ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path"}
+ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path", "attribute", "value"}
 
 
 def root_of(request: Request, route_path: str) -> str:
@@ -474,6 +477,65 @@ def root_of(request: Request, route_path: str) -> str:
         path = path[len(root_path) :]
     own = route_path.format(**request.path_params)
     return erddap_root(request, path.removesuffix(own))
+
+
+def categorize_attributes(request: Request, ext: str) -> Response:
+    """``categorize/index.{ext}``: ERDDAP's ``categorizeOptionsTable``."""
+    _, per_page = search.page_params(query_params(request))
+    base = f"{root_of(request, CATEGORIZE)}/categorize"
+    names = list(search.CATEGORY_ATTRIBUTES)
+    return table_response(*search.category_table("Categorize", names, base, ext, per_page), ext)
+
+
+def categorize_values(
+    request: Request,
+    attribute: str,
+    ext: str,
+    catalog: dict[str, ErddapDataset],
+) -> Response:
+    """``categorize/{attribute}/index.{ext}``: ERDDAP's ``sendCategoryPftOptionsTable``.
+
+    Every value, however many; ``page`` and ``itemsPerPage`` do not apply (they
+    are only passed on in the URLs).
+    """
+    if attribute not in search.CATEGORY_ATTRIBUTES:
+        raise HTTPException(404, "")  # ERDDAP: "Not Found: (no details)"
+    _, per_page = search.page_params(query_params(request))
+    base = f"{root_of(request, CATEGORIZE_ATTRIBUTE)}/categorize/{attribute}"
+    values = search.category_values(list(catalog.values()), attribute)
+    return table_response(*search.category_table("Category", values, base, ext, per_page), ext)
+
+
+def categorize_datasets(
+    request: Request,
+    attribute: str,
+    value: str,
+    ext: str,
+    catalog: dict[str, ErddapDataset],
+) -> Response:
+    """``categorize/{attribute}/{value}/index.{ext}``: the dataset table.
+
+    A value that no dataset has is a 404 with no details, unless its lower-case
+    form has datasets: ERDDAP redirects there. Paged like a search.
+    """
+    if attribute not in search.CATEGORY_ATTRIBUTES:
+        raise HTTPException(404, "")
+    datasets = list(catalog.values())
+    matching = search.category_datasets(datasets, attribute, value)
+    params = query_params(request)
+    base = root_of(request, CATEGORIZE_VALUE)
+    if not matching:
+        lower = value.lower()
+        if value == lower or not search.category_datasets(datasets, attribute, lower):
+            raise HTTPException(404, "")
+        _, per_page = search.page_params(params)
+        return RedirectResponse(
+            f"{base}/categorize/{attribute}/{parse.quote(lower)}/"
+            f"index.{ext}?page=1&itemsPerPage={per_page}",
+            status_code=302,
+        )
+    found = search.page_of(matching, params)
+    return search_response(found, base, ext, search.no_matches())
 
 
 def add_erddap_routes(
@@ -588,6 +650,32 @@ def add_erddap_routes(
         matching = search.advanced_filter(list(cat.values()), params)
         found = search.page_of(search.text_search(matching, searchFor), params)
         return search_response(found, root_of(request, ADVANCED_SEARCH), ext, search.no_matches())
+
+    @route(CATEGORIZE)
+    def categorize_index(request: Request, ext: str) -> Response:
+        """The category attributes to browse by (``Erddap.doCategorize``, #5)."""
+        return categorize_attributes(request, ext)
+
+    @route(CATEGORIZE_ATTRIBUTE)
+    def categorize_attribute(
+        request: Request,
+        attribute: str,
+        ext: str,
+        cat: Catalog = Depends(catalog),
+    ) -> Response:
+        """The values of one category attribute, with the URL of each."""
+        return categorize_values(request, attribute, ext, cat)
+
+    @route(CATEGORIZE_VALUE)
+    def categorize_value(
+        request: Request,
+        attribute: str,
+        value: str,
+        ext: str,
+        cat: Catalog = Depends(catalog),
+    ) -> Response:
+        """The datasets with one category value, by title (the dataset table)."""
+        return categorize_datasets(request, attribute, value, ext, cat)
 
     @route(GRIDDAP)
     def griddap(

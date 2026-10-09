@@ -1,0 +1,21 @@
+Dataset {
+  Float64 time[time = 15166];
+  Float32 latitude[latitude = 3600];
+  Float32 longitude[longitude = 7200];
+  GRID {
+    ARRAY:
+      Byte mask[time = 15166][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15166];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } mask;
+  GRID {
+    ARRAY:
+      Float64 degree_heating_week[time = 15166][latitude = 3600][longitude = 7200];
+    MAPS:
+      Float64 time[time = 15166];
+      Float32 latitude[latitude = 3600];
+      Float32 longitude[longitude = 7200];
+  } degree_heating_week;
+} noaacrwdhwDaily;

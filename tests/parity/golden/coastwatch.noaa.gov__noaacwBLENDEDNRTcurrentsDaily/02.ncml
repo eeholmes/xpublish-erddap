@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://coastwatch.noaa.gov/griddap/noaacwBLENDEDNRTcurrentsDaily">
+  <attribute name="_NCProperties" value="version=2,netcdf=4.9.2,hdf5=1.14.3" />
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="Conventions" value="COARDS, CF-1.0, Unidata Dataset Discovery v1.0" />
+  <attribute name="creator_email" value="Eric.Leuliette@noaa.gov" />
+  <attribute name="creator_name" value="Eric.Leuliette@noaa.gov" />
+  <attribute name="date_created" value="2026-10-08T11:32:11.781054Z" />
+  <attribute name="date_modified" value="2026-10-08T11:32:11.781054Z" />
+  <attribute name="Easternmost_Easting" type="double" value="179.875" />
+  <attribute name="geospatial_lat_max" type="double" value="89.875" />
+  <attribute name="geospatial_lat_min" type="double" value="-89.875" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.25" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="179.875" />
+  <attribute name="geospatial_lon_min" type="double" value="-179.875" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.25" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="infoUrl" value="https://coastwatch.noaa.gov" />
+  <attribute name="institution" value="NOAA NESDIS CoastWatch" />
+  <attribute name="license" value="Data courtesy of NOAA; Sentinel data courtesy of Copernicus Program; Generated using AVISO+ products. The data may be used and redistributed for free but is not intended
+for legal use, since it may contain inaccuracies. Neither the data
+Contributor, ERD, NOAA, nor the United States Government, nor any
+of their employees or contractors, makes any warranty, express or
+implied, including warranties of merchantability and fitness for a
+particular purpose, or assumes any legal liability for the accuracy,
+completeness, or usefulness, of this information." />
+  <attribute name="ncei_template_version" value="NCEI_NetCDF_Grid_Template_v2.0" />
+  <attribute name="nco_openmp_thread_number" type="int" value="1" />
+  <attribute name="node_offset" type="int" value="0" />
+  <attribute name="Northernmost_Northing" type="double" value="89.875" />
+  <attribute name="source" value="Altimetry measurements" />
+  <attribute name="sourceUrl" value="(local files)" />
+  <attribute name="Southernmost_Northing" type="double" value="-89.875" />
+  <attribute name="standard_name_vocabulary" value="CF-1.0" />
+  <attribute name="summary" value="The altimetry data are from RADS (http://rads.tudelft.nl/rads/rads.shtml), the Radar Altimetry Database System, first developed at Delft University of Technology, now also at the NOAA and the European Organisation for the Exploitation of Meteorological Satellites (EUMETSAT). The RADS data for each mission is updated with state of the art corrections for tides, atmospheric path delay, etc. Because they are all computed consistently between the various missions, this avoids the possibility of introducing biases and drifts because of the different implementation of the various corrections by different agencies. The goals of RADS are to provide a homogenous dataset of sea level anomalies, wave heights, and wind speeds, along with database selection and analysis tools." />
+  <attribute name="testOutOfDate" value="now-2days" />
+  <attribute name="time_coverage_end" value="2026-10-07T00:00:00Z" />
+  <attribute name="time_coverage_start" value="2015-01-15T00:00:00Z" />
+  <attribute name="title" value="Sea Surface Currents (Geostrophic), Altimetry (S-3A/B,CryoSat2,Jason-2/3,SARAL), Near Real-Time,
+Global 0.25°, 2017-present, Daily" />
+  <attribute name="Westernmost_Easting" type="double" value="-179.875" />
+  <dimension name="time" length="3414" />
+  <dimension name="latitude" length="720" />
+  <dimension name="longitude" length="1440" />
+  <variable name="time" shape="time" type="double">
+    <attribute name="_CoordinateAxisType" value="Time" />
+    <attribute name="actual_range" type="double" value="1.42128E9 1.7913312E9" />
+    <attribute name="axis" value="T" />
+    <attribute name="bounds" value="time_bnds" />
+    <attribute name="calendar" value="gregorian" />
+    <attribute name="ioos_category" value="Time" />
+    <attribute name="long_name" value="Time" />
+    <attribute name="standard_name" value="time" />
+    <attribute name="time_origin" value="01-JAN-1970 00:00:00" />
+    <attribute name="units" value="seconds since 1970-01-01T00:00:00Z" />
+  </variable>
+  <variable name="latitude" shape="latitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="float" value="-89.875 89.875" />
+    <attribute name="axis" value="Y" />
+    <attribute name="bounds" value="lat_bnds" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+    <attribute name="valid_max" type="float" value="89.875" />
+    <attribute name="valid_min" type="float" value="-89.875" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="float">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="float" value="-179.875 179.875" />
+    <attribute name="axis" value="X" />
+    <attribute name="bounds" value="lon_bnds" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+    <attribute name="valid_max" type="float" value="179.875" />
+    <attribute name="valid_min" type="float" value="-179.875" />
+  </variable>
+  <variable name="u_current" shape="time latitude longitude" type="double">
+    <attribute name="_ChunkSizes" type="uint" value="1 720 1440" />
+    <attribute name="_FillValue" type="double" value="-214748.3648" />
+    <attribute name="comment" value="The Mean Dynamic Topography (MDT) used in the derivation of the geostrophic currents is the MDT CNES/CLS 2013" />
+    <attribute name="coordinates" value="longitude latitude" />
+    <attribute name="coordsys" value="geographic" />
+    <attribute name="grid_mapping" value="crs" />
+    <attribute name="ioos_category" value="Currents" />
+    <attribute name="long_name" value="U Current" />
+    <attribute name="missing_value" type="double" value="-214748.3648" />
+    <attribute name="standard_name" value="surface_geostrophic_eastward_sea_water_velocity" />
+    <attribute name="units" value="m/s" />
+    <attribute name="valid_max" type="double" value="4.6429" />
+    <attribute name="valid_min" type="double" value="-4.8486" />
+  </variable>
+  <variable name="v_current" shape="time latitude longitude" type="double">
+    <attribute name="_ChunkSizes" type="uint" value="1 720 1440" />
+    <attribute name="_FillValue" type="double" value="-214748.3648" />
+    <attribute name="comment" value="The Mean Dynamic Topography (MDT) used in the derivation of the geostrophic currents is the MDT CNES/CLS 2013" />
+    <attribute name="coordinates" value="longitude latitude" />
+    <attribute name="coordsys" value="geographic" />
+    <attribute name="grid_mapping" value="crs" />
+    <attribute name="ioos_category" value="Currents" />
+    <attribute name="long_name" value="V Current" />
+    <attribute name="missing_value" type="double" value="-214748.3648" />
+    <attribute name="standard_name" value="surface_geostrophic_northward_sea_water_velocity" />
+    <attribute name="units" value="m/s" />
+    <attribute name="valid_max" type="double" value="4.5456" />
+    <attribute name="valid_min" type="double" value="-4.805400000000001" />
+  </variable>
+</netcdf>

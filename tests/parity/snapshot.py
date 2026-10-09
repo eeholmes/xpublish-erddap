@@ -91,7 +91,12 @@ def write_snapshot(
 
 def _keep_encoding(encoding: dict) -> dict:
     keep = ("_FillValue", "missing_value", "dtype", "_Unsigned")
-    return {k: v for k, v in encoding.items() if k in keep}
+    kept = {k: v for k, v in encoding.items() if k in keep}
+    # xarray writes a NaN _FillValue on any float variable that has none; the
+    # source has none either (noaacwecn...Climatol's sst has only a
+    # missing_value), so say "none" explicitly to keep the snapshot faithful.
+    kept.setdefault("_FillValue", None)
+    return kept
 
 
 def load_snapshot(path: Path) -> xr.Dataset:
