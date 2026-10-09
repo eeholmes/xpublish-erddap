@@ -214,3 +214,39 @@ the R scripts and `tests/server.py` depend on them.
 - `tests/server.py` binds `0.0.0.0`; the fixture uses `127.0.0.1`.
 - `benchmarks/benchmark_server_catalog.py` is a tool, not collected; consider
   `benchmarks/` (`docs/hosting.md` cites its path).
+
+## Outcome (2026-10-09)
+
+All four shipped the same day, in parallel (Sonnet agents, one worktree
+each, shared files split by passage; trial-merged cleanly): #111 → PR
+#116, #112 → #118, #113 → #119, #114 → #117, and a follow-up #120.
+Suite: 922 passed / 43 skipped in ~126 s on the hub → 820 / 0 in ~21 s;
+line coverage of `xpublish_erddap/` unchanged at 96% in every file.
+
+EH said "I don't know" to the open choices, so the session decided:
+
+- **Media-type parity stays a separate test** from `test_matches_real_erddap`
+  (body and media-type failures keep distinct ids); only the error goldens
+  were left out of its parameters.
+- **CI matrix trimmed to 5 `run` jobs** (Ubuntu × 3 Pythons, macOS and
+  Windows on 3.14). Restore it if xpublish-community wants the full 3×3.
+- **Optional prunes:** removed `test_erddapy_opendap_response` and
+  `test_erddapy_download_file_rejects_unknown_types`; early format tests
+  collapsed into `test_api.py::test_each_format_reads_the_way_its_client_expects`;
+  **kept** R tutorial 1 (a user tutorial) and
+  `test_store_mount.py::test_erddapy_finds_the_split_dataset` (the only
+  client check through a mount).
+- **Benchmark moved** to `benchmarks/` (`prune benchmarks` in MANIFEST.in).
+
+Agent judgement calls, accepted at review: kept
+`test_ncml_escapes_percent_as_a_numeric_entity` (no golden has `&amp;`);
+cut `test_javaparse.py` time zones 8 → 4 as this note's list said (the
+four dropped are jplMURSST41 goldens); dropped the `.nc` rename check.
+
+**Trap (#120):** `test_none_means_no_limit_for_csv` passed even if `None`
+were ignored (its request fit the default 500 MB). The fix asks for the
+whole 3815 MB variable and stubs `FormulaArray._getitem` to raise. Raising
+from the *formula* is too late: `FormulaArray` meshgrids the axes first,
+which at 1000³ is gigabytes, and the first try was killed on the hub. Any
+test that reaches a read of the big `test_limits.py` grid must stub
+`_getitem`; run such experiments under `ulimit -v`.

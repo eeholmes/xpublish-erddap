@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-09, after #2, #8, #10)
+## Repo state (2026-10-09, after the test-suite review #110–#114)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -61,17 +61,16 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
 - **Shipped 2026-10-07:** #34, #18 (per-group root, `docs/hosting.md`), #3,
   #27/#4 (`search.py`, ported), #35, #36 (`errors.py`), #45/#46; 2026-10-06:
   #32, #33, #40.
-- **CI, 14 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
-  `package`, `rerddap`, `erddapy-3-1` (erddapy pinned to 3.1.0, only the
-  erddapy test files; since #10), pre-commit.ci. About 695 passed, 42 skipped,
-  4 xfailed on Linux/macOS (all four PRs below merged together, run on the
-  hub); min-deps one extra skip (erddapy's xarray engine cannot load under the
-  lowest xarray) and now tests `fastapi` 0.115; Windows skips the live-server
-  tests. The `rerddap` job has plotdap since #67, and every R check prints
-  `ok -`. **Since #69 (2026-10-09): 922 passed, 43 skipped, 9 xfailed** on
-  Linux/macOS; Windows 898/67/9; min-deps 921/44/9; `erddapy-3-1` 171
-  passed (the "170 + 1 xfailed" written here before was wrong). The
-  skips are mostly parity media-type checks on error responses, expected; the
+- **CI, 10 checks (since #112):** `run` on Ubuntu × 3.12/3.13/3.14 plus
+  macOS and Windows on 3.14 only (Windows skips every live-server test),
+  `min-deps` (3.11, lowest versions), `package`, `rerddap`, `erddapy-3-1`
+  (erddapy pinned to 3.1.0; only files that `import erddapy` or
+  `importorskip("erddapy")`, since #111), pre-commit.ci. **Since #110–#114
+  and #120 (2026-10-09): 820 passed, 0 skipped, 9 xfailed** on Linux/macOS,
+  ~15–30 s per job (was 922/43/9 in ~70–100 s); Windows 800/20/9; min-deps
+  819/1/9 (erddapy's xarray engine cannot load under the lowest xarray);
+  `erddapy-3-1` 45 passed. Hub: ~21 s for the full suite (was ~126 s).
+  A new skip on Linux now means something. The
   xfails are strict known differences (`KNOWN_MEDIA`: ERDDAP 2.29/2.31 serve
   `.das` as `text/csv`); `KNOWN` (content) holds only dhw_5km's `.dods`
   (ERDDAP truncates unsigned bytes, #2). Parity has **10
@@ -187,7 +186,8 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/audit-2026-10.md` — #50/#52: how the audit ran, what was checked
   and found fine (so the next audit does not redo it), and the issues it made.
 - `notes/test-audit-2026-10.md` — #110: test-suite review before the move;
-  what to prune, what only looks redundant, run time. Work: #111–#114.
+  what was pruned, what only looks redundant (keep list), run time, and
+  the decisions made doing it (#111–#114, all shipped).
 - `tools/fluxlint.py` — rough readiness linter (the validator itself moved to
   another repo).
 
@@ -240,13 +240,13 @@ run the R tests: `notes/dev-environment.md`.
   #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
-- **Test-suite review (#110, 2026-10-09), before the move:** 974 tests, half
-  parity (cheap, the contract); ~85–95 hand-written ones to prune; run time
-  is the real cost (server fixture restarts ~38 times, one 28 s test).
-  Work, in order: #111, #112, #113 (Sonnet 5.5), #114 (Haiku 4.5). #112
-  holds two choices for EH (fold parity functions; trim the CI matrix).
-  Detail: `notes/test-audit-2026-10.md`.
-- **Other open issues:** #37, #72, #105 (idea only), #110–#114; `future`:
-  #6, #53, #98, #99.
+- **Test-suite review shipped 2026-10-09 (#110–#114 closed; PRs #116–#120):**
+  four parallel Sonnet agents; one server per session, 102 cases pruned with
+  coverage unchanged, tests reworded for outside contributors, benchmark in
+  `benchmarks/`. Decisions and traps: `notes/test-audit-2026-10.md`
+  ("Outcome").
+- **No open issue is pre-move work now.** `future` (IOOS hackathon): #6,
+  #53, #98, #99, #105. `after-move` (label made 2026-10-09; other
+  post-transfer work): #37, #72.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
