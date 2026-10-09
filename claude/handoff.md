@@ -240,7 +240,13 @@ run the R tests: `notes/dev-environment.md`.
   #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
-- **Other open issues:** #37, #72, #105 (idea only); `future`: #6,
-  #53, #98, #99.
+- **Test-suite review (#110, 2026-10-09), before the move:** 974 tests, half
+  parity (cheap, the contract); ~85–95 hand-written ones to prune; run time
+  is the real cost (server fixture restarts ~38 times, one 28 s test).
+  Work, in order: #111, #112, #113 (Sonnet 5.5), #114 (Haiku 4.5). #112
+  holds two choices for EH (fold parity functions; trim the CI matrix).
+  Detail: `notes/test-audit-2026-10.md`.
+- **Other open issues:** #37, #72, #105 (idea only), #110–#114; `future`:
+  #6, #53, #98, #99.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
