@@ -9,7 +9,6 @@ from xpublish_erddap.constraints import (
     NoMatchError,
     parse_griddap_query,
     parse_selector,
-    split_selectors,
 )
 
 
@@ -20,11 +19,6 @@ def axes():
         "lat": np.linspace(10.0, 80.0, 71),
         "lon": np.linspace(200.0, 250.0, 51),
     }
-
-
-def test_split_selectors():
-    assert split_selectors("tos[0:1:2][3]") == ("tos", ["0:1:2", "3"])
-    assert split_selectors("tos") == ("tos", [])
 
 
 def test_iso_times_are_not_split_on_their_colons(axes):
@@ -95,7 +89,10 @@ def test_unknown_variable_rejected(axes):
 
 
 def test_wrong_selector_count_rejected(axes):
-    with pytest.raises(ConstraintError, match="expects 3 selectors"):
+    with pytest.raises(
+        ConstraintError,
+        match=r"axis#2=lon: \"\[\" was expected at or after position=9, not \[end",
+    ):
         parse_griddap_query("tos[0][0]", axes, ["time", "lat", "lon"], ["tos"])
 
 
@@ -369,11 +366,22 @@ def test_indices_are_digits_within_the_axis(axes, selector, message):
     )
 
 
-@pytest.mark.parametrize("value", ["notadate", "1_500_000_000", "2019:01:01", "NaN", ""])
+@pytest.mark.parametrize("value", ["notadate", "1_500_000_000", "2019:01:01", "NaN"])
 def test_unreadable_times_are_a_400(axes, value):
     with pytest.raises(ConstraintError) as err:
         parse_selector(f"({value})", axes["time"])
     assert "NaN (invalid format?) isn't allowed." in str(err.value)
+
+
+@pytest.mark.parametrize(
+    ("selector", "role"),
+    [("()", "Start"), ("(  ):1:(5)", "Start"), ("0:1:()", "Stop")],
+)
+def test_empty_parentheses_are_missing_values(axes, selector, role):
+    """``EDDGrid.parseAxisBrackets``, checked on erddap.ioos.us etopo5: ``[()]``."""
+    with pytest.raises(ConstraintError) as err:
+        parse_selector(selector, axes["lat"], where="For variable=tos axis#1=lat")
+    assert str(err.value).endswith(f": The {role} value inside () is missing.")
 
 
 def test_epoch_seconds_and_numbers_on_a_time_axis(axes):

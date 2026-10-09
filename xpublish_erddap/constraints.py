@@ -17,7 +17,7 @@ everything down to integer ``(start, stop, stride)`` triples with an inclusive
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -31,12 +31,12 @@ __all__ = [
     "DimSelection",
     "NoMatchError",
     "ParsedQuery",
+    "jsonp_name",
     "parse_griddap_query",
-    "split_selectors",
+    "split_amp",
 ]
 
-#: ``[start:stop]`` has two parts; ``[start:stride:stop]`` has three.
-_RANGE_PARTS = 2
+#: ``[start:stride:stop]`` has three parts (``[start:stop]`` two).
 _STRIDED_PARTS = 3
 
 
@@ -64,6 +64,10 @@ class ParsedQuery:
 
     variables: list[str]
     selections: dict[str, DimSelection]
+    #: the query before its first ``&``
+    expression: str = ""
+    #: the ``&`` clauses after it (``.jsonp=name``, ``.draw=surface``)
+    commands: list[str] = field(default_factory=list)
 
 
 class ConstraintError(ValueError):
@@ -96,33 +100,6 @@ def _split_top_level(text: str, sep: str) -> list[str]:
             cur.append(ch)
     parts.append("".join(cur))
     return parts
-
-
-def split_selectors(token: str) -> tuple[str, list[str]]:
-    """Split ``name[a][b]`` into ``("name", ["a", "b"])``."""
-    m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(.*)$", token, re.S)
-    if not m:
-        msg = f"cannot parse variable token {token!r}"
-        raise ConstraintError(msg)
-    name, rest = m.group(1), m.group(2).strip()
-    selectors, depth, cur = [], 0, []
-    for ch in rest:
-        if ch == "[":
-            depth += 1
-            if depth == 1:
-                cur = []
-                continue
-        elif ch == "]":
-            depth -= 1
-            if depth == 0:
-                selectors.append("".join(cur))
-                continue
-        if depth >= 1:
-            cur.append(ch)
-    if depth != 0:
-        msg = f"unbalanced brackets in {token!r}"
-        raise ConstraintError(msg)
-    return name, selectors
 
 
 def _axis_is_time(values: np.ndarray) -> bool:
@@ -301,7 +278,6 @@ def _resolve_token(
     token: str,
     values: np.ndarray,
     *,
-    default: int,
     role: str = "Start",
     where: str = "",
 ) -> int:
@@ -315,8 +291,6 @@ def _resolve_token(
     """
     token = token.strip()
     n = len(values)
-    if token == "":
-        return default
     head = f"Query error: {where}: " if where else "Query error: "
 
     if token.startswith(("last", "(last")):
@@ -324,6 +298,9 @@ def _resolve_token(
 
     if token.startswith("("):
         inner = token[1:-1].strip()
+        if not inner:
+            msg = f"{head}The {role} value inside () is missing."
+            raise ConstraintError(msg)
         target = _destination_double(inner, values)
         if np.isnan(target):
             # A 400, before the range checks.
@@ -353,36 +330,31 @@ def parse_selector(
     axis (#57).
     """
     n = len(values)
+    head = "Query error: "
     if where:
         where = f'{where} Constraint="[{selector}]"'
+        head = f"Query error: {where}: "
     start_kw = {"role": "Start", "where": where}
     stop_kw = {"role": "Stop", "where": where}
     parts = [p.strip() for p in _split_top_level(selector, ":")]
     if selector.strip() == "":
         return DimSelection(0, n - 1, 1)
     if len(parts) == 1:
-        idx = _resolve_token(parts[0], values, default=0, **start_kw)
+        idx = _resolve_token(parts[0], values, **start_kw)
         return DimSelection(idx, idx, 1)
-    if len(parts) == _RANGE_PARTS:
-        start = _resolve_token(parts[0], values, default=0, **start_kw)
-        stop = _resolve_token(parts[1], values, default=n - 1, **stop_kw)
-        stride = 1
-    elif len(parts) == _STRIDED_PARTS:
-        start = _resolve_token(parts[0], values, default=0, **start_kw)
-        stride_text = parts[1].strip() or "1"
-        try:
-            stride = int(stride_text)
-        except ValueError as exc:
-            msg = f"stride must be an integer, got {stride_text!r}"
-            raise ConstraintError(msg) from exc
-        stop = _resolve_token(parts[2], values, default=n - 1, **stop_kw)
-    else:
-        msg = f"too many ':' separated parts in selector [{selector}]"
-        raise ConstraintError(msg)
+    stride = 1
+    if len(parts) >= _STRIDED_PARTS:
+        # ERDDAP reads the stride first (String2.parseInt, which rounds), and
+        # whatever follows the second colon is the stop, colons and all
+        stride_text = parts[1]
+        stride = javaparse.parse_int(stride_text)
+        if stride < 1 or stride == javaparse.INT_MAX:
+            msg = f"{head}Stride={stride_text} is invalid."
+            raise ConstraintError(msg)
+        parts = [parts[0], ":".join(parts[2:])]
+    start = _resolve_token(parts[0], values, **start_kw)
+    stop = _resolve_token(parts[1], values, **stop_kw)
 
-    if stride < 1:
-        msg = f"stride must be >= 1, got {stride}"
-        raise ConstraintError(msg)
     if start > stop:
         if not allow_reversed:
             msg = f"start > stop in [{selector}]: give the range in axis order"
@@ -391,22 +363,204 @@ def parse_selector(
     return DimSelection(start, stop, stride)
 
 
-def _parse_axis_request(
-    name: str,
-    selectors: list[str],
-    axes: dict[str, np.ndarray],
-    dim_order: list[str],
-) -> DimSelection:
-    """Selection for an axis-only request such as ``?time[(last)]``.
+#: ``Message.QUERY_ERROR_GRID_AMP``
+_GRID_AMP = "Query error: In a griddap query, '&' must be followed by a .graphicsCommand."
 
-    Plain ``?time`` (erddapy's ``.csvp`` probe) has no selector and never
-    gets here.
+#: ``Message.ERROR_JSONP_FUNCTION_NAME``, which does not name the function.
+_JSONP_NAME = (
+    "Query error: That jsonp functionName isn't allowed. The first character must be an "
+    'ISO 8859-1 letter or "_".  Each optional subsequent character must be an ISO 8859-1 '
+    'letter, "_", a digit, or ".".'
+)
+
+
+def split_amp(query: str) -> list[str]:
+    r"""``Table.getDapQueryParts``: a query's ``&``-separated parts.
+
+    Splits an already percent-decoded query at each ``&`` outside double
+    quotes (``\`` escapes the next character). At least one part: the first
+    is the variables and constraints (``""`` if none), the rest are
+    ``&``-clauses.
     """
-    if len(selectors) > 1:
-        msg = f"axis {name} takes one selector, got {len(selectors)}"
+    text = query + "&"  # the last one triggers the final part
+    parts, start, in_quotes, po = [], 0, False, 0
+    while po < len(text):
+        ch = text[po]
+        if ch == "\\":
+            po += 1
+        elif ch == '"':
+            in_quotes = not in_quotes
+        elif ch == "&" and not in_quotes:
+            parts.append(text[start:po])
+            start = po + 1
+        po += 1
+    if in_quotes:
+        msg = "Query error: A closing doublequote is missing."
         raise ConstraintError(msg)
-    where = f"For variable={name} axis#{dim_order.index(name)}={name}"
-    return parse_selector(selectors[0], axes[name], allow_reversed=False, where=where)
+    return parts
+
+
+def jsonp_name(parts: list[str]) -> str | None:
+    """The function name of a ``.jsonp=`` clause, or None; refuses an unsafe name.
+
+    ``EDStatic.getJsonpFromQuery`` and ``Erddap.doGet``: the first part that
+    starts with ``.jsonp=``, checked with ``String2.isJsonpNameSafe``.
+    """
+    for part in parts:
+        if part.startswith(".jsonp="):
+            name = part[len(".jsonp=") :]
+            if not javaparse.is_jsonp_name_safe(name):
+                raise ConstraintError(_JSONP_NAME)
+            return name
+    return None
+
+
+def _expected_at(
+    what: str,
+    position: int,
+    query: str,
+    *,
+    where: str = "",
+    end: bool = False,
+) -> ConstraintError:
+    """``Message.QUERY_ERROR_EXPECTED_AT``, the found character quoted.
+
+    ``end``: say "[end of query]" whatever is there, as ERDDAP does when the
+    next variable has no ``[`` at all.
+    """
+    found = f'"{query[position]}"' if position < len(query) and not end else "[end of query]"
+    first = f"{where}: " if where else ""
+    msg = f'Query error: {first}"{what}" was expected at or after position={position}, not {found}.'
+    return ConstraintError(msg)
+
+
+class _Request:
+    """One griddap expression (the part before the first ``&``), parsed as ERDDAP does.
+
+    Errors say what ERDDAP says, with its positions, which count characters
+    of the expression from 0.
+    """
+
+    def __init__(
+        self,
+        query: str,
+        axes: dict[str, np.ndarray],
+        dim_order: list[str],
+        known_variables: list[str],
+    ) -> None:
+        self.query = query
+        self.axes = axes
+        self.dims = dim_order
+        self.known = known_variables
+        self.variables: list[str] = []
+
+    def full(self) -> dict[str, DimSelection]:
+        return {d: DimSelection(0, len(self.axes[d]) - 1, 1) for d in self.dims}
+
+    def brackets(self, po: int, name: str, axis: int, *, allow_reversed: bool):
+        """The ``[...]`` of ``name`` for dimension number ``axis`` at ``po``; where it ends.
+
+        ``EDDGrid.parseAxisBrackets``: it must start where the last one ended
+        and runs to the next ``]`` (none can be inside a value).
+        """
+        query, dim = self.query, self.dims[axis]
+        where = f"For variable={name} axis#{axis}={dim}"
+        if po >= len(query) or query[po] != "[":
+            raise _expected_at("[", po, query, where=where)
+        right = query.find("]", po + 1)
+        if right < 0:
+            msg = f'Query error: {where}: "]" was not found after position={po}.'
+            raise ConstraintError(msg)
+        selection = parse_selector(
+            query[po + 1 : right],
+            self.axes[dim],
+            allow_reversed=allow_reversed,
+            where=where,
+        )
+        return selection, right + 1
+
+    def add_variable(self, name: str, *, axis_request: bool, quoted: bool = False) -> None:
+        """Take ``name`` as a requested variable, or refuse it."""
+        kind = "axis" if axis_request else "data"
+        other = "data" if axis_request else "axis"
+        if name in (self.known if axis_request else self.axes):
+            msg = (
+                f"Query error: A griddap {kind} variable query can't include "
+                f"{'a' if other == 'data' else 'an'} {other} variable ({name})."
+            )
+            raise ConstraintError(msg)
+        if name not in (self.axes if axis_request else self.known):
+            msg = f"unknown variable {name!r}"
+            raise ConstraintError(msg)
+        if name in self.variables:
+            shown = f"'{name}'" if quoted else name
+            msg = f"Query error: Variable name={shown} occurs twice."
+            raise ConstraintError(msg)
+        self.variables.append(name)
+
+    def axis_request(self) -> ParsedQuery:
+        """``time[(last)],latitude``: ``EDDGrid.parseAxisDapQuery``."""
+        query = self.query
+        selections = self.full()
+        po = 0
+        while po < len(query):
+            comma = query.find(",", po)
+            comma = len(query) if comma < 0 else comma
+            left = query.find("[", po)
+            has_brackets = 0 <= left < comma
+            name = query[po : left if has_brackets else comma].strip()
+            self.add_variable(name, axis_request=True)
+            if has_brackets:
+                selections[name], end = self.brackets(
+                    left,
+                    name,
+                    self.dims.index(name),
+                    allow_reversed=False,
+                )
+                if end != comma:  # whatever else is there, even another bracket
+                    char = query[end] if end < len(query) else ""
+                    msg = f'Query error: "{char}" was not expected at position={end + 1}.'
+                    raise ConstraintError(msg)
+            po = comma + 1
+        return ParsedQuery(self.variables, selections)
+
+    def data_request(self) -> ParsedQuery:
+        """``sst[0][(30):(40)][1:2:3],sst2[...]``: ``EDDGrid.parseDataDapQuery``."""
+        query = self.query
+        if "[" not in query:  # just data variables: the whole of each
+            for raw_name in query.split(","):
+                if name := raw_name.strip():
+                    self.add_variable(name, axis_request=False, quoted=True)
+            return ParsedQuery(self.variables, self.full())
+
+        selections: dict[str, DimSelection] | None = None
+        po = 0
+        while po < len(query):
+            if po > 0:  # after a variable's brackets: "," or the end
+                if query[po] != ",":
+                    raise _expected_at('," or "[end of query]', po, query)
+                po = _skip_spaces(query, po + 1)
+            left = query.find("[", po)
+            if left < 0:
+                raise _expected_at("[", po, query, end=True)
+            self.add_variable(query[po:left].strip(), axis_request=False)
+            po = left
+            parsed = {}
+            for axis, dim in enumerate(self.dims):
+                parsed[dim], po = self.brackets(po, self.variables[-1], axis, allow_reversed=True)
+            po = _skip_spaces(query, po)
+            if selections is None:
+                selections = parsed
+            elif parsed != selections:
+                msg = "all variables in one griddap request must share the same subset"
+                raise ConstraintError(msg)
+        return ParsedQuery(self.variables, selections or self.full())
+
+
+def _skip_spaces(query: str, po: int) -> int:
+    while po < len(query) and query[po] == " ":
+        po += 1
+    return po
 
 
 def parse_griddap_query(
@@ -417,6 +571,13 @@ def parse_griddap_query(
 ) -> ParsedQuery:
     """Parse a full griddap query string.
 
+    The query is cut at its first ``&`` (``Table.getDapQueryParts``); each
+    clause after it must start with ``.`` (a graphics command, which is not
+    served but is no reason to refuse the request, as in ERDDAP). The
+    rest is an axis request when it starts with an axis name
+    (``EDDGrid.isAxisDapQuery``), else a data request. Text that does not
+    belong, where ERDDAP refuses it, is refused with ERDDAP's words.
+
     Args:
         query: the raw (already percent-decoded) query string.
         axes: mapping of axis name -> its values.
@@ -426,55 +587,20 @@ def parse_griddap_query(
     Returns:
         The requested variables and the resolved per-dimension selections.
     """
-    full = {d: DimSelection(0, len(axes[d]) - 1, 1) for d in dim_order}
-    query = (query or "").strip()
-    if not query:
-        return ParsedQuery(list(known_variables), full)
-
-    variables: list[str] = []
-    selections: dict[str, DimSelection] | None = None
-    axis_selections: dict[str, DimSelection] = {}
-
-    for raw_token in _split_top_level(query, ","):
-        token = raw_token.strip()
-        if not token:
-            continue
-        name, selectors = split_selectors(token)
-        if name in axes:
-            variables.append(name)
-            if selectors:
-                axis_selections[name] = _parse_axis_request(name, selectors, axes, dim_order)
-            continue
-        if name not in known_variables:
-            msg = f"unknown variable {name!r}"
-            raise ConstraintError(msg)
-        variables.append(name)
-        if not selectors:
-            continue
-        if len(selectors) != len(dim_order):
-            msg = (
-                f"{name} expects {len(dim_order)} selectors "
-                f"({', '.join(dim_order)}), got {len(selectors)}"
-            )
-            raise ConstraintError(msg)
-        parsed = {
-            dim: parse_selector(
-                sel,
-                axes[dim],
-                where=f"For variable={name} axis#{i}={dim}",
-            )
-            for i, (dim, sel) in enumerate(zip(dim_order, selectors, strict=True))
-        }
-        if selections is None:
-            selections = parsed
-        elif parsed != selections:
-            msg = "all variables in one griddap request must share the same subset"
-            raise ConstraintError(msg)
-
-    out = dict(selections or full)
-    for dim, sel in axis_selections.items():
-        if selections is not None and selections[dim] != sel:
-            msg = "all variables in one griddap request must share the same subset"
-            raise ConstraintError(msg)
-        out[dim] = sel
-    return ParsedQuery(variables, out)
+    parts = split_amp(query or "")
+    if any(not clause.startswith(".") for clause in parts[1:]):
+        raise ConstraintError(_GRID_AMP)
+    expression = parts[0].strip()
+    if not expression:
+        parsed = ParsedQuery(
+            list(known_variables),
+            {d: DimSelection(0, len(axes[d]) - 1, 1) for d in dim_order},
+        )
+    else:
+        cuts = [i for i in (expression.find("["), expression.find(",")) if i >= 0]
+        first = expression[: min(cuts)] if cuts else expression
+        request = _Request(expression, axes, dim_order, known_variables)
+        parsed = request.axis_request() if first.strip() in axes else request.data_request()
+    parsed.expression = expression
+    parsed.commands = parts[1:]
+    return parsed

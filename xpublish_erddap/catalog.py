@@ -121,6 +121,7 @@ class ErddapDataset:
         attrs = dict(self.ds[name].attrs)
         # the type says it; the DAS and .nc add it back where ERDDAP does
         attrs.pop("_Unsigned", None)
+        attrs.update(_source_attrs(self.ds[name], is_axis=name in self.dims))
         attrs.setdefault("ioos_category", infer_ioos_category(name, attrs))
         if name in self.dims:
             if "units" not in attrs:
@@ -221,6 +222,39 @@ def _typed_as_variable(attrs: dict, dtype: np.dtype) -> dict:
         if not np.array_equal(typed, arr, equal_nan=dtype.kind == "f" and arr.dtype.kind == "f"):
             continue  # it does not fit; leave it as the source gave it
         out[key] = typed if arr.ndim else typed[()]
+    return out
+
+
+#: Calendars whose decoded ``datetime64`` moments are the same on ERDDAP's
+#: Gregorian axis. Any other calendar is converted (``timeaxes``) and the
+#: attribute would then misdescribe the served values.
+_GREGORIAN_CALENDARS = frozenset({"standard", "gregorian", "proleptic_gregorian"})
+
+
+def _source_attrs(da: xr.DataArray, *, is_axis: bool) -> dict:
+    """``calendar`` and ``coordinates``, which xarray moves to ``.encoding``.
+
+    ERDDAP passes a source variable's attributes through unchanged
+    (``EDV`` / ``EDVTimeStamp`` neither add nor remove ``calendar`` or
+    ``coordinates``), so a store whose time says ``calendar "gregorian"``
+    serves it, as coastwatch's ``noaacwVIIRSn21iceconcYW00Daily`` does (#71).
+    A ``calendar`` that is not Gregorian is not restored: ``timeaxes``
+    converts such an axis and drops the attribute, since the served values
+    are no longer in that calendar.
+    """
+    enc = da.encoding
+    out = {}
+    calendar = enc.get("calendar")
+    if (
+        is_axis
+        and isinstance(calendar, str)
+        and calendar.lower() in _GREGORIAN_CALENDARS
+        and np.issubdtype(da.dtype, np.datetime64)
+    ):
+        out["calendar"] = calendar
+    coordinates = enc.get("coordinates")
+    if not is_axis and isinstance(coordinates, str) and coordinates:
+        out["coordinates"] = coordinates
     return out
 
 
@@ -386,6 +420,33 @@ _MOST = {
 }
 
 
+#: ERDDAP's vertical axes (``EDV.ALT_NAME``, ``EDV.DEPTH_NAME``) and the
+#: ``geospatial_vertical_positive`` each gives.
+_VERTICAL_POSITIVE = {"altitude": "up", "depth": "down"}
+
+
+def _vertical_globals(name: str, values: np.ndarray) -> dict:
+    """``geospatial_vertical_*`` of a subset's altitude or depth axis.
+
+    ``AxisDataAccessor`` and ``GridDataAccessor`` set units (``m``), positive
+    and the subset's min and max: a float (``Math2.doubleToFloatNaN``) for a
+    float axis, an int (``Math2.roundToInt``) for byte, short and int axes,
+    else a double. ``geospatial_vertical_resolution`` is not touched.
+    """
+    nice = nice_doubles(values)
+    lo, hi = float(np.nanmin(nice)), float(np.nanmax(nice))
+    if values.dtype == np.float32:
+        lo, hi = np.float32(lo), np.float32(hi)
+    elif values.dtype.kind in "iu" and values.dtype.itemsize <= 4:  # noqa: PLR2004
+        lo, hi = np.int32(round(lo)), np.int32(round(hi))
+    return {
+        "geospatial_vertical_units": "m",
+        "geospatial_vertical_positive": _VERTICAL_POSITIVE[name],
+        "geospatial_vertical_min": lo,
+        "geospatial_vertical_max": hi,
+    }
+
+
 def coverage_globals(
     ds: xr.Dataset,
     dims: tuple[str, ...],
@@ -414,6 +475,9 @@ def coverage_globals(
             first, last = np.datetime_as_string([values.min(), values.max()], unit="s")
             out["time_coverage_start"] = f"{first}Z"
             out["time_coverage_end"] = f"{last}Z"
+            continue
+        if subset and str(dim) in _VERTICAL_POSITIVE and values.dtype.kind in "iuf":
+            out.update(_vertical_globals(str(dim), values))
             continue
         recognised = recognised_axis(str(dim), ds[dim])
         for axis, served in (("lat", "latitude"), ("lon", "longitude")):

@@ -15,6 +15,7 @@ from __future__ import annotations
 import io
 import itertools
 import json
+import math
 
 import numpy as np
 import pandas as pd
@@ -275,7 +276,6 @@ def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
             attrs["units"] = TIME_UNITS
             attrs.setdefault("_CoordinateAxisType", "Time")
             attrs.pop("_FillValue", None)  # ERDDAP rejects NaN fill on axes
-            attrs.pop("calendar", None)
         dtype = dtype_of(ed.ds[name])
         if dtype.itemsize == 1 and dtype.kind in "iu" and "_Unsigned" not in attrs:
             attrs["_Unsigned"] = "true" if dtype.kind == "u" else "false"
@@ -297,6 +297,9 @@ def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
 # --------------------------------------------------------------------------
 
 
+_PAD = object()  # a cell past the end of a shorter axis
+
+
 def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
     """Yield (column_names, units, types, row_iterator) in ERDDAP's long form."""
     axis_names = [d for d in ed.dims if d in sub.dims]
@@ -311,11 +314,13 @@ def _long_form(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]):
         arrays = [np.asarray(sub[c].values) for c in cols]
 
         def rows():
-            # ERDDAP lists each axis in its own column, side by side, padding
-            # the shorter ones with blanks -- not their cartesian product
-            for tup in itertools.zip_longest(*arrays, fillvalue=None):
+            # ERDDAP lists each axis in its own column, side by side, not
+            # their cartesian product. ``Table.makeColumnsSameSize`` pads the
+            # shorter ones with NaN: ``NaN`` in csv, ``null`` in json; a time
+            # column's NaN is a blank, as everywhere.
+            for tup in itertools.zip_longest(*arrays, fillvalue=_PAD):
                 yield [
-                    "" if v is None else format_value(v, is_time=is_t)
+                    ("" if is_t else None) if v is _PAD else format_value(v, is_time=is_t)
                     for v, is_t in zip(tup, times, strict=True)
                 ]
 
@@ -407,10 +412,21 @@ def to_erddap_json(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> 
             "columnTypes": types,
             # a variable with no units is null, as in ERDDAP
             "columnUnits": [u or None for u in units],
-            "rows": [[None if v == "" else v for v in row] for row in rows],
+            "rows": [[_json_cell(v) for v in row] for row in rows],
         },
     }
-    return json.dumps(payload, indent=2, default=str)
+    return json.dumps(payload, indent=2, default=str, allow_nan=False)
+
+
+def _json_cell(value):
+    """A cell as ``.json`` has it: blank, NaN and infinite numbers are ``null``.
+
+    ``String2.toJson(double)``: "null if not finite" (``TableWriterJson`` via
+    ``PrimitiveArray.getJsonString``). Python's ``Infinity`` is not JSON.
+    """
+    if value == "" or (isinstance(value, float) and not math.isfinite(value)):
+        return None
+    return value
 
 
 def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> bytes:
@@ -427,10 +443,10 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         dims = ed.dims
     else:
         # an axis-only request: the file holds just those axes, never the
-        # data, and (as in ERDDAP) bounding-box globals only for them
+        # data, and (as in ERDDAP) coverage globals only for them
         dims = tuple(v for v in variables if v in ed.dims)
         out = xr.Dataset(coords={d: sub[d] for d in dims})
-        globals_ = {k: v for k, v in globals_.items() if not _is_bbox_global(k)}
+        globals_ = {k: v for k, v in globals_.items() if not _is_coverage_global(k)}
     out = out.copy()
     out.attrs = _nc3_attrs({**globals_, **coverage_globals(out, dims, subset=True)})
     # the netCDF-4 library's stamp; ERDDAP lists it but does not write it
@@ -449,6 +465,8 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         attrs = _nc3_attrs(attrs)
         if name not in ed.dims:
             out[name].attrs = attrs
+            # served as an attribute (variable_attrs); xarray refuses it in both
+            out[name].encoding.pop("coordinates", None)
             # in the served type: an integer xarray masked into floats is
             # written back as integers, its NaNs as the fill
             encoding[name] = {
@@ -462,7 +480,6 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         values = np.asarray(out[name].values)
         if _is_time(out[name]):
             values = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
-            attrs.pop("calendar", None)
             attrs["units"] = TIME_UNITS
         if values.size:
             attrs["actual_range"] = np.array(
@@ -519,13 +536,27 @@ def _nc3_integer(da: xr.DataArray, dtype: np.dtype, attrs: dict) -> tuple[np.nda
     return values, _nc3_attrs(attrs)
 
 
-def _is_bbox_global(key: str) -> bool:
-    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in {
-        "Northernmost_Northing",
-        "Southernmost_Northing",
-        "Easternmost_Easting",
-        "Westernmost_Easting",
-    }
+#: What ``AxisDataAccessor`` removes from the globals of an axis-only
+#: request before setting them for the axes asked for: lat and lon (all of
+#: ``geospatial_lat_*``, ``geospatial_lon_*`` and the four "most" names), the
+#: vertical min, max, units and positive (not the resolution), and the time
+#: coverage.
+_COVERAGE_GLOBALS = {
+    "Northernmost_Northing",
+    "Southernmost_Northing",
+    "Easternmost_Easting",
+    "Westernmost_Easting",
+    "geospatial_vertical_min",
+    "geospatial_vertical_max",
+    "geospatial_vertical_units",
+    "geospatial_vertical_positive",
+    "time_coverage_start",
+    "time_coverage_end",
+}
+
+
+def _is_coverage_global(key: str) -> bool:
+    return key.startswith(("geospatial_lat_", "geospatial_lon_")) or key in _COVERAGE_GLOBALS
 
 
 #: ERDDAP's ``XML.encodeAsXML`` (its ``HTML_ENTITIES`` below 128): the five
@@ -568,7 +599,6 @@ def _axis_attrs(ed: ErddapDataset, name: str) -> dict:
     attrs = dict(ed.variable_attrs(name))
     if _is_time(ed.ds[name]):
         attrs["units"] = TIME_UNITS
-        attrs.pop("calendar", None)
     return attrs
 
 
@@ -645,6 +675,32 @@ def _duration(seconds: float) -> str:
     return sign + hms
 
 
+def _only_value(values: np.ndarray) -> str:
+    """An axis's one value as ERDDAP writes it (``Erddap.doInfo``).
+
+    ``EDVGridAxis.destinationToString``: a double axis prints as a Java
+    double, a float axis as the Java float of its 7-digit "nice" double, any
+    other numeric axis as ``Math.rint`` (a double, so ``5.0``); a time axis as
+    an ISO string (``EDVTimeStampGridAxis``). NaN is ``NaN``.
+    """
+    if np.issubdtype(values.dtype, np.datetime64):
+        ts = pd.Timestamp(values[0])
+        return "NaN" if ts is pd.NaT else ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+    value = nice_doubles(values)[0]
+    if values.dtype == np.float32:
+        return java_number(np.float32(value))
+    if values.dtype != np.float64:
+        value = np.rint(value)
+    return java_number(np.float64(value))
+
+
+def _dimension_value(values: np.ndarray) -> str:
+    """The ``Value`` of an info ``dimension`` row."""
+    if values.size == 1:
+        return f"nValues=1, onlyValue={_only_value(values)}"
+    return f"nValues={values.size}{_spacing(values)}"
+
+
 def info_table(ed: ErddapDataset) -> tuple[list[str], list[list]]:
     """Rows for ``/info/{id}/index.csv``.
 
@@ -667,7 +723,7 @@ def info_table(ed: ErddapDataset) -> tuple[list[str], list[list]]:
                 dim,
                 "",
                 erddap_type(ed.ds[dim]),
-                f"nValues={values.size}{_spacing(values)}",
+                _dimension_value(values),
             ],
         )
         attribute_rows(dim, _axis_attrs(ed, dim))

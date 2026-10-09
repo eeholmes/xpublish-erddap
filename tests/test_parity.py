@@ -35,35 +35,7 @@ OUR_SERVER = "http://testserver/erddap"
 
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
-KNOWN: list[tuple[str, str]] = [
-    # From #68's cases. Every one is an item on #71 (small differences from
-    # ERDDAP's output), which is fixing them; whichever branch merges second
-    # removes the entries that pass.
-    (
-        r"^(noaacwBLENDEDNRTcurrentsDaily|noaacwNPPVIIRSSQchlaMonthly) "
-        r"(griddap/\S+\.(das|ncml)|info/\S+/index\.(csv|json))$",
-        "#71: the `calendar` (time) attribute is dropped; xarray moves it to .encoding",
-    ),
-    (
-        r"^noaacwBLENDEDNRTcurrentsDaily (griddap/\S+\.(das|ncml)|info/\S+/index\.(csv|json))$",
-        "#71: the `coordinates` variable attribute is dropped; xarray moves it to .encoding",
-    ),
-    (
-        r"^(noaacwBLENDEDNRTcurrentsDaily|noaacwNPPVIIRSSQchlaMonthly) griddap/\S+\.nc\?",
-        "#71: `calendar` (and `coordinates` on the data variables) dropped from the .nc",
-    ),
-    (
-        r"^(noaacwNPPVIIRSSQchlaMonthly|noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol) "
-        r"info/\S+/index\.(csv|json)$",
-        "#71: a one-value axis is `nValues=1, onlyValue=0.0` in ERDDAP's info, `nValues=1` here",
-    ),
-    (
-        r"^(noaacwNPPVIIRSSQchlaMonthly|noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol) "
-        r"griddap/\S+\.csv\?\w+\[\S+,\w+\[",
-        "#71: axis-only csv with unequal lengths: ERDDAP pads numeric columns with NaN, "
-        "we leave them blank",
-    ),
-]
+KNOWN: list[tuple[str, str]] = []
 
 #: The same, for media-type differences.
 KNOWN_MEDIA: list[tuple[str, str]] = [

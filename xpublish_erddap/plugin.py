@@ -35,13 +35,22 @@ from xpublish_erddap.catalog import (
     tree_datasets,
     unique_ids,
 )
-from xpublish_erddap.constraints import ConstraintError, NoMatchError, parse_griddap_query
+from xpublish_erddap.constraints import (
+    ConstraintError,
+    NoMatchError,
+    jsonp_name,
+    parse_griddap_query,
+    split_amp,
+)
 from xpublish_erddap.errors import ErddapRoute
 
 logger = logging.getLogger("uvicorn")
 
 #: rerddap asserts on this exact string, so it must not gain a space.
 ERDDAP_JSON = "application/json;charset=UTF-8"
+
+#: What a ``.jsonp=name`` request is served as (``OutputStreamFromHttpResponse``).
+ERDDAP_JAVASCRIPT = "application/javascript;charset=UTF-8"
 
 TABULAR = {"csv", "csvp", "csv0", "json"}
 
@@ -158,6 +167,31 @@ def raw_query(request: Request) -> str:
     ``unquote_plus``.
     """
     return parse.unquote_plus(request.url.components[3])
+
+
+def jsonp_of(query: str, ext: str) -> str | None:
+    """The ``.jsonp=name`` function of a ``.json`` request, or None.
+
+    ``Erddap.doGet``: only a ``.json`` file type has one; a bad name is a 400.
+    """
+    if ext != "json":
+        return None
+    try:
+        return jsonp_name(split_amp(query))
+    except ConstraintError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+def jsonp_wrap(response: Response, name: str | None) -> Response:
+    """``name(`` ... ``)`` around a JSON response, served as JavaScript.
+
+    ``TableWriterJson`` writes the name and ``(`` first and ``)`` after the
+    closing brace and its newline.
+    """
+    if name is None:
+        return response
+    body = bytes(response.body).decode("utf-8")
+    return Response(f"{name}({body}\n)", media_type=ERDDAP_JAVASCRIPT)
 
 
 _JSON_ESCAPES = {"\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\b": ""}
@@ -341,6 +375,7 @@ def griddap_response(  # noqa: PLR0911, PLR0913
             media_type="application/xml",
         )
 
+    jsonp = jsonp_of(query, ext)
     try:
         parsed = parse_griddap_query(
             query,
@@ -365,11 +400,11 @@ def griddap_response(  # noqa: PLR0911, PLR0913
                 ed,
                 sub,
                 parsed.variables,
-                all_axes=not query.strip(),
+                all_axes=not parsed.expression,
             ),
         )
     if head and ext in HEAD_MEDIA:
-        return Response(media_type=HEAD_MEDIA[ext])
+        return Response(media_type=ERDDAP_JAVASCRIPT if jsonp else HEAD_MEDIA[ext])
     if ext == "nc":
         data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
         return Response(
@@ -380,9 +415,12 @@ def griddap_response(  # noqa: PLR0911, PLR0913
             },
         )
     if ext == "json":
-        return Response(
-            formats.to_erddap_json(ed, sub, parsed.variables),
-            media_type=ERDDAP_JSON,
+        return jsonp_wrap(
+            Response(
+                formats.to_erddap_json(ed, sub, parsed.variables),
+                media_type=ERDDAP_JSON,
+            ),
+            jsonp,
         )
     if ext in {"csv", "csvp", "csv0"}:
         return PlainTextResponse(
@@ -571,7 +609,10 @@ def add_erddap_routes(
         ed = lookup(cat, erddap_id)
         if ext == "html":
             return info_page(ed, root_of(request, INFO))
-        return table_response(*formats.info_table(ed), ext)
+        return jsonp_wrap(
+            table_response(*formats.info_table(ed), ext),
+            jsonp_of(raw_query(request), ext),
+        )
 
     @route(SEARCH)
     def search_index(

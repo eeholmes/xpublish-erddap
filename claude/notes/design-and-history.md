@@ -473,3 +473,62 @@ none of those has none. We now do the same, so a polar grid has no lat bounds
 and is not found by a `minLat` search (as on ERDDAP). The case that motivated
 the issue's version, wrong bounds from metre axes, is gone with the x/y fix.
 EH confirmed following ERDDAP here (2026-10-08).
+
+## Small differences from ERDDAP's output and grammar (#71)
+
+Each item was read in ERDDAP's source (class and method are in the commit
+messages and in the tests' comments) and checked on erddap.ioos.us (2.31) or
+coastwatch. **Fixed**, in one commit each: `calendar`/`coordinates` served;
+`onlyValue` for a one-value axis; an axis-only `.nc` drops the vertical and
+time coverage of axes not asked for; an axis-only csv pads with `NaN`;
+`.json` has `null`, not `Infinity`; `&.jsonp=`; `&` clauses; text after
+brackets, repeated and mixed variables; empty start or stop and a rounded
+stride. The NcML `%` entity was already right (#64); a test now guards it.
+
+**Kept differences**, with the reason:
+
+- **`time_precision` is ignored** (the only unfixed box). ERDDAP's default is
+  whole seconds, as ours; a store that sets another (`1970-01-01`,
+  `...T00:00:00.000Z`) would see it in the DAS but not in the data. Honouring
+  it touches csv (as written), json (only fractional precisions are kept, see
+  `TableWriterJson`), `onlyValue`, the coverage globals and the times in
+  error messages, and none of the first 150 datasets of coastwatch.pfeg and ioos
+  sets it in its DAS. Asked of EH in the PR (#71).
+- **`calendar` comes back only for Gregorian-family calendars** (`standard`,
+  `gregorian`, `proleptic_gregorian`) on a decoded datetime axis. A converted
+  model calendar keeps none (#60: the served values are no longer in that
+  calendar, and a client that read it next to ERDDAP's units would shift every
+  date again). ERDDAP would pass the source's `calendar` through as it does for
+  any attribute.
+- **`coordinates` is copied from the source as written**, as ERDDAP does, even
+  when it names a variable this server does not serve (a 2-D `lat`) or under
+  its old name (#59 renames axes). Nothing reads it back.
+- **Vertical globals of the whole dataset are not derived.** `EDDGrid`
+  removes any supplied `geospatial_vertical_*` and derives units (`m`),
+  positive, min, max and, for an even axis, resolution from an axis named
+  `altitude` or `depth`. We keep what the store says. For a `.nc` download we
+  do set units, positive, min and max for the subset (`AxisDataAccessor`,
+  `GridDataAccessor`), so the two disagree if a store carries wrong ones.
+- **A percent-encoded `&` (`%26`) is read as `&`**, because `raw_query`
+  decodes the whole query before it is cut. ERDDAP cuts the encoded query,
+  then decodes each part. No griddap constraint contains an `&`.
+- **`ROSE[..][..],latitude[0:1:1]`** (an axis after a data variable with
+  brackets) is a 500 on ERDDAP ("destinationVariableName=latitude wasn't
+  found", a side effect of its lookup). We answer 400 with the message it
+  gives the same mistake without brackets. Unknown variables are 400 here
+  and 500 there, as before.
+- **`.json` prints integer-valued doubles as `-90.0`**, ERDDAP as `-90`, and
+  ours has no newline after the last brace (so `name(` ... `\n)` for jsonp
+  matches byte for byte, but a plain `.json` is one byte shorter). Same
+  numbers to any parser.
+- **`&.jsonp=` is served only on griddap `.json` and `info/{id}/index.json`.**
+  ERDDAP also takes it on the dataset list and the searches; those routes
+  belong to the categorize/search work (#5), so it was not added there.
+- **Graphics commands (`.draw`, `.vars`, ...) are accepted and ignored.** We
+  serve data, never images; the request is not refused, so a hand-built URL
+  with them still returns its data.
+- **Whitespace around names and after commas is tolerated** (`sst[..], sst2[..]`);
+  ERDDAP would call the space part of the name. Left lenient on purpose.
+- **Not checked live:** ERDDAP rounds seconds to the millisecond before
+  printing (`Calendar2.epochSecondsToLimitedIsoStringT`), so 59.9996 s prints
+  as the next minute; we truncate. Only sub-millisecond times differ.
