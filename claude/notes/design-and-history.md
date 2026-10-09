@@ -256,7 +256,8 @@ provider. Now (`ErddapPlugin.server_catalog`, `ServerState`):
   `catalog_check_s` (default 10 s)**, in `catalog_workers` (16) threads. This
   is the trade-off: a listing can lag a commit by up to 10 s. Chosen because
   ERDDAP itself only re-lists on `reloadEveryNMinutes`, and the data routes,
-  which are what client code reads, stay exact. `0` restores checking on
+  which are what client code reads, stay exact. EH confirmed 10 s
+  (2026-10-09): commits are not that frequent. `0` restores checking on
   every listing request. One request checks at a time (`refreshing` lock,
   non-blocking once a catalog exists); others serve the last catalog.
 - **Newly listed or delisted ids** (`dataset_ids`, called every request,
