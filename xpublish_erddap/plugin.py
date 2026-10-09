@@ -12,6 +12,7 @@ flat datasetIDs -- so the main router is a server-wide ``app_router``; a
 
 from __future__ import annotations
 
+import html
 import inspect
 import io
 import json
@@ -22,7 +23,7 @@ from urllib import parse
 
 import xarray as xr
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from xpublish import Dependencies, Plugin, hookimpl
 from xpublish.dependencies import get_group_path
 from xpublish.utils.api import DATASET_ID_ATTR_KEY
@@ -254,6 +255,29 @@ def advanced_search_criteria(request: Request, ext: str) -> None:
         )
 
 
+def info_page(ed: ErddapDataset, base: str) -> HTMLResponse:
+    """A minimal ``info/{id}/index.html``: the title and links to the data.
+
+    There is no UI, but rerddapXtracto's ``safe_info()`` and rerddap's
+    ``browse()`` request this URL and need a page that exists (#62).
+    """
+    title = html.escape(str(ed.globals_.get("title", ed.dataset_id)))
+    links = [
+        (f"{base}/info/{ed.dataset_id}/index.{kind}", f"Variables and attributes ({kind})")
+        for kind in sorted(TABLE_EXTENSIONS)
+    ] + [
+        (f"{base}/griddap/{ed.dataset_id}.{kind}", f"Data access: {ed.dataset_id}.{kind}")
+        for kind in ("das", "dds")
+    ]
+    items = "\n".join(
+        f'<li><a href="{html.escape(url)}">{html.escape(text)}</a></li>' for url, text in links
+    )
+    return HTMLResponse(
+        f"<!DOCTYPE html>\n<html><head><title>{title}</title></head>\n"
+        f"<body><h1>{title}</h1>\n<ul>\n{items}\n</ul></body></html>\n",
+    )
+
+
 def search_response(
     found: list[ErddapDataset],
     base: str,
@@ -286,14 +310,20 @@ def split_target(target: str) -> tuple[str, str]:
     return dataset_id, ext
 
 
-def griddap_response(
+def griddap_response(  # noqa: PLR0911, PLR0913
     ed: ErddapDataset,
     ext: str,
     query: str,
     base: str,
     max_response_mb: float | None,
+    *,
+    head: bool = False,
 ) -> Response:
-    """Answer a griddap request for one dataset in one file type."""
+    """Answer a griddap request for one dataset in one file type.
+
+    ``head`` answers a HEAD request: the request is validated as for GET, but
+    a data file (nc, json, csv...) is not built, only its headers sent.
+    """
     if ext == "das":
         # ERDDAP's DAS is ISO-8859-1 (a degree sign is one byte); Java writes
         # a character outside it as "?"
@@ -334,6 +364,8 @@ def griddap_response(
                 all_axes=not query.strip(),
             ),
         )
+    if head and ext in HEAD_MEDIA:
+        return Response(media_type=HEAD_MEDIA[ext])
     if ext == "nc":
         data = formats.to_netcdf_bytes(ed, sub, parsed.variables)
         return Response(
@@ -355,6 +387,16 @@ def griddap_response(
         )
     # every ALL_EXTENSIONS member is handled above
     raise AssertionError(ext)  # pragma: no cover
+
+
+#: Content types of the data files, for a HEAD request that builds none.
+HEAD_MEDIA = {
+    "nc": "application/x-netcdf",
+    "json": ERDDAP_JSON,
+    "csv": "text/csv",
+    "csvp": "text/csv",
+    "csv0": "text/csv",
+}
 
 
 # -- the ERDDAP routes, shared by both routers -------------------------------
@@ -404,12 +446,17 @@ def add_erddap_routes(
     """
     Catalog = dict[str, ErddapDataset]  # noqa: N806
 
-    @router.get(VERSION, response_class=PlainTextResponse)
+    def route(path: str, **kwargs):
+        # ERDDAP answers HEAD like GET (rerddapXtracto's safe_info(), erddapy's
+        # check_url_response()); the data route skips building its body.
+        return router.api_route(path, methods=["GET", "HEAD"], **kwargs)
+
+    @route(VERSION, response_class=PlainTextResponse)
     def version() -> str:
         """ERDDAP version banner."""
         return "ERDDAP_version=2.23\n"
 
-    @router.get(GRIDDAP_INDEX)
+    @route(GRIDDAP_INDEX)
     def griddap_index(
         request: Request,
         ext: str,
@@ -423,7 +470,7 @@ def add_erddap_routes(
             query_params(request),
         )
 
-    @router.get(INFO_INDEX)
+    @route(INFO_INDEX)
     def info_index(
         request: Request,
         ext: str,
@@ -437,7 +484,7 @@ def add_erddap_routes(
             query_params(request),
         )
 
-    @router.get(TABLEDAP_INDEX)
+    @route(TABLEDAP_INDEX)
     def tabledap_index(ext: str) -> Response:
         """Empty tabledap catalog.
 
@@ -447,16 +494,20 @@ def add_erddap_routes(
         """
         return table_response(search.DATASET_COLUMNS, [], ext)
 
-    @router.get(INFO)
+    @route(INFO)
     def dataset_info(
+        request: Request,
         erddap_id: str,
         ext: str,
         cat: Catalog = Depends(catalog),
     ) -> Response:
         """Variable and attribute table for one dataset."""
-        return table_response(*formats.info_table(lookup(cat, erddap_id)), ext)
+        ed = lookup(cat, erddap_id)
+        if ext == "html":
+            return info_page(ed, root_of(request, INFO))
+        return table_response(*formats.info_table(ed), ext)
 
-    @router.get(SEARCH)
+    @route(SEARCH)
     def search_index(
         request: Request,
         ext: str,
@@ -479,7 +530,7 @@ def add_erddap_routes(
             search.no_search_matches(searchFor),
         )
 
-    @router.get(ADVANCED_SEARCH)
+    @route(ADVANCED_SEARCH)
     def advanced_search(
         request: Request,
         ext: str,
@@ -493,7 +544,7 @@ def add_erddap_routes(
         found = search.page_of(search.text_search(matching, searchFor), params)
         return search_response(found, root_of(request, ADVANCED_SEARCH), ext, search.no_matches())
 
-    @router.get(GRIDDAP)
+    @route(GRIDDAP)
     def griddap(
         request: Request,
         target: str,
@@ -507,6 +558,7 @@ def add_erddap_routes(
             raw_query(request),
             root_of(request, GRIDDAP),
             max_response_mb,
+            head=request.method == "HEAD",
         )
 
     return router
