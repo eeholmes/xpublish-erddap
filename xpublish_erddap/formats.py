@@ -15,6 +15,7 @@ from __future__ import annotations
 import io
 import itertools
 import json
+import math
 
 import numpy as np
 import pandas as pd
@@ -411,10 +412,21 @@ def to_erddap_json(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> 
             "columnTypes": types,
             # a variable with no units is null, as in ERDDAP
             "columnUnits": [u or None for u in units],
-            "rows": [[None if v == "" else v for v in row] for row in rows],
+            "rows": [[_json_cell(v) for v in row] for row in rows],
         },
     }
-    return json.dumps(payload, indent=2, default=str)
+    return json.dumps(payload, indent=2, default=str, allow_nan=False)
+
+
+def _json_cell(value):
+    """A cell as ``.json`` has it: blank, NaN and infinite numbers are ``null``.
+
+    ``String2.toJson(double)``: "null if not finite" (``TableWriterJson`` via
+    ``PrimitiveArray.getJsonString``). Python's ``Infinity`` is not JSON.
+    """
+    if value == "" or (isinstance(value, float) and not math.isfinite(value)):
+        return None
+    return value
 
 
 def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) -> bytes:

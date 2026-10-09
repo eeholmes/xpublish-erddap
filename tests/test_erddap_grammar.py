@@ -156,6 +156,17 @@ def test_axis_only_json_pads_with_null(client):
     assert r.json()["table"]["rows"][-1] == [None, 140.0]
 
 
+# -- .json: infinite numbers (String2.toJson(double)) -------------------------------
+def test_json_writes_null_for_infinite_numbers():
+    ds = gridded(1, 2, 2)
+    ds["sst"].values[0, 0, :] = [np.inf, -np.inf]
+    rest = xpublish.Rest({"inf": ds}, plugins={"erddap": ErddapPlugin()})
+    r = TestClient(rest.app).get("/erddap/griddap/inf.json?sst[0][0:1][0:1]")
+    assert "Infinity" not in r.text
+    rows = r.json()["table"]["rows"]  # valid JSON: json.loads would also take Infinity
+    assert [row[-1] for row in rows] == [None, None, 2.0, 3.0]
+
+
 def test_one_value_axis_info_says_only_value():
     rest = xpublish.Rest({"one": one_value_axes()}, plugins={"erddap": ErddapPlugin()})
     text = TestClient(rest.app).get("/erddap/info/one/index.csv").text
