@@ -275,7 +275,6 @@ def das_response(ed: ErddapDataset, sub: xr.Dataset) -> str:
             attrs["units"] = TIME_UNITS
             attrs.setdefault("_CoordinateAxisType", "Time")
             attrs.pop("_FillValue", None)  # ERDDAP rejects NaN fill on axes
-            attrs.pop("calendar", None)
         dtype = dtype_of(ed.ds[name])
         if dtype.itemsize == 1 and dtype.kind in "iu" and "_Unsigned" not in attrs:
             attrs["_Unsigned"] = "true" if dtype.kind == "u" else "false"
@@ -449,6 +448,8 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         attrs = _nc3_attrs(attrs)
         if name not in ed.dims:
             out[name].attrs = attrs
+            # served as an attribute (variable_attrs); xarray refuses it in both
+            out[name].encoding.pop("coordinates", None)
             # in the served type: an integer xarray masked into floats is
             # written back as integers, its NaNs as the fill
             encoding[name] = {
@@ -462,7 +463,6 @@ def to_netcdf_bytes(ed: ErddapDataset, sub: xr.Dataset, variables: list[str]) ->
         values = np.asarray(out[name].values)
         if _is_time(out[name]):
             values = (values - np.datetime64(0, "s")) / np.timedelta64(1, "s")
-            attrs.pop("calendar", None)
             attrs["units"] = TIME_UNITS
         if values.size:
             attrs["actual_range"] = np.array(
@@ -568,7 +568,6 @@ def _axis_attrs(ed: ErddapDataset, name: str) -> dict:
     attrs = dict(ed.variable_attrs(name))
     if _is_time(ed.ds[name]):
         attrs["units"] = TIME_UNITS
-        attrs.pop("calendar", None)
     return attrs
 
 

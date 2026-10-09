@@ -105,6 +105,10 @@ def load_snapshot(path: Path) -> xr.Dataset:
         )
     out = xr.Dataset(coords={d: snap[d] for d in snap.dims if d in snap.coords})
     out.attrs = _unescape(snap.attrs)
+    for coord in out.coords:
+        # xarray wrote this ``calendar`` when saving the snapshot; the
+        # ERDDAP the snapshot came from never had one (#71)
+        out[coord].encoding.pop("calendar", None)
     for name in snap.data_vars:
         if str(name).startswith(_BLOCK):
             continue

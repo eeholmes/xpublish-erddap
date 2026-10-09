@@ -121,6 +121,7 @@ class ErddapDataset:
         attrs = dict(self.ds[name].attrs)
         # the type says it; the DAS and .nc add it back where ERDDAP does
         attrs.pop("_Unsigned", None)
+        attrs.update(_source_attrs(self.ds[name], is_axis=name in self.dims))
         attrs.setdefault("ioos_category", infer_ioos_category(name, attrs))
         if name in self.dims:
             if "units" not in attrs:
@@ -221,6 +222,39 @@ def _typed_as_variable(attrs: dict, dtype: np.dtype) -> dict:
         if not np.array_equal(typed, arr, equal_nan=dtype.kind == "f" and arr.dtype.kind == "f"):
             continue  # it does not fit; leave it as the source gave it
         out[key] = typed if arr.ndim else typed[()]
+    return out
+
+
+#: Calendars whose decoded ``datetime64`` moments are the same on ERDDAP's
+#: Gregorian axis. Any other calendar is converted (``timeaxes``) and the
+#: attribute would then misdescribe the served values.
+_GREGORIAN_CALENDARS = frozenset({"standard", "gregorian", "proleptic_gregorian"})
+
+
+def _source_attrs(da: xr.DataArray, *, is_axis: bool) -> dict:
+    """``calendar`` and ``coordinates``, which xarray moves to ``.encoding``.
+
+    ERDDAP passes a source variable's attributes through unchanged
+    (``EDV`` / ``EDVTimeStamp`` neither add nor remove ``calendar`` or
+    ``coordinates``), so a store whose time says ``calendar "gregorian"``
+    serves it, as coastwatch's ``noaacwVIIRSn21iceconcYW00Daily`` does (#71).
+    A ``calendar`` that is not Gregorian is not restored: ``timeaxes``
+    converts such an axis and drops the attribute, since the served values
+    are no longer in that calendar.
+    """
+    enc = da.encoding
+    out = {}
+    calendar = enc.get("calendar")
+    if (
+        is_axis
+        and isinstance(calendar, str)
+        and calendar.lower() in _GREGORIAN_CALENDARS
+        and np.issubdtype(da.dtype, np.datetime64)
+    ):
+        out["calendar"] = calendar
+    coordinates = enc.get("coordinates")
+    if not is_axis and isinstance(coordinates, str) and coordinates:
+        out["coordinates"] = coordinates
     return out
 
 
