@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-09, after #63–#67)
+## Repo state (2026-10-09, after #5, #68, #71)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -36,8 +36,8 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   Since #59 it serves ERDDAP's axis names (`latitude`, `longitude`; the
   decadal forecasts' date-valued `lead` is `time`). Redeploying needs EH's
   `aws login --remote` (profile `litellm-poc`, which `greenfield` sources).
-  **Not redeployed since `bbe53e0`**: #60–#67 are on `main` but not on the
-  server. `deploy/server.py` already sets `max_response_mb=500`, the new
+  **Not redeployed since `bbe53e0`**: #60–#67, #5, #68 and #71 are on `main`
+  but not on the server. `deploy/server.py` already sets `max_response_mb=500`, the new
   default, and none of the 12 stores is known to use a model calendar or a
   lead-time axis, so little is expected to change; redeploy before relying
   on it.
@@ -69,10 +69,14 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   hub); min-deps one extra skip (erddapy's xarray engine cannot load under the
   lowest xarray) and now tests `fastapi` 0.115; Windows skips the live-server
   tests. The `rerddap` job has plotdap since #67, and every R check prints
-  `ok -`. The
+  `ok -`. **Since #94 (2026-10-09): 845 passed, 43 skipped, 8 xfailed** on
+  Linux/macOS; Windows 823/66/7; min-deps 844/44/8. The
   skips are mostly parity media-type checks on error responses, expected; the
   xfails are strict known differences (`KNOWN_MEDIA`: ERDDAP 2.29/2.31 serve
-  `.das` as `text/csv`). Parity has 6 cases, all recaptured 2026-10-08,
+  `.das` as `text/csv`); `KNOWN` (content) is empty again. Parity has **10
+  cases** since #68 (four coastwatch 2.31: a static 4-D climatology with a
+  one-value axis, chla monthly with `calendar`, two-variable currents, Byte
+  `.dds`/`.das`); the six older ones were recaptured 2026-10-08,
   including `CRW_baa_max_7d_v1_0` (Byte with fill cells) and PacIOOS
   `dhw_5km` (unsigned bytes; its data blocks come from ERDDAP's `.nc`
   because netCDF-C's DAP client fails on them).
@@ -99,7 +103,15 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   (PR #91); #67 client tests for every listed path (PR #92); #66 packaging:
   SPDX license, URLs, EH as author with her NOAA email, `fastapi>=0.115`
   declared, extras fixed (PR #93). **The pre-release list #55–#67 is done**;
-  #60 is still open on GitHub (EH closes it). After release: #68–#72. The ordered table is
+  #60 closed 2026-10-09. After release: #68–#72. **Shipped 2026-10-09, in
+  parallel** (three Sonnet agents, reviewed and trial-merged here): #71 every
+  box fixed or a kept difference (PR #94; `calendar`/`coordinates` restored,
+  `onlyValue`, coverage globals on axis-only `.nc`, NaN padding, JSON `null`,
+  ERDDAP's `&`-clause grammar and error positions, `.jsonp`, stride rounding),
+  #68 (PR #96), #5 `categorize` (PR #95; EH kept both defaults: all seven
+  attributes with `_null`, no redirect for a bare URL). **Left of #68–#72:**
+  #69 (Opus), #70 (needs EH), #72 (EH: wait until the repo is in
+  xpublish-community, then use the org's Codecov). The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
 
@@ -186,6 +198,11 @@ run the R tests: `notes/dev-environment.md`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
   `_xpublish_id` and reopen stores now and then, so new commits show up
   without a restart (a live demo of #3).
+- **#71's open question for EH:** honour a store's `time_precision`? It would
+  reach csv, json, `onlyValue`, coverage globals and error times; none of 150
+  datasets checked sets one. In `design-and-history.md` (#71 section).
+- **#6:** an outside contributor offered (on the issue) to do the
+  formats/entry-point refactor as a first PR. EH has not answered yet.
 - **Known differences kept on purpose:** some constraint-error wording
   (stride, selector count); 400 where ERDDAP gives 500 for an unknown
   variable; `/erddap/nope` paths get FastAPI's 404. Values off an axis (404,
@@ -193,7 +210,7 @@ run the R tests: `notes/dev-environment.md`.
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
 - **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
-  CoastWatch Python tutorials need it, see its latest comment), #5
-  (`categorize`, now cheap: `search.categories` exists), #6, #7, #10, #14.
+  CoastWatch Python tutorials need it, see its latest comment), #6, #7, #10
+  (an older-erddapy CI job), #14.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.

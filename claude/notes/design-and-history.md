@@ -532,3 +532,25 @@ stride. The NcML `%` entity was already right (#64); a test now guards it.
 - **Not checked live:** ERDDAP rounds seconds to the millisecond before
   printing (`Calendar2.epochSecondsToLimitedIsoStringT`), so 59.9996 s prints
   as the next minute; we truncate. Only sub-millisecond times differ.
+
+## Categorize follows ERDDAP's defaults (#5)
+
+`/categorize/` (PR #95) is ported from `Erddap.doCategorize`. EH agreed
+(2026-10-09) to keep two defaults: all seven of `setup.xml`'s default
+`categoryAttributes` are always listed, with `_null` for a dataset that lacks
+one, as ERDDAP does; and a bare categorize URL is **not** redirected to add
+`page=1&itemsPerPage=1000` (ERDDAP redirects; clients get the same result,
+and search does not redirect either). `attribute` and `value` joined
+`ROUTE_PARAMS`, so a host's own path parameters must not use those names
+(`docs/hosting.md`).
+
+## Parity snapshots keep a source's own `calendar` (#71, #68)
+
+xarray writes `calendar "proleptic_gregorian"` on every datetime axis it
+saves, so a snapshot cannot tell an added calendar from a real one.
+`write_snapshot` marks a time axis whose source had none (`__no_calendar`),
+and `load_snapshot` drops the calendar only there. The six older snapshots
+were marked in place (their real info tables list no calendar); coastwatch's
+currents and chla really have `calendar "gregorian"`. `coordinates` is kept in
+snapshot encodings too. #71 first dropped every calendar, which was right for
+the old cases and hid the fix on #68's.

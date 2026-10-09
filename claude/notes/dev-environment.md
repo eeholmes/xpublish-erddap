@@ -77,6 +77,13 @@ worked; three things made it work:
   of README). The four branches then merged cleanly; before merging, the
   session trial-merged all of them in a scratch worktree and ran the full
   suite on the result, since no single PR's CI saw the combination.
+- **The live-server tests' server runs the main checkout's code** (the
+  venv's editable install), not the worktree's, unless `PYTHONPATH` is set
+  for the whole `pytest` run. On 2026-10-09 a trial merge showed a false 404
+  on a new route this way. `-p no:cacheprovider` breaks 23 tutorial tests
+  (they use `config.cache`); do not pass it.
+- **Give each agent its own scratch file names**: three agents sharing the
+  scratchpad overwrote each other's `pr.md` (2026-10-09, caught in time).
 
 ## Other limits of the hub
 
