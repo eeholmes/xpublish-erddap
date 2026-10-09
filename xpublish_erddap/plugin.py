@@ -454,11 +454,18 @@ ADVANCED_SEARCH = "/search/advanced.{ext}"
 CATEGORIZE = "/categorize/index.{ext}"
 CATEGORIZE_ATTRIBUTE = "/categorize/{attribute}/index.{ext}"
 CATEGORIZE_VALUE = "/categorize/{attribute}/{value}/index.{ext}"
+CONVERT = "/convert/{converter:path}"
 GRIDDAP = "/griddap/{target}"
 
 #: Path parameters of the routes above, plus the host's group path: any other
 #: path parameter names the dataset.
-ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path", "attribute", "value"}
+ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path", "attribute", "value", "converter"}
+
+#: ``Erddap.doConvert`` with ``convertersActive`` false: ``Message.DISABLED``
+#: for "convert", as a 404 (``sendResourceNotFoundError``). Interpolate is a
+#: future extension (#98); until then every converter is refused at once (#70).
+CONVERT_DISABLED = 'The "convert" system has been disabled on this ERDDAP.'
+
 
 
 def root_of(request: Request, route_path: str) -> str:
@@ -676,6 +683,11 @@ def add_erddap_routes(
     ) -> Response:
         """The datasets with one category value, by title (the dataset table)."""
         return categorize_datasets(request, attribute, value, ext, cat)
+
+    @route(CONVERT)
+    def convert(converter: str) -> Response:
+        """``convert/*``, as on an ERDDAP whose converters are switched off (#70)."""
+        raise HTTPException(404, CONVERT_DISABLED)
 
     @route(GRIDDAP)
     def griddap(
