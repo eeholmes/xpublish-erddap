@@ -59,6 +59,25 @@ most users run (#10).
 - **`curl -g`** for ERDDAP URLs with `[...]`: without it curl treats the
   brackets as its own globbing and sends nothing.
 
+## Several agents at once (2026-10-09, #63–#67)
+
+EH had four Sonnet agents do #63, #65, #66 and #67 in parallel, each in its
+own git worktree, with the session reviewing their PRs before merging. It
+worked; three things made it work:
+
+- **The venv's editable install points at the main checkout**, not a
+  worktree. In a worktree run tests with `PYTHONPATH=<worktree path>` and
+  check `xpublish_erddap.__file__` once. Some agents could not use `$PWD` in
+  commands (the tool guard refused it) and wrote the path out.
+- **The live-server tests and the R tests use fixed port 9000.** Parallel
+  runs collide, so every run that may start that server was wrapped in
+  `flock /tmp/claude-1000/xpe-port9000.lock ...`.
+- **Split shared files by passage** in the prompts (#63 owned the size-limit
+  text in README and `hosting.md`, #65 the rest of `hosting.md`, #66 the rest
+  of README). The four branches then merged cleanly; before merging, the
+  session trial-merged all of them in a scratch worktree and ran the full
+  suite on the result, since no single PR's CI saw the combination.
+
 ## Other limits of the hub
 
 - **Python 3.11.** CI tests 3.12–3.14; the package still allows 3.11.
