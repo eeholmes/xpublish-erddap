@@ -6,6 +6,7 @@ as a host that opens a store over the network would::
 
     python tests/benchmark_server_catalog.py              # N=200, 50 ms, reopening
     python tests/benchmark_server_catalog.py --n 1000 --cached
+    python tests/benchmark_server_catalog.py --check-s 0   # check all, every request
 
 ``--cached`` makes the provider keep the trees it opened (the delay is paid
 once per store); without it every call reopens. Each line is the median of
@@ -93,15 +94,24 @@ def main() -> None:
     parser.add_argument("--cached", action="store_true", help="provider keeps opened stores")
     parser.add_argument("--repeat", type=int, default=5)
     parser.add_argument("--concurrent", type=int, default=60, help="slow requests in flight")
+    parser.add_argument(
+        "--check-s",
+        type=float,
+        default=None,
+        help="ErddapPlugin(catalog_check_s=...); 0 shows what checking every dataset costs",
+    )
     args = parser.parse_args()
 
     provider = SlowProvider(n=args.n, delay=args.delay, cached=args.cached, opened={}, calls=[])
-    rest = xpublish.Rest({}, plugins={"slow": provider, "erddap": ErddapPlugin()})
+    plugin = ErddapPlugin() if args.check_s is None else ErddapPlugin(catalog_check_s=args.check_s)
+    rest = xpublish.Rest({}, plugins={"slow": provider, "erddap": plugin})
     client = TestClient(rest.app)
     mode = "cached" if args.cached else "reopening"
-    print(f"N={args.n}, {args.delay * 1000:g} ms provider, {mode}")
+    check = f"catalog_check_s={plugin.catalog_check_s:g}"
+    print(f"N={args.n}, {args.delay * 1000:g} ms provider, {mode}, {check}")
 
-    print(f"  cold  /erddap/griddap/index.csv         {timed(client, '/erddap/griddap/index.csv'):7.3f} s")
+    cold = timed(client, "/erddap/griddap/index.csv")
+    print(f"  cold  /erddap/griddap/index.csv         {cold:7.3f} s")
     last = f"store{args.n - 1}"
     urls = {
         "/erddap/griddap/index.csv": "/erddap/griddap/index.csv",
