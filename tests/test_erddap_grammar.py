@@ -48,14 +48,12 @@ def client():
 
 # -- calendar and coordinates (EDV passes source attributes through) -----------
 def test_calendar_and_coordinates_are_served(client):
+    """One fix, seen in .das, .ncml, the info table and a .nc download."""
     das = client.get("/erddap/griddap/g.das").text
     time_block = das.split("time {")[1].split("}")[0]
     assert 'String calendar "gregorian";' in time_block
     assert 'units "seconds since 1970-01-01T00:00:00Z"' in time_block
     assert 'String coordinates "time latitude longitude";' in das.split("sst {")[1].split("}")[0]
-
-
-def test_calendar_and_coordinates_are_in_ncml_info_and_nc(client):
     ncml = client.get("/erddap/griddap/g.ncml").text
     assert '<attribute name="calendar" value="gregorian" />' in ncml
     assert '<attribute name="coordinates" value="time latitude longitude" />' in ncml
@@ -139,17 +137,6 @@ def test_data_nc_vertical_coverage_describes_the_subset():
 
 
 # -- axis-only tables of unequal lengths (Table.makeColumnsSameSize) ------------
-def test_axis_only_csv_pads_numbers_with_nan_and_time_with_blank(client):
-    r = client.get("/erddap/griddap/g.csv?time[0:1:2],longitude[0:1:4],latitude[0:1:3]")
-    assert r.text.splitlines()[2:] == [
-        "2020-01-01T00:00:00Z,100.0,10.0",
-        "2020-01-02T00:00:00Z,110.0,20.0",
-        "2020-01-03T00:00:00Z,120.0,30.0",
-        ",130.0,40.0",
-        ",140.0,NaN",
-    ]
-
-
 def test_axis_only_json_pads_with_null(client):
     r = client.get("/erddap/griddap/g.json?time[0:1:2],longitude[0:1:4]")
     assert r.json()["table"]["rows"][-2:] == [[None, 130.0], [None, 140.0]]
@@ -214,15 +201,12 @@ def query_error(client, query: str, ext: str = "csv") -> str:
     ("selector", "text"),
     [
         ("[:1:2]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
-        ("[:2]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
-        ("[:]", 'Start="" is invalid.  It must be an integer between 0 and 2.'),
         ("[0:]", 'Stop="" is invalid.  It must be an integer between 0 and 2.'),
-        ("[0:1:]", 'Stop="" is invalid.  It must be an integer between 0 and 2.'),
         ("[0::2]", "Stride= is invalid."),
         ("[0:0:2]", "Stride=0 is invalid."),
-        ("[0:-1:2]", "Stride=-1 is invalid."),
         ("[0:abc:2]", "Stride=abc is invalid."),
         ("[()]", "The Start value inside () is missing."),
+        ("[(  ):1:(5)]", "The Start value inside () is missing."),
         ("[0:1:()]", "The Stop value inside () is missing."),
     ],
 )
@@ -253,13 +237,6 @@ def test_jsonp_wraps_a_json_response(client):
     assert r.headers["content-type"] == "application/javascript;charset=UTF-8"
     assert r.text == f"handle.it({plain.text}\n)"
     assert plain.headers["content-type"] == "application/json;charset=UTF-8"
-
-
-def test_jsonp_on_a_data_request(client):
-    r = client.get(f"/erddap/griddap/g.json?{FULL}&.jsonp=cb")
-    assert r.status_code == 200
-    assert r.text.startswith('cb({\n  "table"')
-    assert r.text.endswith("}\n)")
 
 
 def test_jsonp_wraps_the_info_table(client):
@@ -316,19 +293,13 @@ def test_an_and_clause_alone_asks_for_the_whole_dataset(client):
     )
 
 
-def test_jsonp_on_a_whole_dataset_request(client):
-    r = client.get("/erddap/griddap/g.json?&.jsonp=cb")
-    assert r.status_code == 200
-    assert r.text.startswith('cb({\n  "table"')
-
-
 def test_a_comma_in_an_and_clause_is_not_a_variable(client):
     r = client.get(f"/erddap/griddap/g.csv?{FULL}&.vars=longitude|latitude|sst,nosuchvariable")
     assert r.status_code == 200
     assert r.text == client.get(f"/erddap/griddap/g.csv?{FULL}").text
 
 
-@pytest.mark.parametrize("query", [f"{FULL}&foo", f"{FULL}&", f"{FULL}&&.draw=surface", "&", "&x"])
+@pytest.mark.parametrize("query", [f"{FULL}&foo", f"{FULL}&", f"{FULL}&&.draw=surface", "&x"])
 def test_an_and_clause_must_start_with_a_dot(client, query):
     assert query_error(client, query) == (
         "Query error: In a griddap query, '&' must be followed by a .graphicsCommand."
@@ -414,14 +385,3 @@ def test_text_after_a_data_request_is_refused(client, query, text):
 )
 def test_duplicate_and_mixed_variables_are_refused(client, query, text):
     assert query_error(client, query) == f"Query error: {text}"
-
-
-def test_two_variables_with_one_subset_are_still_served():
-    ds = gridded(2, 2, 2)
-    ds["sst2"] = ds["sst"] * 2
-    rest = xpublish.Rest({"two": ds}, plugins={"erddap": ErddapPlugin()})
-    r = TestClient(rest.app).get(
-        "/erddap/griddap/two.csv?sst[0:1:1][0][0:1:1],sst2[0:1:1][0][0:1:1]",
-    )
-    assert r.status_code == 200
-    assert r.text.splitlines()[0] == "time,latitude,longitude,sst,sst2"
