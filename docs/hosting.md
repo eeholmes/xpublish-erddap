@@ -54,8 +54,9 @@ That is long, and it includes the ref, so a client's datasetID would change if
 the same data were served from another branch or tag. We kept it because it is
 unambiguous and needs no knowledge of the host. "Path parameters" means every
 path parameter of the matched route except the plugin's own (`ext`,
-`erddap_id`, `target`) and the group (`group_path`), so it depends on what
-your parameters are called.
+`erddap_id`, `target`, `attribute`, `value`) and the group (`group_path`), so
+it depends on what your parameters are called. A host's own path parameters
+must not use those names, or they are dropped from the dataset name.
 
 **To change it**, pass a function. It receives those parameters as a dict and
 the group path (`""` for a store's root), and returns a name:
