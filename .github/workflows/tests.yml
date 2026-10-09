@@ -139,7 +139,7 @@ jobs:
           python -c "import erddapy; assert erddapy.__version__ == '3.1.0', erddapy.__version__"
 
       - name: Tests that use erddapy
-        run: python -m pytest -rxs $(grep -rl erddapy tests --include='test_*.py')
+        run: python -m pytest -rxs $(grep -rlE 'import erddapy|importorskip\("erddapy"\)' tests --include='test_*.py')
 
   rerddap:
     # The R client is a first-class target for this package, so it is tested
