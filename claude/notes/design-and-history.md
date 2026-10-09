@@ -554,3 +554,19 @@ were marked in place (their real info tables list no calendar); coastwatch's
 currents and chla really have `calendar "gregorian"`. `coordinates` is kept in
 snapshot encodings too. #71 first dropped every calendar, which was right for
 the old cases and hid the fix on #68's.
+
+## `convert/*` is refused as "disabled" (#70)
+
+EH (2026-10-09, on #70): interpolate is in scope but a future project (#98);
+for now answer with an ERDDAP error. Every `convert/*` path gets what
+`Erddap.doConvert` sends when `convertersActive` is false: a 404 with
+`Message.DISABLED` for "convert" (`The "convert" system has been disabled on
+this ERDDAP.`). That is a real ERDDAP's answer, and tells a user why, where
+FastAPI's JSON 404 did not.
+
+**It does not make `rxtracto(interp=...)` fast.** rerddapXtracto 1.2.3's
+`erddap_interp` retries any status but 200 eleven times, sleeping
+0.5 s x try (about 33 s), then prints "error while trying to do the extract"
+and returns NULL. Its only early exit, `check_interp`, refuses servers whose
+`/version` is below 2.10, and we report 2.23 because other clients need it.
+No status code avoids the wait; only serving interpolate (#98) does.
