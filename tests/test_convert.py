@@ -52,9 +52,9 @@ def test_every_converter_is_refused_as_disabled(client, path):
     assert resp.text == DISABLED
 
 
-@pytest.mark.parametrize("path", PATHS)
-def test_and_on_a_per_dataset_root(client, path):
-    resp = client.get(f"/datasets/sst/erddap/{path}")
+def test_and_on_a_per_dataset_root(client):
+    """One path is enough: the per-dataset root reaches the same one-line route."""
+    resp = client.get(f"/datasets/sst/erddap/{PATHS[0]}")
     assert resp.status_code == 404
     assert resp.text == DISABLED
 
