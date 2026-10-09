@@ -1,0 +1,86 @@
+{
+  "server": "https://coastwatch.noaa.gov/erddap",
+  "dataset_id": "noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol",
+  "erddap_version": "ERDDAP_version=2.31",
+  "captured": "2026-10-09",
+  "requests": [
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csvp?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv0?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.json?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.nc?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
+      "file": "10.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.nc?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
+      "file": "11.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv?sst[(10)][(5)][(38)][(-74)]",
+      "file": "12.error",
+      "status": 404,
+      "content_type": "text/plain;charset=UTF-8"
+    }
+  ]
+}

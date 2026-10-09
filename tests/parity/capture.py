@@ -52,6 +52,8 @@ HTTP_OK = 200
 #: ERDDAP's answer to a request, so it is retried rather than recorded.
 HTTP_BUSY = 503
 RETRIES = 4
+#: ERDDAP's names for the unsigned attribute types OPeNDAP cannot carry.
+UNSIGNED = {"ubyte": "uint8", "ushort": "uint16", "uint": "uint32", "ulong": "uint64"}
 
 
 def get(client: httpx.Client, url: str) -> httpx.Response:
@@ -99,9 +101,21 @@ def repair_text(case: Case, client: httpx.Client, ds: xr.Dataset) -> None:
     rows = get(client, url).json()["table"]["rows"]
     real = {(row[1], row[2]): row[4] for row in rows if row[0] == "attribute"}
     owners = [("NC_GLOBAL", ds.attrs)] + [(str(n), v.attrs) for n, v in ds.variables.items()]
+    types = {(row[1], row[2]): row[3] for row in rows if row[0] == "attribute"}
     for owner, attrs in owners:
-        for key, value in attrs.items():
-            if not isinstance(value, str) or (owner, key) not in real:
+        for key, value in list(attrs.items()):
+            if key == "history" and (owner, key) not in real:
+                # ERDDAP adds a ``history`` to its DAS for each request; the
+                # dataset itself has none (its info table lists none)
+                del attrs[key]
+                continue
+            if not isinstance(value, str):
+                if types.get((owner, key)) in UNSIGNED:
+                    # OPeNDAP has no unsigned 32-bit type: ``_ChunkSizes``
+                    # arrives as int32 although the dataset has uint
+                    attrs[key] = np.asarray(value).astype(UNSIGNED[types[owner, key]])
+                continue
+            if (owner, key) not in real:
                 continue
             if key == "history" or "�" in value:
                 attrs[key] = real[(owner, key)]

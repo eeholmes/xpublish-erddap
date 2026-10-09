@@ -25,14 +25,25 @@ _REQUEST_HISTORY = re.compile(
 )
 
 
-def normalise_text(text: str, server: str) -> str:
-    """Strip per-request history lines and replace the server URL."""
+def normalise_text(text: str, server: str | tuple[str, ...]) -> str:
+    """Strip per-request history lines and replace the server URL.
+
+    ``server`` may be several roots. Our side passes its own and the real
+    server's: a dataset attribute that names the real server (``infoUrl``,
+    ``publisher_url``, a license's citation link) is the dataset's own value,
+    which we serve as it is, and the real side has that URL replaced too.
+    """
     text = _REQUEST_HISTORY.sub("", text)
-    root = server.rstrip("/")
-    text = text.replace(root, "{SERVER}")
-    # ERDDAP's NcML ``location`` drops the ``/erddap`` path segment
-    host_root = root.rsplit("/erddap", 1)[0]
-    return text.replace(host_root, "{SERVER}")
+    # A dataset with no ``history`` of its own is given one by ERDDAP that
+    # holds only the request lines; nothing is left of it once they are gone.
+    text = re.sub(r'^ *String history "";\n', "", text, flags=re.MULTILINE)
+    text = re.sub(r'^ *<attribute name="history" value="" />\n', "", text, flags=re.MULTILINE)
+    for one in [server] if isinstance(server, str) else server:
+        root = one.rstrip("/")
+        text = text.replace(root, "{SERVER}")
+        # ERDDAP's NcML ``location`` drops the ``/erddap`` path segment
+        text = text.replace(root.rsplit("/erddap", 1)[0], "{SERVER}")
+    return text
 
 
 def media_type(content_type: str | None) -> str:
@@ -40,7 +51,7 @@ def media_type(content_type: str | None) -> str:
     return (content_type or "").split(";", 1)[0].strip()
 
 
-def comparable(body: bytes, ext: str, server: str):
+def comparable(body: bytes, ext: str, server: str | tuple[str, ...]):
     """Turn a response body into the value we compare, by file type."""
     if ext == "nc":
         return _netcdf_summary(body, server)
@@ -64,7 +75,7 @@ def ext_of(path: str) -> str:
     return path.split("?", 1)[0].rsplit(".", 1)[-1]
 
 
-def _netcdf_summary(body: bytes, server: str) -> dict:
+def _netcdf_summary(body: bytes, server: str | tuple[str, ...]) -> dict:
     """What a client sees in a netCDF file, raw (no CF decoding)."""
     with xr.open_dataset(io.BytesIO(body), decode_cf=False) as ds:
         variables = {}
@@ -82,11 +93,13 @@ def _netcdf_summary(body: bytes, server: str) -> dict:
         }
 
 
-def _attrs(attrs: dict, server: str) -> dict:
+def _attrs(attrs: dict, server: str | tuple[str, ...]) -> dict:
     out = {}
     for key, value in attrs.items():
         if isinstance(value, str):
             out[key] = normalise_text(value, server)
+            if key == "history" and not out[key]:
+                del out[key]  # only ERDDAP's request lines (see normalise_text)
         else:
             arr = np.asarray(value)
             out[key] = [str(arr.dtype), _nan_to_none(arr.tolist())]
@@ -130,7 +143,7 @@ def _table(body: str, ext: str) -> tuple[list[str], list[list[str]]]:
     return rows[0], rows[1:]
 
 
-def dataset_table(body: bytes, ext: str, dataset_id: str, server: str) -> dict:
+def dataset_table(body: bytes, ext: str, dataset_id: str, server: str | tuple[str, ...]) -> dict:
     """What we compare of ERDDAP's dataset table (search, griddap/index, ...).
 
     The header without the configuration columns, and the row for

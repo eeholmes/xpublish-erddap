@@ -35,12 +35,40 @@ OUR_SERVER = "http://testserver/erddap"
 
 #: Known differences: (regex, reason). A regex is searched in
 #: "<datasetID> <request path>"; every matching reason applies.
-KNOWN: list[tuple[str, str]] = []
+KNOWN: list[tuple[str, str]] = [
+    # From #68's cases. Every one is an item on #71 (small differences from
+    # ERDDAP's output), which is fixing them; whichever branch merges second
+    # removes the entries that pass.
+    (
+        r"^(noaacwBLENDEDNRTcurrentsDaily|noaacwNPPVIIRSSQchlaMonthly) "
+        r"(griddap/\S+\.(das|ncml)|info/\S+/index\.(csv|json))$",
+        "#71: the `calendar` (time) attribute is dropped; xarray moves it to .encoding",
+    ),
+    (
+        r"^noaacwBLENDEDNRTcurrentsDaily (griddap/\S+\.(das|ncml)|info/\S+/index\.(csv|json))$",
+        "#71: the `coordinates` variable attribute is dropped; xarray moves it to .encoding",
+    ),
+    (
+        r"^(noaacwBLENDEDNRTcurrentsDaily|noaacwNPPVIIRSSQchlaMonthly) griddap/\S+\.nc\?",
+        "#71: `calendar` (and `coordinates` on the data variables) dropped from the .nc",
+    ),
+    (
+        r"^(noaacwNPPVIIRSSQchlaMonthly|noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol) "
+        r"info/\S+/index\.(csv|json)$",
+        "#71: a one-value axis is `nValues=1, onlyValue=0.0` in ERDDAP's info, `nValues=1` here",
+    ),
+    (
+        r"^(noaacwNPPVIIRSSQchlaMonthly|noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol) "
+        r"griddap/\S+\.csv\?\w+\[\S+,\w+\[",
+        "#71: axis-only csv with unequal lengths: ERDDAP pads numeric columns with NaN, "
+        "we leave them blank",
+    ),
+]
 
 #: The same, for media-type differences.
 KNOWN_MEDIA: list[tuple[str, str]] = [
     (
-        r"^(etopo5_EDDGridCopy|jplMURSST41|dhw_5km) griddap/\S*\.das$",
+        r"^(etopo5_EDDGridCopy|jplMURSST41|dhw_5km|noaac\w+) griddap/\S*\.das$",
         "ERDDAP 2.29 and 2.31 serve .das as text/csv; 2.22 says text/plain. Not copied.",
     ),
 ]
@@ -91,7 +119,10 @@ def test_matches_real_erddap(slug, manifest, entry):
         real = (GOLDEN / slug / entry["file"]).read_bytes() if "file" in entry else b""
         if real.startswith(b"Error {"):
             server = manifest["server"]
-            assert normalise_text(ours.text, OUR_SERVER) == normalise_text(real.decode(), server)
+            assert normalise_text(ours.text, (OUR_SERVER, server)) == normalise_text(
+                real.decode(),
+                server,
+            )
         return
 
     assert ours.status_code == HTTP_OK, ours.text[:500]
@@ -104,14 +135,14 @@ def test_matches_real_erddap(slug, manifest, entry):
             ext, server = ext_of(entry["path"]), manifest["server"]
             real = (GOLDEN / slug / entry["file"]).read_bytes()
             dataset_id = manifest["dataset_id"]
-            assert dataset_table(ours.content, ext, dataset_id, OUR_SERVER) == (
+            assert dataset_table(ours.content, ext, dataset_id, (OUR_SERVER, server)) == (
                 dataset_table(real, ext, dataset_id, server)
             )
         return
     ext = ext_of(entry["path"])
     server = manifest["server"]
     real = (GOLDEN / slug / entry["file"]).read_bytes()
-    assert comparable(ours.content, ext, OUR_SERVER) == comparable(real, ext, server)
+    assert comparable(ours.content, ext, (OUR_SERVER, server)) == comparable(real, ext, server)
 
 
 @pytest.mark.parametrize(("slug", "manifest", "entry"), _params(media=True))

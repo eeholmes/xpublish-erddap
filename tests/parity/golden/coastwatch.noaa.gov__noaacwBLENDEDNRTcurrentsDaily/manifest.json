@@ -1,0 +1,68 @@
+{
+  "server": "https://coastwatch.noaa.gov/erddap",
+  "dataset_id": "noaacwBLENDEDNRTcurrentsDaily",
+  "erddap_version": "ERDDAP_version=2.31",
+  "captured": "2026-10-09",
+  "requests": [
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.ncml",
+      "file": "02.ncml",
+      "status": 200,
+      "content_type": "application/xml;charset=UTF-8"
+    },
+    {
+      "path": "info/noaacwBLENDEDNRTcurrentsDaily/index.csv",
+      "file": "03.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "info/noaacwBLENDEDNRTcurrentsDaily/index.json",
+      "file": "04.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.csv?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "05.csv",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.csvp?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "06.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.csv0?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "07.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.json?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "08.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/noaacwBLENDEDNRTcurrentsDaily.nc?u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)],v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+      "file": "09.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    }
+  ]
+}

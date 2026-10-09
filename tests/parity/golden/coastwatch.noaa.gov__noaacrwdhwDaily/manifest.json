@@ -1,0 +1,20 @@
+{
+  "server": "https://coastwatch.noaa.gov/erddap",
+  "dataset_id": "noaacrwdhwDaily",
+  "erddap_version": "ERDDAP_version=2.31",
+  "captured": "2026-10-09",
+  "requests": [
+    {
+      "path": "griddap/noaacrwdhwDaily.dds",
+      "file": "00.dds",
+      "status": 200,
+      "content_type": "text/plain;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/noaacrwdhwDaily.das",
+      "file": "01.das",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    }
+  ]
+}

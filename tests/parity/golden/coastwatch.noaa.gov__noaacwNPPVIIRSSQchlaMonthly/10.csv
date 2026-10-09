@@ -1,0 +1,6 @@
+latitude,time,altitude
+degrees_north,UTC,m
+89.75625,2012-01-02T12:00:00Z,0.0
+89.71875,2012-02-01T12:00:00Z,NaN
+89.68124999999999,,NaN
+89.64375,,NaN
