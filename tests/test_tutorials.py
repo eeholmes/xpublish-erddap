@@ -147,6 +147,38 @@ def test_erddapy_griddap_example_download(etopo):
     )
 
 
+def test_erddapy_griddap_page_exactly(etopo):
+    """The docs page end to end: strides of 10, reset by griddap_initialize(), stride 1.
+
+    The page sets both steps to 10 and downloads (217 x 432), then calls
+    ``griddap_initialize()`` again, which puts the steps back to the string
+    ``"1"``, and downloads the np.float64 bounding box. erddap.ioos.us gives
+    ``ROSE.shape == (727, 594)`` for it (#52).
+    """
+    etopo.constraints["latitude_step"] = 10
+    etopo.constraints["longitude_step"] = 10
+    assert etopo.to_xarray().ROSE.shape == (217, 432)
+
+    etopo.griddap_initialize()
+    assert etopo.constraints["latitude_step"] == "1"
+    assert etopo.constraints["longitude_step"] == "1"
+
+    etopo.constraints.update(
+        {
+            "longitude>=": np.float64(290.908),
+            "longitude<=": np.float64(340.365),
+            "latitude>=": np.float64(-60.533),
+            "latitude<=": np.float64(0.033),
+        },
+    )
+    ds = etopo.to_xarray()
+    assert ds.ROSE.shape == (727, 594)
+    np.testing.assert_allclose(
+        ds.ROSE.values,
+        rose(ds.latitude.values[:, None], ds.longitude.values[None, :]),
+    )
+
+
 @pytest.mark.xfail(
     reason="response='opendap' needs .dods, which is not served yet (#2)",
     strict=True,

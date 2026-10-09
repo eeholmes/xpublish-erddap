@@ -158,11 +158,88 @@ def etopo5_eddgridcopy() -> xr.Dataset:
     )
 
 
+def vert_value(time, vert, lat, lon):
+    """Values for the small datasets with a vertical axis (and for their R checks)."""
+    day = time.astype("datetime64[D]").astype("int64") % 365
+    return (
+        15.0
+        + 0.1 * np.asarray(lat, "float64")
+        - 0.01 * np.asarray(lon, "float64")
+        - 0.05 * np.asarray(vert, "float64")
+        + day / 100.0
+    )
+
+
+def _vertical_dataset(var: str, vname: str, vert, latlon: tuple, vattrs: dict) -> xr.Dataset:
+    """A small 4-D dataset: time, one vertical axis, latitude, longitude."""
+    lat, lon = latlon
+    time = np.arange("2018-01-01", "2018-01-06", dtype="datetime64[D]").astype("datetime64[ns]")
+    vert = np.asarray(vert, "float64")
+    tt, vv, yy, xx = np.meshgrid(time, vert, lat, lon, indexing="ij")
+    return xr.Dataset(
+        {
+            var: (
+                ("time", vname, "latitude", "longitude"),
+                vert_value(tt, vv, yy, xx),
+                {"units": "degree_C", "long_name": var},
+            ),
+        },
+        coords={
+            "time": ("time", time, {"axis": "T"}),
+            vname: (vname, vert, vattrs),
+            "latitude": ("latitude", lat, {"units": "degrees_north", "axis": "Y"}),
+            "longitude": ("longitude", lon, {"units": "degrees_east", "axis": "X"}),
+        },
+        attrs={
+            "title": f"{var} with a {vname} axis (test stand-in)",
+            "summary": "Small formula dataset for rerddap's vertical axes.",
+            "institution": "xpublish-erddap tests",
+            "license": "[standard]",
+        },
+    )
+
+
+def viirs_like() -> xr.Dataset:
+    """Like CoastWatch's VIIRS: latitude runs north to south, one ``altitude``."""
+    return _vertical_dataset(
+        "chlor_a",
+        "altitude",
+        [0.0],
+        (np.arange(30.0, 20.0 - 0.25, -0.25), np.arange(200.0, 210.0 + 0.25, 0.25)),
+        {"units": "m", "positive": "up", "axis": "Z"},
+    )
+
+
+def soda_like() -> xr.Dataset:
+    """Like SODA: a ``depth`` axis, requested at ``depth=70.02`` in plotdap's vignette."""
+    return _vertical_dataset(
+        "temp",
+        "depth",
+        [5.01, 15.07, 25.28, 70.02],
+        (np.arange(-10.0, 10.0 + 0.5, 0.5), np.arange(100.0, 110.0 + 0.5, 0.5)),
+        {"units": "m", "positive": "down", "axis": "Z"},
+    )
+
+
+def oisst_like() -> xr.Dataset:
+    """Like OISST: a ``zlev`` axis holding a single level."""
+    return _vertical_dataset(
+        "sst",
+        "zlev",
+        [0.0],
+        (np.arange(-10.0, 10.0 + 0.5, 0.5), np.arange(100.0, 110.0 + 0.5, 0.5)),
+        {"units": "m", "positive": "down", "axis": "Z"},
+    )
+
+
 def tutorial_datasets() -> dict[str, xr.Dataset]:
     """Every stand-in, keyed by its real ERDDAP datasetID."""
     return {
         "CRW_sst_v1_0_monthly": crw_sst_v1_0_monthly(),
         "etopo5_EDDGridCopy": etopo5_eddgridcopy(),
+        "viirs_like": viirs_like(),
+        "soda_like": soda_like(),
+        "oisst_like": oisst_like(),
     }
 
 
