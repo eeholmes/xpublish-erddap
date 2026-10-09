@@ -243,3 +243,52 @@ def test_a_stride_is_rounded_as_string2_parseint_does(client, stride, rows):
     r = client.get(f"/erddap/griddap/g.csv?time[0:{stride}:2]")
     assert r.status_code == 200
     assert len(r.text.splitlines()) == 2 + rows
+
+
+# &.jsonp= (Erddap.doGet, TableWriterJson, String2.isJsonpNameSafe)
+def test_jsonp_wraps_a_json_response(client):
+    plain = client.get("/erddap/griddap/g.json?time[0:1:1]")
+    r = client.get("/erddap/griddap/g.json?time[0:1:1]&.jsonp=handle.it")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/javascript;charset=UTF-8"
+    assert r.text == f"handle.it({plain.text}\n)"
+    assert plain.headers["content-type"] == "application/json;charset=UTF-8"
+
+
+def test_jsonp_on_a_data_request(client):
+    r = client.get(f"/erddap/griddap/g.json?{FULL}&.jsonp=cb")
+    assert r.status_code == 200
+    assert r.text.startswith('cb({\n  "table"')
+    assert r.text.endswith("}\n)")
+
+
+def test_jsonp_wraps_the_info_table(client):
+    r = client.get("/erddap/info/g/index.json?&.jsonp=cb")
+    assert r.headers["content-type"] == "application/javascript;charset=UTF-8"
+    assert r.text.startswith('cb({\n  "table"')
+    assert r.text.endswith("}\n)")
+    assert client.get("/erddap/info/g/index.csv?&.jsonp=cb").text.startswith("Row Type,")
+
+
+def test_jsonp_is_for_json_only(client):
+    for ext in ("csv", "csvp", "nc"):
+        r = client.get(f"/erddap/griddap/g.{ext}?time[0:1:1]&.jsonp=cb")
+        assert r.status_code == 200
+        assert not r.content.startswith(b"cb(")
+
+
+@pytest.mark.parametrize("name", ["1abc", "bad-name", "a.", ".a", "a..b", "a b", "x" * 256])
+def test_a_bad_jsonp_name_is_refused(client, name):
+    for url in (
+        f"/erddap/griddap/g.json?time[0:1:1]&.jsonp={name}",
+        f"/erddap/info/g/index.json?&.jsonp={name}",
+    ):
+        r = client.get(url)
+        assert r.status_code == 400, url
+        assert query_message(r).startswith("Query error: That jsonp functionName isn't allowed.")
+        assert name not in query_message(r)  # ERDDAP does not echo a possibly malicious name
+
+
+def test_jsonp_head_says_javascript(client):
+    r = client.head("/erddap/griddap/g.json?time[0:1:1]&.jsonp=cb")
+    assert r.headers["content-type"] == "application/javascript;charset=UTF-8"

@@ -7,7 +7,8 @@ as a space), and ``String2.parseDouble`` returns NaN instead of raising. Python'
 parsers differ on each point, so the methods are ported here, from
 github.com/ERDDAP/erddap ``main`` (2026-10-08):
 
-- ``com.cohort.util.String2.parseDouble``, ``String2.parseInt``
+- ``com.cohort.util.String2.parseDouble``, ``String2.parseInt``,
+  ``String2.isJsonpNameSafe``
 - ``com.cohort.util.Calendar2.parseISODateTime``, ``parseN``,
   ``isoStringToMillis``, ``isIsoDate``
 
@@ -19,7 +20,13 @@ from __future__ import annotations
 import math
 import re
 
-__all__ = ["is_iso_date", "iso_to_epoch_seconds", "parse_double", "parse_int"]
+__all__ = [
+    "is_iso_date",
+    "is_jsonp_name_safe",
+    "iso_to_epoch_seconds",
+    "parse_double",
+    "parse_int",
+]
 
 #: ``Integer.MAX_VALUE``, which ``String2.parseInt`` returns for "trouble".
 INT_MAX = 2**31 - 1
@@ -89,6 +96,32 @@ def parse_int(text: str) -> int:
     # Math2.roundToInt: rounds half up; out of range is trouble.
     rounded = math.floor(value + 0.5)
     return rounded if -(2**31) <= rounded < INT_MAX else INT_MAX
+
+
+def _is_letter(ch: str) -> bool:
+    """``String2.isLetter``: A-Z, a-z and the ISO 8859-1 letters."""
+    return (
+        "A" <= ch <= "Z"
+        or "a" <= ch <= "z"
+        or ("\u00c0" <= ch <= "\u00ff" and ch not in "\u00d7\u00f7")
+    )
+
+
+def is_jsonp_name_safe(name: str) -> bool:
+    """``String2.isJsonpNameSafe``: dotted words of letters, ``_`` and digits.
+
+    Each word starts with a letter or ``_``; there is at least one, none is
+    empty (so no leading, trailing or doubled ``.``), and the name is at most
+    255 characters.
+    """
+    if not name or len(name) > 255 or name.endswith("."):  # noqa: PLR2004
+        return False
+    for word in name.split("."):
+        if not word or not (_is_letter(word[0]) or word[0] == "_"):
+            return False
+        if not all(_is_letter(c) or "0" <= c <= "9" or c == "_" for c in word[1:]):
+            return False
+    return True
 
 
 def strict_int(text: str) -> int | None:

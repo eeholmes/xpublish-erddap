@@ -31,7 +31,9 @@ __all__ = [
     "DimSelection",
     "NoMatchError",
     "ParsedQuery",
+    "jsonp_name",
     "parse_griddap_query",
+    "split_amp",
     "split_selectors",
 ]
 
@@ -383,6 +385,55 @@ def parse_selector(
             raise ConstraintError(msg)
         start, stop = stop, start
     return DimSelection(start, stop, stride)
+
+
+#: ``Message.ERROR_JSONP_FUNCTION_NAME``, which does not name the function.
+_JSONP_NAME = (
+    "Query error: That jsonp functionName isn't allowed. The first character must be an "
+    'ISO 8859-1 letter or "_".  Each optional subsequent character must be an ISO 8859-1 '
+    'letter, "_", a digit, or ".".'
+)
+
+
+def split_amp(query: str) -> list[str]:
+    r"""``Table.getDapQueryParts``: a query's ``&``-separated parts.
+
+    Splits an already percent-decoded query at each ``&`` outside double
+    quotes (``\`` escapes the next character). At least one part: the first
+    is the variables and constraints (``""`` if none), the rest are
+    ``&``-clauses.
+    """
+    text = query + "&"  # the last one triggers the final part
+    parts, start, in_quotes, po = [], 0, False, 0
+    while po < len(text):
+        ch = text[po]
+        if ch == "\\":
+            po += 1
+        elif ch == '"':
+            in_quotes = not in_quotes
+        elif ch == "&" and not in_quotes:
+            parts.append(text[start:po])
+            start = po + 1
+        po += 1
+    if in_quotes:
+        msg = "Query error: A closing doublequote is missing."
+        raise ConstraintError(msg)
+    return parts
+
+
+def jsonp_name(parts: list[str]) -> str | None:
+    """The function name of a ``.jsonp=`` clause, or None; refuses an unsafe name.
+
+    ``EDStatic.getJsonpFromQuery`` and ``Erddap.doGet``: the first part that
+    starts with ``.jsonp=``, checked with ``String2.isJsonpNameSafe``.
+    """
+    for part in parts:
+        if part.startswith(".jsonp="):
+            name = part[len(".jsonp=") :]
+            if not javaparse.is_jsonp_name_safe(name):
+                raise ConstraintError(_JSONP_NAME)
+            return name
+    return None
 
 
 def _parse_axis_request(
