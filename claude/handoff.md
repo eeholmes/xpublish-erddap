@@ -28,7 +28,8 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
-  account, running `main` at `bbe53e0` (redeployed 2026-10-08). 12 stores,
+  account, running `main` at `ba31ab6` (redeployed 2026-10-09, after #69;
+  everything on `main`, `.dods` included, is now on the server). 12 stores,
   22 datasets in the server-wide root, plus one root per store at
   `/datasets/{id}/erddap`. Hackweek collaborators use it. **Tear it down on
   2026-11-13** with `deploy/aws/teardown.sh`, then revoke the Arraylake key
@@ -36,11 +37,8 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   Since #59 it serves ERDDAP's axis names (`latitude`, `longitude`; the
   decadal forecasts' date-valued `lead` is `time`). Redeploying needs EH's
   `aws login --remote` (profile `litellm-poc`, which `greenfield` sources).
-  **Not redeployed since `bbe53e0`**: #60–#67, #5, #68, #71 and #2 (`.dods`)
-  are on `main` but not on the server. `deploy/server.py` already sets `max_response_mb=500`, the new
-  default, and none of the 12 stores is known to use a model calendar or a
-  lead-time axis, so little is expected to change; redeploy before relying
-  on it.
+  Checks after the redeploy: `check_clients.py` 0 unexpected failures,
+  `check_rerddap.R` all ok, collaborator kit 10/10 Python, 7/7 R.
 - **Collaborator test kit, local only, deliberately not in git:**
   `collaborator-test/` on this hub (hidden by `.git/info/exclude`); EH shares
   it by Slack. Updated for #59's names and #57's 404 on 2026-10-08 and
@@ -70,9 +68,9 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   hub); min-deps one extra skip (erddapy's xarray engine cannot load under the
   lowest xarray) and now tests `fastapi` 0.115; Windows skips the live-server
   tests. The `rerddap` job has plotdap since #67, and every R check prints
-  `ok -`. **Since #2 (2026-10-09): 911 passed, 43 skipped, 9 xfailed** on
-  Linux/macOS; Windows 887/67/9; min-deps 910/44/9; `erddapy-3-1` 170
-  passed, 1 xfailed. The
+  `ok -`. **Since #69 (2026-10-09): 922 passed, 43 skipped, 9 xfailed** on
+  Linux/macOS; Windows 898/67/9; min-deps 921/44/9; `erddapy-3-1` 171
+  passed (the "170 + 1 xfailed" written here before was wrong). The
   skips are mostly parity media-type checks on error responses, expected; the
   xfails are strict known differences (`KNOWN_MEDIA`: ERDDAP 2.29/2.31 serve
   `.das` as `text/csv`); `KNOWN` (content) holds only dhw_5km's `.dods`
@@ -120,7 +118,7 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   attributes with `_null`, no redirect for a bare URL). Later on
   2026-10-09: #70 (PR #101: every `convert/*` answers ERDDAP's "convert
   system disabled" 404; `rxtracto(interp=...)` still retries ~33 s, only #98
-  fixes that) and #7 (PR #100, README). **Left of #68–#72:** #69 (Opus), #72
+  fixes that) and #7 (PR #100, README). #69 shipped late 2026-10-09 (PR #108, below). **Left of #68–#72:** #72
   (EH: wait until the repo is in xpublish-community, then use the org's
   Codecov). The ordered table is
   the last-but-one comment on #50; method and what was found fine:
@@ -217,10 +215,16 @@ run the R tests: `notes/dev-environment.md`.
   (EH's choice: 1.1.1 does not import in a new 3.12 venv), ERDDAP's
   `grid.grid`/`grid.axis` names, byte-identical to ERDDAP on every parity
   case; goldens recaptured 2026-10-09. Details: `design-and-history.md`.
+- **#69 shipped 2026-10-09 (PR #108, closed):** the server-wide root opens
+  only the requested dataset's source for `griddap`/`info`, and checks every
+  source for listings at most every `catalog_check_s` (10 s; EH: fine,
+  commits are not frequent), 16 at once (`catalog_workers`). Its state lives
+  with the router, not cachey (1 MB default evicted it; not thread-safe).
+  N=200, 50 ms provider: 10.6 s -> 0.02-0.06 s. Benchmark
+  `tests/benchmark_server_catalog.py`; details in `design-and-history.md`.
 - **Next, as EH planned it (2026-10-09), before the move to
-  xpublish-community:** #69 (Opus), started in a fresh session. Also before
-  the move: redeploy the test server (it lacks `.dods`), re-share the
-  collaborator kit. Possibly, after the move and with EH's yes: an upstream
+  xpublish-community:** re-share the collaborator kit (it passes against the
+  redeployed server; the copy collaborators have still uses `lat`/`lon`). Possibly, after the move and with EH's yes: an upstream
   issue that xpublish-opendap 0.2.0 likely fails to import in a fresh env
   (its `opendap-protocol<1.2.0` needs `pkg_resources`; not run).
 - **`time_precision`:** not honoured, EH's decision (2026-10-09, "no for
@@ -234,7 +238,7 @@ run the R tests: `notes/dev-environment.md`.
   #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
-- **Other open issues:** #37, #69, #72, #105 (idea only); `future`: #6,
+- **Other open issues:** #37, #72, #105 (idea only); `future`: #6,
   #53, #98, #99.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.

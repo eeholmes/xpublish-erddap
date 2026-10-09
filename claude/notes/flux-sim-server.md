@@ -227,3 +227,15 @@ types without 500s in `.nc`, and packed variables with their unpacked
 `_FillValue`/`valid_*` (#64). No script changes were needed. Results: 22
 datasets listed, `check_clients.py` 0 unexpected failures, `check_rerddap.R`
 all ok, collaborator kit 10/10 Python, 7/7 R.
+
+## Redeploy on 2026-10-09 (`ba31ab6`, after #60–#71, #2 and #69)
+
+Same SSM steps, plus `/opt/venv/bin/pip install -e /opt/xpublish-erddap -r
+deploy/requirements.txt` because `fastapi>=0.115` was newly declared (#66);
+the instance already had fastapi 0.142.2, so nothing changed. New on the
+server: `.dods` (#2), `categorize` (#5), `convert/*` 404s (#70), HEAD on every
+route (#62), and the cheaper server-wide root (#69: `griddap/index.csv`
+answered in 0.3 s over the internet). Results: 22 datasets listed,
+`check_clients.py` 0 unexpected failures, `check_rerddap.R` all ok,
+collaborator kit 10/10 Python (`python test_erddap_server.py`, a script, not
+pytest), 7/7 R.
