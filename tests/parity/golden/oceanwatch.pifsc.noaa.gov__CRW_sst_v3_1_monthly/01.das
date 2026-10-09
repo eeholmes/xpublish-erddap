@@ -88,8 +88,8 @@ Thu Oct  1 07:33:28 2026: ncatted -O -a valid_min,lon,o,f,0.025 ct5km_sst-mean_v
 Thu Oct  1 07:33:26 2026: ncap2 -O -s where(lon<0) lon=lon+360 ct5km_sst-mean_v3.1_202609-0-360.nc ct5km_sst-mean_v3.1_202609-0-360.nc
 Thu Oct  1 07:33:24 2026: ncks -O --msa_usr_rdr -d lon,0.0,180.0 -d lon,-180.0,0.0 ct5km_sst-mean_v3.1_202609.nc ct5km_sst-mean_v3.1_202609-0-360.nc
 This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite Version 3.1 (v3.1) in its NetCDF Version 1.0 (v1.0).
-2026-10-08T18:47:29Z (local files)
-2026-10-08T18:47:29Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v3_1_monthly.das";
+2026-10-09T17:25:24Z (local files)
+2026-10-09T17:25:24Z https://oceanwatch.pifsc.noaa.gov/erddap/griddap/CRW_sst_v3_1_monthly.das";
     String id "Satellite_Global_5km_SST_Monthly_Mean_Composite";
     String infoUrl "https://coralreefwatch.noaa.gov/product/5km/index.php";
     String institution "NOAA/NESDIS/STAR Coral Reef Watch Program";

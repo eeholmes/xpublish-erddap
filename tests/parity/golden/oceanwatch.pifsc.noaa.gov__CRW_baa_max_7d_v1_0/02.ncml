@@ -66,18 +66,18 @@ This is a product data file of the NOAA Coral Reef Watch Daily Global 5km Satell
   <attribute name="standard_name_vocabulary" value="CF Standard Name Table v27" />
   <attribute name="summary" value="This is a product of NOAA Coral Reef Watch Daily Global 5km Satellite Coral Bleaching Heat Stress Monitoring Product Suite, derived from CoralTemp v1.0. Bleaching Alert Levels: 0 - No stress, 1 - Watch, 2 - Warning, 3 - Alert Level 1, 4 - Alert LEvel 2. For more information: https://coralreefwatch.noaa.gov/product/5km/index_5km_baa_max_r07d.php" />
   <attribute name="time_coverage_duration" value="P7D" />
-  <attribute name="time_coverage_end" value="2026-10-07T12:00:00Z" />
+  <attribute name="time_coverage_end" value="2026-10-08T12:00:00Z" />
   <attribute name="time_coverage_resolution" value="P7D" />
   <attribute name="time_coverage_start" value="1985-03-31T12:00:00Z" />
   <attribute name="title" value="Coral Bleaching Alert Area 7-day Maximum Composite, Coral Reef Watch - Daily, 1985-
 present" />
   <attribute name="Westernmost_Easting" type="double" value="0.025" />
-  <dimension name="time" length="15152" />
+  <dimension name="time" length="15153" />
   <dimension name="latitude" length="3600" />
   <dimension name="longitude" length="7200" />
   <variable name="time" shape="time" type="double">
     <attribute name="_CoordinateAxisType" value="Time" />
-    <attribute name="actual_range" type="double" value="4.811184E8 1.7913744E9" />
+    <attribute name="actual_range" type="double" value="4.811184E8 1.7914608E9" />
     <attribute name="axis" value="T" />
     <attribute name="coverage_content_type" value="coordinate" />
     <attribute name="ioos_category" value="Time" />

@@ -1,4 +1,4 @@
 Error {
     code=400;
-    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[(notadate)]\": Start=NaN (invalid format?) isn't allowed.";
+    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[last-9000]\": Start=\"-107\" is invalid.  It must be an integer between 0 and 8893.";
 }

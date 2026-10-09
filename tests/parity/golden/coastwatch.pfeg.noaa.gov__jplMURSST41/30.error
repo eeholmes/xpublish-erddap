@@ -1,5 +1,4 @@
 Error {
     code=400;
-    message="Bad Request: Query error: The +/- index value in Start=last-1.5 isn't an integer.
-(Cause: java.lang.NumberFormatException: For input string: \"1.5\")";
+    message="Bad Request: Query error: Unexpected character after \"last\" in Start=last 0.";
 }

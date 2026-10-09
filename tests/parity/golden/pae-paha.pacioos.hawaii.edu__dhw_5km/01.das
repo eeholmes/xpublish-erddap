@@ -217,8 +217,8 @@ Attributes {
     String history "2017-05-19T00:00:00Z Data obtained from NOAA Coral Reef Watch and re-distributed via THREDDS Data Server (TDS) at PacIOOS to provide temporal aggregation and distribution through NetCDF/OPeNDAP utilities like ncWMS and ERDDAP.
 2018-11-26T00:00:00Z Upgraded dataset from v3.0 to v3.1, which also extends start date from 2013-06-03 back to 1985-04-01.
 2020-06-04T00:00:00Z Although still v3.1, CRW implemented some changes to metadata and ice masks for transition to NOAA/NESDIS operational products.
-2026-10-08T19:23:47Z (local files)
-2026-10-08T19:23:47Z https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.das";
+2026-10-09T17:29:26Z (local files)
+2026-10-09T17:29:26Z https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.das";
     String id "CoralTemp-v3.1";
     String infoUrl "https://coralreefwatch.noaa.gov/satellite/";
     String institution "NOAA Coral Reef Watch (CRW)";

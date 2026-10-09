@@ -90,8 +90,8 @@ Attributes {
     String grid_mapping_name "latitude_longitude";
     String history "Sun Sep 20 01:55:01 2026
 : /data/data652/coastwatch/oc/L3/scripts/bin/nccomposite -M gmean -T Month -m chlor_a /data/data652/coastwatch/oc/L3/scripts/config/chlor_a_comp_config.input /data/aftp/socd1/mecb/coastwatch/viirs/science/L3/global/chlora/monthly/WW00/V2026213_2026243_F31_WW00_chlora.nc
-2026-10-09T03:51:17Z (local files)
-2026-10-09T03:51:17Z https://coastwatch.noaa.gov/erddap/griddap/noaacwNPPVIIRSSQchlaMonthly.das";
+2026-10-09T17:29:37Z (local files)
+2026-10-09T17:29:37Z https://coastwatch.noaa.gov/erddap/griddap/noaacwNPPVIIRSSQchlaMonthly.das";
     String id "noaacwNPPVIIRSSQchlaMonthly";
     String identifier_product_doi "https://dx.doi.org";
     String identifier_product_doi_authority "https://dx.doi.org";

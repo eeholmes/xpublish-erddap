@@ -2,7 +2,7 @@
   "server": "https://pae-paha.pacioos.hawaii.edu/erddap",
   "dataset_id": "dhw_5km",
   "erddap_version": "ERDDAP_version=2.29",
-  "captured": "2026-10-08",
+  "captured": "2026-10-09",
   "requests": [
     {
       "path": "griddap/dhw_5km.dds",
@@ -65,34 +65,46 @@
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/dhw_5km.dods?CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/dhw_5km.csv?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
-      "file": "10.csv",
+      "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/dhw_5km.csvp?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
-      "file": "11.csvp",
+      "file": "12.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/dhw_5km.csv0?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
-      "file": "12.csv0",
+      "file": "13.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/dhw_5km.json?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
-      "file": "13.json",
+      "file": "14.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/dhw_5km.nc?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
-      "file": "14.nc",
+      "file": "15.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/dhw_5km.dods?CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
+      "file": "16.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
     }
   ]
 }

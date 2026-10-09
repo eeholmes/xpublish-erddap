@@ -65,20 +65,26 @@
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.dods?sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
-      "file": "10.csv",
+      "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.nc?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
-      "file": "11.nc",
+      "file": "12.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
       "path": "griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.csv?sst[(10)][(5)][(38)][(-74)]",
-      "file": "12.error",
+      "file": "13.error",
       "status": 404,
       "content_type": "text/plain;charset=UTF-8"
     }

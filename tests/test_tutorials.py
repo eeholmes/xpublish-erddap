@@ -194,13 +194,34 @@ def test_erddapy_griddap_page_exactly(etopo):
     )
 
 
-@pytest.mark.xfail(
-    reason="response='opendap' needs .dods, which is not served yet (#2)",
-    strict=True,
-)
-def test_erddapy_opendap_response(etopo):
-    """erddapy can also open the griddap URL itself as OPeNDAP."""
-    etopo.response = "opendap"
-    ds = etopo.to_xarray()
+def test_erddapy_opendap_response(xpublish_server):
+    """erddapy can also open the griddap URL itself as OPeNDAP (#2).
+
+    ``response = "opendap"`` is set before ``griddap_initialize()``, which it
+    then skips: erddapy asks for the bare griddap URL. Set after it, erddapy
+    builds a URL with the value constraints, which netCDF-C refuses itself
+    ("Malformed or unexpected Constraint") whatever the server.
+    """
+    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
+    e.response = "opendap"
+    e.dataset_id = "etopo5_EDDGridCopy"
+    e.griddap_initialize()
+    ds = e.to_xarray()
     assert ds.ROSE.shape == (2161, 4320)
     assert float(ds.ROSE[1080, 0]) == 0.0
+
+
+def test_open_dataset_on_the_griddap_url(xpublish_server):
+    """CoastWatch tutorials open the griddap URL itself, then subset (#2).
+
+    About 14 of the ~25 Python tutorials do this, with no fileType: netCDF-C
+    reads the ``.dds`` and ``.das``, then only the cells asked for, as ``.dods``.
+    """
+    url = f"{xpublish_server}/griddap/etopo5_EDDGridCopy"
+    with xr.open_dataset(url) as ds:
+        assert ds.ROSE.shape == (2161, 4320)
+        box = ds.ROSE.sel(latitude=slice(-5.5, 0), longitude=slice(330.9, 340.4))
+        np.testing.assert_allclose(
+            box.values,
+            rose(box.latitude.values[:, None], box.longitude.values[None, :]),
+        )

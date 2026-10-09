@@ -1,7 +1,7 @@
 Attributes {
   time {
     String _CoordinateAxisType "Time";
-    Float64 actual_range 1.022922e+9, 1.7913636e+9;
+    Float64 actual_range 1.022922e+9, 1.79145e+9;
     String axis "T";
     String comment "Nominal time of analyzed fields";
     String ioos_category "Time";
@@ -74,7 +74,7 @@ Attributes {
     Float64 _FillValue -1.28;
     Float64 colorBarMaximum 1.0;
     Float64 colorBarMinimum 0.0;
-    String comment "ice fraction is a dimensionless quantity between 0 and 1; it has been interpolated by a nearest neighbor approach; EUMETSAT OSI-SAF files used: ice_conc_nh_polstere-100_amsr3_202610021200.nc, ice_conc_sh_polstere-100_amsr3_202610021200.nc.";
+    String comment "ice fraction is a dimensionless quantity between 0 and 1; it has been interpolated by a nearest neighbor approach; EUMETSAT OSI-SAF files used: ice_conc_nh_polstere-100_amsr3_202610031200.nc, ice_conc_sh_polstere-100_amsr3_202610031200.nc.";
     String ioos_category "Ice Distribution";
     String long_name "Sea Ice Area Fraction";
     String source "EUMETSAT OSI-SAF, copyright EUMETSAT";
@@ -93,7 +93,7 @@ Attributes {
     String creator_name "JPL MUR SST project";
     String creator_type "group";
     String creator_url "https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1";
-    String date_created "2026-10-08T07:57:52Z";
+    String date_created "2026-10-09T07:57:52Z";
     Float64 Easternmost_Easting 180.0;
     Int32 file_quality_level 3;
     String gds_version_id "2.0";
@@ -108,8 +108,8 @@ Attributes {
     String history "created at nominal 4-day latency; replaced nrt (1-day latency) version.
 Data is downloaded daily from https://podaac-opendap.jpl.nasa.gov/opendap/allData/ghrsst/data/GDS2/L4/GLOB/JPL/MUR/v4.1/ to NOAA NMFS SWFSC ERD by erd.data@noaa.gov .
 The data for the most recent 7 days is usually revised everyday. The data for other days is sometimes revised.
-2026-10-08T18:48:35Z (local files)
-2026-10-08T18:48:35Z https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das";
+2026-10-09T17:26:32Z (local files)
+2026-10-09T17:26:32Z https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das";
     String id "MUR-JPL-L4-GLOB-v04.1";
     String infoUrl "https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1";
     String institution "NASA JPL";
@@ -143,7 +143,7 @@ completeness, or usefulness, of this information.";
     String standard_name_vocabulary "CF Standard Name Table v70";
     String summary "This is a merged, multi-sensor L4 Foundation Sea Surface Temperature (SST) analysis product from Jet Propulsion Laboratory (JPL). This daily, global, Multi-scale, Ultra-high Resolution (MUR) Sea Surface Temperature (SST) 1-km data set, Version 4.1, is produced at JPL under the NASA MEaSUREs program. For details, see https://podaac.jpl.nasa.gov/dataset/MUR-JPL-L4-GLOB-v4.1 . This dataset is part of the Group for High-Resolution Sea Surface Temperature (GHRSST) project. The data for the most recent 7 days is usually revised everyday.  The data for other days is sometimes revised.";
     String testOutOfDate "now-3days";
-    String time_coverage_end "2026-10-07T09:00:00Z";
+    String time_coverage_end "2026-10-08T09:00:00Z";
     String time_coverage_start "2002-06-01T09:00:00Z";
     String title "Multi-scale Ultra-high Resolution (MUR) SST Analysis fv04.1, Global, 0.01°, 2002-present, Daily";
     Float64 Westernmost_Easting -179.99;

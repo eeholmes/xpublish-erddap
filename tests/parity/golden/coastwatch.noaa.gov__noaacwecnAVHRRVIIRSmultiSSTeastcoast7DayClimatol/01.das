@@ -68,8 +68,8 @@ le, a value of 1 represents days 1-7 of the year.";
     Float64 geospatial_lon_min -85.07597103632074;
     Float64 geospatial_lon_resolution 0.006168587891163593;
     String geospatial_lon_units "degrees_east";
-    String history "2026-10-09T03:53:09Z (local files)
-2026-10-09T03:53:09Z https://coastwatch.noaa.gov/erddap/griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.das";
+    String history "2026-10-09T17:29:30Z (local files)
+2026-10-09T17:29:30Z https://coastwatch.noaa.gov/erddap/griddap/noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol.das";
     String infoUrl "https://eastcoast.coastwatch.noaa.gov/cw_avhrr-viirs_sst.php";
     String institution "NOAA NESDIS CoastWatch East Coast Node";
     String instrument "Merged Advanced Very High Resolution Radiometer (AVHRR) and Visible Infrared Imaging Radiometer Suite (VIIRS)";

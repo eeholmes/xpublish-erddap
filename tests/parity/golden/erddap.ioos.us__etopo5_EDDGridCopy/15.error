@@ -1,4 +1,0 @@
-Error {
-    code=404;
-    message="Not Found: Your query produced no matching results. Query error: For variable=ROSE axis#1=longitude Constraint=\"[(-120)]\": Start=\"-120\" is less than the axis minimum=0.0 (and even -0.041667052558462606).";
-}

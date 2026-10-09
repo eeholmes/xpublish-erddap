@@ -1,4 +1,4 @@
 Error {
     code=400;
-    message="Bad Request: Query error: For variable=time axis#0=time Constraint=\"[last-9000]\": Start=\"-108\" is invalid.  It must be an integer between 0 and 8892.";
+    message="Bad Request: Query error: The +/- value in Start=(last-x) isn't valid.";
 }

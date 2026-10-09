@@ -205,10 +205,22 @@ ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
 
 ### 6. OPeNDAP binary (`.dods`)
 
-ERDDAP can serve `.dods`; this plugin answers it with **501** and a message
-pointing at the dataset's OPeNDAP endpoint, because a host like Flux already
-serves `/opendap` beside it (issue
-[#2](https://github.com/eeholmes/xpublish-erddap/issues/2)).
+The plugin serves `.dods` as ERDDAP does (issue
+[#2](https://github.com/eeholmes/xpublish-erddap/issues/2)), so the griddap URL
+is itself an OPeNDAP URL: many CoastWatch tutorials call
+`xr.open_dataset("<server>/erddap/griddap/<id>")`. This is separate from a
+`/opendap` endpoint the host may serve beside it (xpublish-opendap): the two
+answer the same clients, but the ERDDAP one uses ERDDAP's names, types and
+attributes, which is what code written against ERDDAP expects.
+
+The response streams: the store is read a block at a time
+(`formats.DODS_BLOCK_BYTES`, 8 MB) while it is sent, and only for the cells
+asked for. A failure partway (a store read that errors) cuts the response
+short after its 200 status, as in ERDDAP; clients report a read error. The
+binary encoding is ported from `opendap-protocol` (MeteoSwiss, BSD-3-Clause),
+which xpublish-opendap uses, not imported: release 1.1.1 imports `pkg_resources`,
+which a new Python 3.12 venv does not have (no setuptools, or setuptools 84,
+checked 2026-10-09), so it fails to import there.
 
 ### 7. Axis and variable names
 

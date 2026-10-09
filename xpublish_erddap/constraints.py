@@ -509,6 +509,12 @@ class _Request:
             left = query.find("[", po)
             has_brackets = 0 <= left < comma
             name = query[po : left if has_brackets else comma].strip()
+            grid, dot, axis_name = name.partition(".")
+            if dot:  # gridName.axisName (parseAxisDapQuery)
+                if grid not in self.known:
+                    msg = f"unknown variable {grid!r}"
+                    raise ConstraintError(msg)
+                name = axis_name
             self.add_variable(name, axis_request=True)
             if has_brackets:
                 selections[name], end = self.brackets(
@@ -529,7 +535,7 @@ class _Request:
         query = self.query
         if "[" not in query:  # just data variables: the whole of each
             for raw_name in query.split(","):
-                if name := raw_name.strip():
+                if name := _grid_member(raw_name.strip(), self.known):
                     self.add_variable(name, axis_request=False, quoted=True)
             return ParsedQuery(self.variables, self.full())
 
@@ -543,7 +549,7 @@ class _Request:
             left = query.find("[", po)
             if left < 0:
                 raise _expected_at("[", po, query, end=True)
-            self.add_variable(query[po:left].strip(), axis_request=False)
+            self.add_variable(_grid_member(query[po:left].strip(), self.known), axis_request=False)
             po = left
             parsed = {}
             for axis, dim in enumerate(self.dims):
@@ -555,6 +561,26 @@ class _Request:
                 msg = "all variables in one griddap request must share the same subset"
                 raise ConstraintError(msg)
         return ParsedQuery(self.variables, selections or self.full())
+
+
+def _grid_member(name: str, known: list[str]) -> str:
+    """``sst.sst`` -> ``sst``: DAP2's Grid.Array name for a data variable.
+
+    netCDF-C asks for a grid's data this way. As in ``EDDGrid.parseDataDapQuery``,
+    only that exact form is shortened, and only for a data variable.
+    """
+    short, dot, rest = name.partition(".")
+    return short if dot and rest == short and short in known else name
+
+
+def _grid_axis(name: str, known: list[str], axes) -> str | None:
+    """``sst.latitude`` -> ``latitude``: DAP2's Grid.Map name for an axis.
+
+    ``EDDGrid.isAxisDapQuery``: the axis name after a data variable's name.
+    None if ``name`` is not that form.
+    """
+    short, dot, rest = name.partition(".")
+    return rest if dot and short in known and rest in axes else None
 
 
 def _skip_spaces(query: str, po: int) -> int:
@@ -600,7 +626,9 @@ def parse_griddap_query(
         cuts = [i for i in (expression.find("["), expression.find(",")) if i >= 0]
         first = expression[: min(cuts)] if cuts else expression
         request = _Request(expression, axes, dim_order, known_variables)
-        parsed = request.axis_request() if first.strip() in axes else request.data_request()
+        first = first.strip()
+        is_axis = first in axes or _grid_axis(first, known_variables, axes) is not None
+        parsed = request.axis_request() if is_axis else request.data_request()
     parsed.expression = expression
     parsed.commands = parts[1:]
     return parsed

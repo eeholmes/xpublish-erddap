@@ -2,7 +2,7 @@
   "server": "https://oceanwatch.pifsc.noaa.gov/erddap",
   "dataset_id": "CRW_sst_v1_0_monthly",
   "erddap_version": "ERDDAP_version=2.22",
-  "captured": "2026-10-08",
+  "captured": "2026-10-09",
   "requests": [
     {
       "path": "griddap/CRW_sst_v1_0_monthly.dds",
@@ -65,176 +65,206 @@
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v1_0_monthly.dods?analysed_sst[(2019-01-15):1:(2019-02-15)][(19.2345832):1:(19.3)][(177.84422):1:(177.9)]",
+      "file": "10.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v1_0_monthly.csv?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
-      "file": "10.csv",
+      "file": "11.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
-      "file": "11.csvp",
+      "file": "12.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csv0?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
-      "file": "12.csv0",
+      "file": "13.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.json?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
-      "file": "13.json",
+      "file": "14.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.nc?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
-      "file": "14.nc",
+      "file": "15.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v1_0_monthly.dods?analysed_sst[(2018-01-01T12:00:00Z):1:(2018-02-01T12:00:00Z)][(17):2:(17.2)][(195):3:(195.3)]",
+      "file": "16.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v1_0_monthly.csv?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "15.csv",
+      "file": "17.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "16.csvp",
+      "file": "18.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csv0?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "17.csv0",
+      "file": "19.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.json?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "18.json",
+      "file": "20.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.nc?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
-      "file": "19.nc",
+      "file": "21.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v1_0_monthly.dods?analysed_sst[(2019-01-15)][(19.3):1:(19.2)][(177.84):1:(177.9)]",
+      "file": "22.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v1_0_monthly.csv?analysed_sst[(last)][(0.0)][(180.0)]",
-      "file": "20.csv",
+      "file": "23.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?analysed_sst[(last)][(0.0)][(180.0)]",
-      "file": "21.csvp",
+      "file": "24.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csv0?analysed_sst[(last)][(0.0)][(180.0)]",
-      "file": "22.csv0",
+      "file": "25.csv0",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.json?analysed_sst[(last)][(0.0)][(180.0)]",
-      "file": "23.json",
+      "file": "26.json",
       "status": 200,
       "content_type": "application/json;charset=UTF-8"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.nc?analysed_sst[(last)][(0.0)][(180.0)]",
-      "file": "24.nc",
+      "file": "27.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
+      "path": "griddap/CRW_sst_v1_0_monthly.dods?analysed_sst[(last)][(0.0)][(180.0)]",
+      "file": "28.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v1_0_monthly.csv?analysed_sst[last-1:last][100][200]",
-      "file": "25.csv",
+      "file": "29.csv",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?analysed_sst[last-1:last][100][200]",
-      "file": "26.csvp",
-      "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
-    },
-    {
-      "path": "griddap/CRW_sst_v1_0_monthly.csv0?analysed_sst[last-1:last][100][200]",
-      "file": "27.csv0",
-      "status": 200,
-      "content_type": "text/csv;charset=ISO-8859-1"
-    },
-    {
-      "path": "griddap/CRW_sst_v1_0_monthly.json?analysed_sst[last-1:last][100][200]",
-      "file": "28.json",
-      "status": 200,
-      "content_type": "application/json;charset=UTF-8"
-    },
-    {
-      "path": "griddap/CRW_sst_v1_0_monthly.nc?analysed_sst[last-1:last][100][200]",
-      "file": "29.nc",
-      "status": 200,
-      "content_type": "application/x-netcdf"
-    },
-    {
-      "path": "griddap/CRW_sst_v1_0_monthly.csvp?time[(last)]",
       "file": "30.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
+      "path": "griddap/CRW_sst_v1_0_monthly.csv0?analysed_sst[last-1:last][100][200]",
+      "file": "31.csv0",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.json?analysed_sst[last-1:last][100][200]",
+      "file": "32.json",
+      "status": 200,
+      "content_type": "application/json;charset=UTF-8"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.nc?analysed_sst[last-1:last][100][200]",
+      "file": "33.nc",
+      "status": 200,
+      "content_type": "application/x-netcdf"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.dods?analysed_sst[last-1:last][100][200]",
+      "file": "34.dods",
+      "status": 200,
+      "content_type": "application/octet-stream;charset=ISO-8859-1"
+    },
+    {
+      "path": "griddap/CRW_sst_v1_0_monthly.csvp?time[(last)]",
+      "file": "35.csvp",
+      "status": 200,
+      "content_type": "text/csv;charset=ISO-8859-1"
+    },
+    {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?latitude[0:1:2]",
-      "file": "31.csvp",
+      "file": "36.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?time",
-      "file": "32.csvp",
+      "file": "37.csvp",
       "status": 200,
       "content_type": "text/csv;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.csvp?latitude[(19.3):1:(19.2)]",
-      "file": "33.error",
+      "file": "38.error",
       "status": 500,
       "content_type": "text/html; charset=iso-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.dds?analysed_sst[0:1:1][0:1:2][0:1:3]",
-      "file": "34.dds",
+      "file": "39.dds",
       "status": 200,
       "content_type": "text/plain;charset=ISO-8859-1"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.nc?time[(last)]",
-      "file": "35.nc",
+      "file": "40.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.nc?time[(last)],latitude[0:1:1]",
-      "file": "36.nc",
+      "file": "41.nc",
       "status": 200,
       "content_type": "application/x-netcdf"
     },
     {
       "path": "griddap/CRW_sst_v1_0_monthly.foo",
-      "file": "37.error",
+      "file": "42.error",
       "status": 400,
       "content_type": "text/html; charset=iso-8859-1"
     },
     {
       "path": "info/CRW_sst_v1_0_monthly/index.foo",
-      "file": "38.error",
+      "file": "43.error",
       "status": 404,
       "content_type": "text/html; charset=iso-8859-1"
     }
