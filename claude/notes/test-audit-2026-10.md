@@ -137,7 +137,7 @@ parity functions are folded into one) and under a minute.
 - `test_head.py::test_head_on_data_builds_no_body` and
   `test_dods.py::test_head_builds_no_body` take the same branch: add `dods`
   to the former's parameters, drop the latter. Neither checks HEAD's
-  content-type equals GET's for csv/json/nc; worth adding.
+  content-type equals the GET response's for csv/json/nc; worth adding.
 - `test_limits.py::test_the_smaller_limit_is_reported` repeats the `nc`
   case of `test_default_settings_refuse_a_whole_variable`.
 - Live-server duplicates: `test_server.py::test_mixed_dimensions_split_into_two_datasets`
