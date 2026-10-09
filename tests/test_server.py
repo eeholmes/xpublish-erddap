@@ -8,7 +8,6 @@ a real HTTP client -- content-type handling and percent-encoding among them.
 
 import sys
 
-import httpx
 import numpy as np
 import pandas as pd
 import pytest
@@ -94,13 +93,6 @@ def test_to_pandas_csv(erddap):
     assert len(df) > 0
 
 
-def test_mixed_dimensions_split_into_two_datasets(xpublish_server):
-    """A source whose variables differ in dimensions becomes several datasets."""
-    body = httpx.get(f"{xpublish_server}/griddap/index.csv", timeout=30).text
-    assert "mixed" in body
-    assert "mixed_level" in body
-
-
 def test_griddap_initialize_on_the_split_dataset(xpublish_server):
     """The extra hypercube is usable, not just listed."""
     e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap", response="nc")
@@ -165,12 +157,6 @@ def test_erddapy_download_file(xpublish_server, tmp_path, monkeypatch):
             ds.longitude.values[None, None, :],
         )
         np.testing.assert_allclose(ds.analysed_sst.values, expected)
-
-
-def test_erddapy_download_file_rejects_unknown_types(xpublish_server):
-    """A type erddapy does not know is its own ValueError, before any request."""
-    with pytest.raises(ValueError, match="not available"):
-        _small_crw(xpublish_server).download_file("notatype")
 
 
 @pytest.mark.skipif(

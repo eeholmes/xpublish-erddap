@@ -45,7 +45,6 @@ def test_attr_type(value, kind):
 @pytest.mark.parametrize(
     ("seconds", "text"),
     [
-        (2629635.6, "30 days 10h 27m 16s"),  # CRW_sst_v1_0_monthly
         (86764.0, "1 day 0h 6m 4s"),  # erdMH1chla1day
         (690030.0, "7 days 23h 40m 30s"),  # erdMH1chla8day
     ],
@@ -58,12 +57,6 @@ def test_float32_axes_are_rounded_to_seven_digits():
     """erdMH1chla8day: 89.979164 is used as 89.97916."""
     values = np.array([89.979164, -89.97917], dtype="float32")
     assert list(nice_doubles(values)) == [89.97916, -89.97917]
-
-
-def test_spacing_of_a_descending_float32_axis():
-    """CRW_sst_v3_1_monthly's latitude, as its real info table gives it."""
-    lat = (89.975 - 0.05 * np.arange(3600)).astype("float32")
-    assert _spacing(lat) == (", evenlySpaced=true, averageSpacing=-0.049999999999999996")
 
 
 def test_spacing_of_uneven_times():

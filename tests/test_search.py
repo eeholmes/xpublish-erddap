@@ -128,13 +128,8 @@ def table(client, path):
     return pd.read_csv(io.StringIO(resp.text))
 
 
-def test_tables_have_erddaps_columns(client):
-    for path in (
-        "griddap/index.csv",
-        "info/index.csv",
-        "search/index.csv?searchFor=grid",
-    ):
-        assert list(table(client, f"/erddap/{path}").columns) == DATASET_COLUMNS
+def test_tabledap_index_has_erddaps_columns(client):
+    """The griddap, info and search tables are parity cases (etopo5 c00, c13-c15)."""
     resp = client.get("/erddap/tabledap/index.json")
     assert resp.json()["table"]["columnNames"] == DATASET_COLUMNS
 

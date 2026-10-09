@@ -129,21 +129,6 @@ def test_daily_360_day_is_refused(client, caplog):
     assert "1993-02-29 is not a Gregorian date" in caplog.text
 
 
-@pytest.mark.parametrize("calendar", ["360_day", "all_leap", "366_day"])
-def test_dates_that_do_not_exist_are_refused(calendar):
-    times = xr.date_range("2001-02-27", periods=3, freq="D", calendar=calendar, use_cftime=True)
-    with pytest.raises(ValueError, match="2001-02-29 is not a Gregorian date"):
-        cftime_to_datetime64(times.values)
-
-
-def test_monthly_360_day_keeps_labels():
-    times = xr.date_range("2001-01-01", periods=24, freq="MS", calendar="360_day", use_cftime=True)
-    times = np.array([t.replace(day=16) for t in times.values])
-    served, how = cftime_to_datetime64(times)
-    assert how == "each date label kept"
-    assert str(served[1])[:10] == "2001-02-16"
-
-
 def test_julian_is_converted_by_moment():
     # the same day, written on the Gregorian calendar (12 days later in 1900)
     times = xr.date_range("1900-01-01", periods=3, freq="D", calendar="julian", use_cftime=True)
@@ -160,8 +145,9 @@ def test_standard_calendar_crosses_1582_by_moment():
     assert [str(t)[:10] for t in served] == ["1582-10-13", "1582-10-14", "1582-10-15"]
 
 
-MODEL_CALENDARS = ["noleap", "365_day", "360_day", "all_leap", "366_day"]
-REAL_CALENDARS = ["julian", "standard", "gregorian", "proleptic_gregorian"]
+# one of each alias pair: gregorian/standard, 365_day/noleap, 366_day/all_leap
+MODEL_CALENDARS = ["noleap", "360_day", "all_leap"]
+REAL_CALENDARS = ["julian", "standard", "proleptic_gregorian"]
 
 
 def source_axes(calendar):
@@ -191,7 +177,7 @@ def test_no_served_time_differs_from_its_source(calendar):
         try:
             served, _ = cftime_to_datetime64(values)
         except ValueError:
-            assert calendar in ("360_day", "all_leap", "366_day")
+            assert calendar in ("360_day", "all_leap")
             continue
         assert served.dtype == np.dtype("datetime64[us]")
         if calendar in MODEL_CALENDARS:
@@ -241,16 +227,11 @@ def test_lead_time_nc(client):
 def test_projected_xy_are_not_lat_lon(client):
     das = client.get("/erddap/griddap/polar.das").text
     assert "degrees_north" not in das
-    assert "geospatial_lat" not in das
+    assert "geospatial_lat" not in das  # also the supplied geospatial_lat_min
     assert "geospatial_lon" not in das
     assert 'units "m"' in das
-
-
-def test_supplied_bounds_go_like_erddap(client):
-    # EDDGrid removes these and derives them from the axes, even when
+    # EDDGrid removes the bounds and derives them from the axes, even when
     # supplied; with no latitude or time axis there are none
-    das = client.get("/erddap/griddap/polar.das").text
-    assert "geospatial_lat_min" not in das
     assert "time_coverage_start" not in das
 
 

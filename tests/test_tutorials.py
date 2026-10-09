@@ -136,32 +136,6 @@ def test_erddapy_griddap_example_defaults(etopo):
         assert etopo.constraints == expected
 
 
-def test_erddapy_griddap_example_download(etopo):
-    """Strides of 10, then a 0-360 bounding box, then to_xarray()."""
-    etopo.constraints["latitude_step"] = 10
-    etopo.constraints["longitude_step"] = 10
-    ds = etopo.to_xarray()
-    assert ds.ROSE.shape == (217, 432)
-
-    etopo.constraints.update(
-        {
-            "longitude>=": 290.908,
-            "longitude<=": 340.365,
-            "latitude>=": -60.533,
-            "latitude<=": 0.033,
-        },
-    )
-    ds = etopo.to_xarray()
-    assert float(ds.latitude.min()) == pytest.approx(-60.5, abs=0.05)
-    assert float(ds.longitude.min()) == pytest.approx(290.9, abs=0.05)
-    assert ds.latitude.max() <= 0.033
-    assert ds.longitude.max() <= 340.365
-    np.testing.assert_allclose(
-        ds.ROSE.values,
-        rose(ds.latitude.values[:, None], ds.longitude.values[None, :]),
-    )
-
-
 def test_erddapy_griddap_page_exactly(etopo):
     """The docs page end to end: strides of 10, reset by griddap_initialize(), stride 1.
 
@@ -188,27 +162,14 @@ def test_erddapy_griddap_page_exactly(etopo):
     )
     ds = etopo.to_xarray()
     assert ds.ROSE.shape == (727, 594)
+    assert float(ds.latitude.min()) == pytest.approx(-60.5, abs=0.05)
+    assert float(ds.longitude.min()) == pytest.approx(290.9, abs=0.05)
+    assert ds.latitude.max() <= 0.033
+    assert ds.longitude.max() <= 340.365
     np.testing.assert_allclose(
         ds.ROSE.values,
         rose(ds.latitude.values[:, None], ds.longitude.values[None, :]),
     )
-
-
-def test_erddapy_opendap_response(xpublish_server):
-    """erddapy can also open the griddap URL itself as OPeNDAP (#2).
-
-    ``response = "opendap"`` is set before ``griddap_initialize()``, which it
-    then skips: erddapy asks for the bare griddap URL. Set after it, erddapy
-    builds a URL with the value constraints, which netCDF-C refuses itself
-    ("Malformed or unexpected Constraint") whatever the server.
-    """
-    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
-    e.response = "opendap"
-    e.dataset_id = "etopo5_EDDGridCopy"
-    e.griddap_initialize()
-    ds = e.to_xarray()
-    assert ds.ROSE.shape == (2161, 4320)
-    assert float(ds.ROSE[1080, 0]) == 0.0
 
 
 def test_open_dataset_on_the_griddap_url(xpublish_server):

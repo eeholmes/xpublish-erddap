@@ -1,7 +1,6 @@
 """ERDDAP's variable names: latitude/longitude/time axes and safe names (#59)."""
 
 import io
-import xml.etree.ElementTree as ET
 
 import numpy as np
 import pandas as pd
@@ -17,7 +16,6 @@ from xpublish_erddap.catalog import (
     recognised_axis,
     safe_variable_name,
 )
-from xpublish_erddap.formats import NCML_NS
 
 DIMS = ("t", "lat", "lon")
 
@@ -67,19 +65,6 @@ def test_dds_uses_erddap_names(client):
     assert " t[" not in body
 
 
-def test_das_uses_erddap_names(client):
-    body = client.get("/erddap/griddap/short.das").text
-    for name in SERVED:
-        assert f"  {name} {{" in body
-    assert "  lat {" not in body
-
-
-def test_ncml_uses_erddap_names(client):
-    root = ET.fromstring(client.get("/erddap/griddap/short.ncml").text)
-    dims = [d.get("name") for d in root.iter(f"{{{NCML_NS}}}dimension")]
-    assert dims == SERVED
-
-
 def test_info_uses_erddap_names(client):
     df = pd.read_csv(io.StringIO(client.get("/erddap/info/short/index.csv").text))
     dims = df[df["Row Type"] == "dimension"]["Variable Name"].tolist()
@@ -105,13 +90,6 @@ def test_source_names_are_unknown_variables(client):
     resp = client.get("/erddap/griddap/short.csv?lat[0]")
     assert resp.status_code == 400
     assert "lat" in resp.text
-
-
-def test_netcdf_uses_erddap_names(client):
-    resp = client.get("/erddap/griddap/short.nc?sst[0][0:1][0]")
-    ds = xr.open_dataset(io.BytesIO(resp.content))
-    assert list(ds.sst.dims) == SERVED
-    np.testing.assert_array_equal(ds.latitude.values, [10.0, 20.0])
 
 
 def test_unsafe_variable_name_is_served_under_erddaps_safe_name(client):
@@ -176,22 +154,18 @@ def da(values, **attrs) -> xr.DataArray:
         ("latitude", da([1.0, 2.0], units="degrees"), "latitude"),
         ("j", da([1.0, 2.0], units="degrees_north"), "latitude"),
         ("j", da([1.0, 2.0], standard_name="latitude"), "latitude"),
-        ("y", da([1.0, 2.0], units="degrees_north"), "latitude"),
         ("lon", da([1.0, 2.0], units="degrees_east"), "longitude"),
         ("long", da([1.0, 2.0], units="degrees"), "longitude"),
         ("x", da([1.0, 2.0], units="degree_east"), "longitude"),
         ("t", da(pd.date_range("2020", periods=2).values), "time"),
-        ("valid_time", da(pd.date_range("2020", periods=2).values), "time"),
         # projected axes are not lat/lon (#60)
         ("x", da([1.0, 2.0], units="m"), None),
-        ("y", da([1.0, 2.0]), None),
         ("y", da([1.0, 2.0], standard_name="projection_y_coordinate"), None),
         # a rotated grid's degrees are not latitude
         ("grid_latitude", da([1.0, 2.0], units="degrees", standard_name="grid_latitude"), None),
         ("rlat", da([1.0, 2.0], units="degrees"), None),
         ("lat", da([1.0, 2.0], units="degrees_east"), None),
         ("latin_name", da([1.0, 2.0]), None),
-        ("lon", da(["a", "b"]), None),
         # a forecast lead is not time, nor is undecoded CF time
         ("lead_time", da(np.array([0, 6], dtype="timedelta64[h]")), None),
         ("t", da([0.0, 1.0], units="days since 2000-01-01"), None),

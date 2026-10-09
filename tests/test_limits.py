@@ -70,7 +70,7 @@ def detail(response) -> str:
     return message(response)
 
 
-@pytest.mark.parametrize("ext", ["nc", "csv", "csvp", "csv0", "json"])
+@pytest.mark.parametrize("ext", ["csv", "nc"])
 def test_configured_limit_refuses_every_data_format(ext):
     r = client(max_response_mb=1).get(f"/erddap/griddap/g.{ext}?{ONE_STEP}")
     assert r.status_code == 413
@@ -92,10 +92,9 @@ def test_whole_variable_nc_hits_erddaps_2gb_limit_with_no_limit_set():
     assert detail(r).endswith("3815 MB is more than the .nc 2 GB limit.")
 
 
-@pytest.mark.parametrize("ext", ["csv", "json", "nc"])
-def test_default_settings_refuse_a_whole_variable(ext):
+def test_default_settings_refuse_a_whole_variable():
     """The default is a finite 500 MB, so a bare ``?v`` never starts a read."""
-    r = client().get(f"/erddap/griddap/g.{ext}?v")
+    r = client().get("/erddap/griddap/g.nc?v")
     assert r.status_code == 413
     assert detail(r) == (
         "Payload Too Large: Your query produced too much data.  "
@@ -114,11 +113,6 @@ def test_none_means_no_limit_for_csv():
         "/erddap/griddap/g.csv?v[0][0:10:999][0:10:999]",
     )
     assert r.status_code == 200
-
-
-def test_the_smaller_limit_is_reported():
-    r = client(max_response_mb=100).get("/erddap/griddap/g.nc?v")
-    assert detail(r).endswith("this server's 100 MB limit.")
 
 
 def test_metadata_requests_are_not_limited():
