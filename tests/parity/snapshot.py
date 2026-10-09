@@ -23,6 +23,9 @@ MARGIN = 2
 _BLOCK = "__block"
 _TEMPLATE_DIMS = "__dims"
 _TEMPLATE_SHAPE = "__shape"
+#: On a time axis whose source had no ``calendar``: xarray writes one anyway
+#: (``proleptic_gregorian``) when it saves the snapshot.
+_NO_CALENDAR = "__no_calendar"
 
 #: Attribute names the netCDF-4 library owns and will not let us write.
 _RESERVED = {"_NCProperties", "_IsNetcdf4", "_SuperblockVersion", "_Format"}
@@ -67,6 +70,9 @@ def write_snapshot(
             source whose data ``ds`` cannot read; default ``ds`` itself.
     """
     out = xr.Dataset(coords={d: ds[d] for d in ds.dims}, attrs=_escape(ds.attrs))
+    for d in out.coords:
+        if np.issubdtype(out[d].dtype, np.datetime64) and "calendar" not in ds[d].encoding:
+            out[d].attrs[_NO_CALENDAR] = 1
     for name, da in ds.data_vars.items():
         template = xr.Variable((), np.zeros((), dtype=da.dtype), _escape(da.attrs))
         template.attrs[_TEMPLATE_DIMS] = " ".join(da.dims)
@@ -90,7 +96,8 @@ def write_snapshot(
 
 
 def _keep_encoding(encoding: dict) -> dict:
-    keep = ("_FillValue", "missing_value", "dtype", "_Unsigned")
+    # ``coordinates`` is a source attribute xarray moves to ``.encoding`` (#71)
+    keep = ("_FillValue", "missing_value", "dtype", "_Unsigned", "coordinates")
     kept = {k: v for k, v in encoding.items() if k in keep}
     # xarray writes a NaN _FillValue on any float variable that has none; the
     # source has none either (noaacwecn...Climatol's sst has only a
@@ -111,9 +118,11 @@ def load_snapshot(path: Path) -> xr.Dataset:
     out = xr.Dataset(coords={d: snap[d] for d in snap.dims if d in snap.coords})
     out.attrs = _unescape(snap.attrs)
     for coord in out.coords:
-        # xarray wrote this ``calendar`` when saving the snapshot; the
-        # ERDDAP the snapshot came from never had one (#71)
-        out[coord].encoding.pop("calendar", None)
+        if out[coord].attrs.pop(_NO_CALENDAR, None) is not None:
+            # xarray wrote this ``calendar`` when saving the snapshot; the
+            # ERDDAP the snapshot came from had none (#71). A source's own
+            # ``calendar`` (coastwatch's "gregorian") is kept.
+            out[coord].encoding.pop("calendar", None)
     for name in snap.data_vars:
         if str(name).startswith(_BLOCK):
             continue
