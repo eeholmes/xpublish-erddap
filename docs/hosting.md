@@ -198,9 +198,10 @@ ErddapPlugin(catalog_max_age_s=600)  # rebuild at least every 10 minutes
   until cachey evicts it. The plugin tells cachey each catalog's approximate
   size (axes plus attributes), so eviction works under memory pressure; an
   evicted catalog is rebuilt.
-- There is no invalidation endpoint (ERDDAP's `setDatasetFlag.txt`): without
-  auth (issue [#8](https://github.com/eeholmes/xpublish-erddap/issues/8)),
-  anyone could force rebuilds.
+- There is no invalidation endpoint (ERDDAP's `setDatasetFlag.txt`): the
+  plugin does not authenticate callers (see
+  [Access control](../README.md#access-control)), so such an endpoint would
+  let anyone force rebuilds. If you need one, put it behind your host's auth.
 
 ### 6. OPeNDAP binary (`.dods`)
 
@@ -270,6 +271,32 @@ to the host:
   coastwatch.pfeg.noaa.gov; erddap.ioos.us does send one). If browser clients
   (JavaScript on another origin) matter, add `CORSMiddleware` or the proxy's
   header.
+
+## Reaching a private store
+
+The plugin never sees credentials. Whoever opens the dataset (your provider
+plugin, or the host) does that with the xarray, icechunk or Arraylake client,
+and hands the plugin an open `xarray.Dataset` or `DataTree`.
+`deploy/server.py` does it this way for the CEFI stores:
+
+```python
+from arraylake import Client
+
+session = Client().get_repo("NOAA-PMEL/cefi-nep-hindcast-daily").readonly_session("main")
+ds = xr.open_zarr(session.store, group="regrid/main", consolidated=False, chunks={})
+```
+
+`Client()` reads the API key from the `ARRAYLAKE_TOKEN` environment variable
+(or from `arraylake auth login`). Set the variable in the service's
+environment and keep the key out of the code, the repo and the logs. The AWS
+demo keeps it in an SSM SecureString parameter and reads it into the
+environment when the service starts (`deploy/aws/stack.yaml`). Other stores
+work the same way: icechunk storage credentials, or the cloud SDK's usual
+environment variables, belong to whoever calls `icechunk.Repository.open`.
+
+Remember the other direction: once the server holds a key that can read a
+private repo, anyone who can reach the server can read it too. See
+[Access control](../README.md#access-control).
 
 ## Settings at a glance
 

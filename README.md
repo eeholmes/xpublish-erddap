@@ -43,8 +43,30 @@ working, unchanged. An example of a similar concept for OPeNDAP access to Icechu
 
 Working end to end against both clients, on synthetic data and on real NOAA CEFI
 model output served from Icechunk via Earthmover Flux. Not production software:
-no auth, no tabledap yet, a partial file-type list, and the catalog is built eagerly
+[no authentication](#access-control), no tabledap yet, a partial file-type list, and the catalog is built eagerly
 at first request.
+
+## Access control
+
+This plugin does no authentication or authorization of its own callers.
+Every dataset it is given is public to anyone who can reach the server.
+If you serve a private Arraylake or Icechunk repo with it, that data becomes
+public: the server opens the store with its own credentials and answers anyone.
+
+Put access control in the hosting layer instead: a reverse proxy, the
+platform's own auth (such as Earthmover Flux's), or middleware or dependencies
+that you add to the FastAPI/xpublish app. The plugin can add routes but not
+middleware. The same goes for stopping a caller from asking for too much; the
+plugin's `max_response_mb` cap is a guard, not a quota.
+
+If a host does add HTTP authentication, the clients can send it. `erddapy` has
+an `auth` attribute (a `(user, password)` tuple for HTTP Basic, used by
+`to_xarray`) and a `requests_kwargs` argument passed on to `requests`;
+`rerddap` passes named arguments on to `crul`. This is read from their source and
+docs, not tested against this server.
+
+How the server reaches a private store (the other direction) is in
+[docs/hosting.md](docs/hosting.md#reaching-a-private-store).
 
 ## Installation
 
