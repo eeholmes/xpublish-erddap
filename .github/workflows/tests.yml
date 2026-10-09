@@ -18,7 +18,12 @@ jobs:
         # requires-python is >=3.11; 3.11 runs in the min-deps job below, at
         # the lowest allowed dependency versions.
         python-version: ["3.12", "3.13", "3.14"]
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
+        include:
+          # Windows skips every live-server test, so one job there (and one on
+          # macOS), on the newest Python, covers what the OS can change (#112).
+          - {os: macos-latest, python-version: "3.14"}
+          - {os: windows-latest, python-version: "3.14"}
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0

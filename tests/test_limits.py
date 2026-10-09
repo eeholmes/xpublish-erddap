@@ -105,8 +105,14 @@ def test_default_settings_refuse_a_whole_variable(ext):
 
 
 def test_none_means_no_limit_for_csv():
-    """With ``None`` the size check passes csv; a small request is served."""
-    r = client(readable, max_response_mb=None).get(f"/erddap/griddap/g.csv?{ONE_STEP}")
+    """With ``None`` the size check passes csv; the request is served.
+
+    Strided to 100 x 100 values (10,000 csv rows) so it runs in well under a
+    second; the unstrided step is a million rows and took 28 s (#112).
+    """
+    r = client(readable, max_response_mb=None).get(
+        "/erddap/griddap/g.csv?v[0][0:10:999][0:10:999]",
+    )
     assert r.status_code == 200
 
 

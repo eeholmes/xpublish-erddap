@@ -60,6 +60,10 @@ def _params(*, media: bool = False):
         manifest = json.loads(manifest_path.read_text())
         slug = manifest_path.parent.name
         for entry in manifest["requests"]:
+            if media and entry["status"] != HTTP_OK:
+                # An error response has no media type worth comparing; leave
+                # it out here rather than skip it at run time (#112).
+                continue
             key = f"{manifest['dataset_id']} {entry['path']}"
             reasons = [why for pattern, why in known if re.search(pattern, key)]
             marks = [pytest.mark.xfail(reason="; ".join(reasons), strict=True)] if reasons else []
@@ -127,8 +131,6 @@ def test_matches_real_erddap(slug, manifest, entry):
 @pytest.mark.parametrize(("slug", "manifest", "entry"), _params(media=True))
 def test_media_type_matches_real_erddap(slug, manifest, entry):
     """Same media type as the real ERDDAP (charset aside)."""
-    if entry["status"] != HTTP_OK:
-        pytest.skip("ERDDAP returned an error")
     ours = _client(slug, manifest["dataset_id"]).get(f"/erddap/{entry['path']}")
     assert media_type(ours.headers.get("content-type")) == media_type(
         entry["content_type"],

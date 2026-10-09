@@ -13,12 +13,15 @@ from xprocess import ProcessStarter
 server_path = Path(__file__).parent / "server.py"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def xpublish_server(xprocess):
     """Launch an Xpublish server in the background.
 
     Serves the air_temperature tutorial dataset with the ERDDAP plugin
     running with defaults, so real clients can be exercised over a socket.
+
+    One server per test session: ``tests/server.py`` is static and the live
+    tests only send GET requests, so none needs a fresh one (#112).
     """
 
     class Starter(ProcessStarter):
