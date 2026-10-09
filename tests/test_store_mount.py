@@ -1,4 +1,4 @@
-"""xpublish-erddap served below a per-store path, as Flux would serve it.
+"""Regression test for ``app.mount()`` and ``root_path``: a per-store ERDDAP root.
 
 The test server mounts a CEFI-like store at ``STORE_PREFIX``, so its ERDDAP
 root is ``.../regrid/main/erddap``, beside the store's ``.../opendap``. Users

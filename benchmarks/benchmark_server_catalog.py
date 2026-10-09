@@ -4,9 +4,9 @@ Not a test (pytest does not collect it): run it by hand, in-process, with tiny
 lazy datasets and a provider that takes ``--delay`` seconds to return a tree,
 as a host that opens a store over the network would::
 
-    python tests/benchmark_server_catalog.py              # N=200, 50 ms, reopening
-    python tests/benchmark_server_catalog.py --n 1000 --cached
-    python tests/benchmark_server_catalog.py --check-s 0   # check all, every request
+    python benchmarks/benchmark_server_catalog.py              # N=200, 50 ms, reopening
+    python benchmarks/benchmark_server_catalog.py --n 1000 --cached
+    python benchmarks/benchmark_server_catalog.py --check-s 0   # check all, every request
 
 ``--cached`` makes the provider keep the trees it opened (the delay is paid
 once per store); without it every call reopens. Each line is the median of

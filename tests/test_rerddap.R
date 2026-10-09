@@ -31,7 +31,8 @@ j <- info("mixed_level", url = url)
 stopifnot("air_levels" %in% j$variables$variable_name)
 ok("the split dataset is usable from R")
 
-# One Arraylake store as Flux would serve it: an ERDDAP root below a store path
+# Regression test for app.mount() and root_path: an ERDDAP root below a store
+# path (tests/flux_host.py is the Flux stand-in; this mount is a plain store path)
 store <- paste0(
   "http://127.0.0.1:9000/v1/services/dap2/NOAA-PMEL/",
   "cefi-nep-hindcast-daily/main/regrid/main/erddap/"
@@ -69,7 +70,7 @@ t_start <- "2018-01-01T12:00:00Z"
 t_end <- "2018-03-01T12:00:00Z"
 # note: rerddap's check_time_range compares strings, so a date-only bound that
 # equals the first time ("1985-01-01" vs "1985-01-01T12:00:00Z") halts, as it
-# does against real ERDDAP (claude/notes/client-compatibility.md); these tests
+# does against real ERDDAP (so it is not a server bug); these tests
 # give full timestamps.
 get_crw <- function(...) {
   suppressMessages(griddap(crw, ...))
@@ -210,7 +211,7 @@ stopifnot(max(abs(res$data$sst - vert_formula(
 ok("griddap() with a zlev dimension (OISST's zlev = 0)")
 
 # --- estimate_griddap_size ------------------------------------------------------
-# Added in rerddap 1.3.0 (CI); the hub's 1.2.1 has none, so skip there only.
+# estimate_griddap_size() was added in rerddap 1.3.0; skip on older versions.
 if (exists("estimate_griddap_size", asNamespace("rerddap"))) {
   est <- rerddap:::estimate_griddap_size(
     crw, time = c(t_start, "2018-12-31T12:00:00Z"),

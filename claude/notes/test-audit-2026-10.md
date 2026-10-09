@@ -212,5 +212,5 @@ the R scripts and `tests/server.py` depend on them.
   `flux_host.py` is the Flux stand-in, and the mount is a regression test
   for `app.mount()`/`root_path` (`erddap-parity-plan.md`).
 - `tests/server.py` binds `0.0.0.0`; the fixture uses `127.0.0.1`.
-- `tests/benchmark_server_catalog.py` is a tool, not collected; consider
+- `benchmarks/benchmark_server_catalog.py` is a tool, not collected; consider
   `benchmarks/` (`docs/hosting.md` cites its path).

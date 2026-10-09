@@ -199,7 +199,7 @@ this instead:
   Set `catalog_workers=1` if yours is not.
 
 **Numbers** (tiny lazy datasets, in-process, a provider that takes 50 ms to
-return a tree; `python tests/benchmark_server_catalog.py`, run on a
+return a tree; `python benchmarks/benchmark_server_catalog.py`, run on a
 JupyterHub, 2026-10-09):
 
 | | before #69 | now |

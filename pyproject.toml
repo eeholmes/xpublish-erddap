@@ -69,6 +69,7 @@ select = ["A", "B", "C4", "D", "E", "F", "I", "PL", "UP", "W"]
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*" = ["D", "PLR2004"]
 "demo/*" = ["D", "E402"]
+"benchmarks/*" = ["D", "PLR2004"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

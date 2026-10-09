@@ -58,4 +58,4 @@ flux = FluxLikeRest(
 )
 rest.app.mount(FLUX_PREFIX, flux.app)
 
-rest.serve(host="0.0.0.0", port=9000)  # noqa: S104
+rest.serve(host="127.0.0.1", port=9000)

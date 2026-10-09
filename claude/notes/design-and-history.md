@@ -275,7 +275,7 @@ provider. Now (`ErddapPlugin.server_catalog`, `ServerState`):
   re-read from the store on every request.
 - **Routes without a catalog are `async`** (`version`, `tabledap/index`,
   `categorize/index`, `convert`), so they never wait for a worker thread.
-- Benchmark: `tests/benchmark_server_catalog.py` (not collected by pytest);
+- Benchmark: `benchmarks/benchmark_server_catalog.py` (not collected by pytest);
   numbers in `docs/hosting.md` §5. CI guards the behaviour by counting opens
   (`tests/test_catalog_cache.py`), not by timing.
 

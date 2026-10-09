@@ -9,6 +9,7 @@ prune demo
 prune deploy
 prune docs
 prune tests
+prune benchmarks
 prune *.egg-info
 
 global-exclude *.nc
