@@ -12,8 +12,11 @@ import httpx
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
+from tutorial_data import sst
 
 erddapy = pytest.importorskip("erddapy")
+search_servers = pytest.importorskip("erddapy.multiple_server_search").search_servers
 
 # The live-server tests bind a socket and read netCDF from memory; both are
 # flaky on the Windows runners. xpublish-opendap skips its live tests there
@@ -115,3 +118,80 @@ def test_erddapy_search_lists_every_dataset(xpublish_server, search_for):
     every = set(pd.read_csv(f"{xpublish_server}/griddap/index.csv")["Dataset ID"])
     found = pd.read_csv(e.get_search_url(search_for=search_for, response="csv"))
     assert set(found["Dataset ID"]) == every
+
+
+def test_erddapy_get_var_by_attr(xpublish_server):
+    """get_var_by_attr reads attributes from the info csv (axis and standard_name)."""
+    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap")
+    dataset_id = "CRW_sst_v1_0_monthly"
+    assert e.get_var_by_attr(dataset_id, axis="X") == ["longitude"]
+    assert e.get_var_by_attr(dataset_id, axis="Y") == ["latitude"]
+    assert e.get_var_by_attr(dataset_id, standard_name="sea_surface_temperature") == [
+        "analysed_sst",
+    ]
+    # the erddapy docs' callable form: every axis variable
+    axes = e.get_var_by_attr(dataset_id, axis=lambda v: v in ["X", "Y", "Z", "T"])
+    assert sorted(axes) == ["latitude", "longitude", "time"]
+
+
+def _small_crw(xpublish_server):
+    """An erddapy client for a small box of the CRW stand-in."""
+    e = erddapy.ERDDAP(server=xpublish_server, protocol="griddap", response="nc")
+    e.dataset_id = "CRW_sst_v1_0_monthly"
+    e.griddap_initialize()
+    e.constraints.update(
+        {
+            "time>=": "2018-01-01T12:00:00Z",
+            "time<=": "2018-03-01T12:00:00Z",
+            "latitude>=": 17.0,
+            "latitude<=": 18.0,
+            "longitude>=": 195.0,
+            "longitude<=": 196.0,
+        },
+    )
+    return e
+
+
+def test_erddapy_download_file(xpublish_server, tmp_path, monkeypatch):
+    """download_file("nc") saves the griddap .nc response to the working directory."""
+    monkeypatch.chdir(tmp_path)
+    path = _small_crw(xpublish_server).download_file("nc")
+    assert path.suffix == ".nc"
+    with xr.open_dataset(tmp_path / path) as ds:
+        assert ds.analysed_sst.shape == (3, 21, 21)
+        expected = sst(
+            ds.time.values[:, None, None],
+            ds.latitude.values[None, :, None],
+            ds.longitude.values[None, None, :],
+        )
+        np.testing.assert_allclose(ds.analysed_sst.values, expected)
+
+
+def test_erddapy_download_file_rejects_unknown_types(xpublish_server):
+    """A type erddapy does not know is its own ValueError, before any request."""
+    with pytest.raises(ValueError, match="not available"):
+        _small_crw(xpublish_server).download_file("notatype")
+
+
+@pytest.mark.skipif(
+    "erddapy" not in xr.backends.list_engines(),
+    reason="erddapy's xarray backend does not load with the lowest-version xarray "
+    "(it imports T_PathFileOrDataStore, which that xarray lacks): an erddapy/xarray "
+    "mismatch, not ours. The min-deps job is the only one that skips this.",
+)
+def test_xarray_engine_erddapy(xpublish_server):
+    """xr.open_dataset(url, engine="erddapy") opens a griddap .nc URL."""
+    e = _small_crw(xpublish_server)
+    ds = xr.open_dataset(e.get_download_url(response="nc"), engine="erddapy")
+    assert ds.analysed_sst.shape == (3, 21, 21)
+    assert ds.analysed_sst.attrs["units"] == "degree_C"
+
+
+def test_erddapy_search_servers(xpublish_server):
+    """search_servers over a server list of one (ours), so nothing leaves the machine."""
+    # erddapy's own server list ends every URL with a slash and builds
+    # "{server}search/index.csv" from it
+    server = f"{xpublish_server}/"
+    found = search_servers("CRW_sst", servers_list=[server], protocol="griddap")
+    assert list(found["Dataset ID"]) == ["CRW_sst_v1_0_monthly"]
+    assert found["Server url"].iloc[0] == server

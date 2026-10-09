@@ -92,4 +92,66 @@ stopifnot(min(sst$longitude) > 177.5 - 0.05, max(sst$longitude) < 199.0 + 0.05)
 stopifnot(min(sst$longitude) < 180, max(sst$longitude) > 180)
 ok("tutorial 3: values inside the polygon match, across the dateline")
 
+# --- rxtracto(): the track matchup the CoastWatch R tutorials use (#67) -----
+# Five of the tutorials call rxtracto(info, parameter, xcoord, ycoord, tcoord,
+# xlen, ylen) for a ship or animal track and read back the "mean ..." and
+# "satellite date" columns.
+grid_centre <- function(x) round((x - 0.025) / 0.05) * 0.05 + 0.025
+track_x <- c(195.52, 196.02, 200.52)
+track_y <- c(17.52, 18.02, 20.27)
+track_t <- c("2018-02-15", "2018-03-10", "2018-06-20")
+
+# a box of zero size is the single nearest grid cell, so the value is exact
+point <- rxtracto(
+  dataInfo, parameter = parameter,
+  xcoord = track_x, ycoord = track_y, tcoord = track_t
+)
+stopifnot(identical(
+  point[["satellite date"]],
+  c("2018-02-01T12:00:00Z", "2018-03-01T12:00:00Z", "2018-07-01T12:00:00Z")
+))
+stopifnot(all(point$n == 1))
+expected <- sst_formula(point[["satellite date"]], grid_centre(track_y), grid_centre(track_x))
+stopifnot(max(abs(point[["mean analysed_sst"]] - expected)) < 1e-6)
+ok("rxtracto(): a track of three points returns the formula values and dates")
+
+# a 0.2 degree box averages 20 cells; the surface is nearly flat there
+boxed <- rxtracto(
+  dataInfo, parameter = parameter,
+  xcoord = track_x, ycoord = track_y, tcoord = track_t, xlen = 0.2, ylen = 0.2
+)
+stopifnot(all(boxed$n > 1))
+stopifnot(max(abs(boxed[["mean analysed_sst"]] - expected)) < 0.05)
+stopifnot(all(boxed[["stdev analysed_sst"]] < 0.05))
+ok("rxtracto(xlen, ylen): a box of cells is averaged")
+
+# --- plotdap (#52): add_griddap reads the griddap object -------------------
+# plotdap takes only $summary$dim$time/latitude/longitude$vals and $data from
+# the object (names hard-coded), so the dataset's axis names matter (#59).
+suppressMessages(library(plotdap))
+grd <- suppressMessages(griddap(
+  dataInfo,
+  time = c("2018-01-01T12:00:00Z", "2018-03-01T12:00:00Z"),
+  latitude = c(17, 17.5), longitude = c(195, 195.5)
+))
+plot <- suppressMessages(add_griddap(plotdap("base"), grd, ~analysed_sst))
+stopifnot(inherits(plot, "plotdap"))
+ok("plotdap: add_griddap() accepts the griddap object")
+
+rast <- plotdap:::get_raster(grd, ~analysed_sst)
+lats <- sort(unique(grd$data$latitude), decreasing = TRUE)
+lons <- sort(unique(grd$data$longitude))
+ext <- raster::extent(rast)
+stopifnot(raster::nlayers(rast) == 3, dim(rast)[1:2] == c(length(lats), length(lons)))
+stopifnot(abs(ext@xmin - min(lons)) < 1e-6, abs(ext@xmax - max(lons)) < 1e-6)
+stopifnot(abs(ext@ymin - min(lats)) < 1e-6, abs(ext@ymax - max(lats)) < 1e-6)
+layer_times <- sort(unique(grd$data$time))
+for (k in seq_along(layer_times)) {
+  # raster cells run from the top-left: latitude north to south, then longitude
+  cells <- expand.grid(lon = lons, lat = lats)
+  want <- sst_formula(layer_times[k], cells$lat, cells$lon)
+  stopifnot(max(abs(raster::values(rast)[, k] - want)) < 1e-6)
+}
+ok("plotdap: get_raster() values match the formula, one layer per time")
+
 cat("\nAll tutorial checks passed\n")
