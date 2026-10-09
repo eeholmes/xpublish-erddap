@@ -264,7 +264,9 @@ Rscript tests/test_rerddap.R   # after starting `python tests/server.py`
 Rscript tests/test_tutorials.R # same server; needs rerddapXtracto, httr, ncdf4
 ```
 
-`nox` runs the suite against the same Python versions as CI.
+`nox` runs the suite against the same Python versions as CI. CI also runs the
+erddapy-using tests with erddapy pinned to 3.1.0 (the `erddapy-3-1` job; the
+matrix gets the newest erddapy) and the R tests with the newest rerddap.
 
 `tests/test_tutorials.py` and `tests/test_tutorials.R` run the users' own
 tutorial steps (CoastWatch satellite course, erddapy docs) against stand-in

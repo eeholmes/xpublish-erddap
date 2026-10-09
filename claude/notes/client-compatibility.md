@@ -68,6 +68,16 @@ work used 3.1.0; CI installed 3.3.1 from conda-forge, and every live test
 failed. **A local pass says nothing about the client version CI uses.** This is
 issue #10.
 
+Since #10 CI has an `erddapy-3-1` job (Linux, Python 3.12) that pins
+`erddapy==3.1.0`, prints and asserts the version, and runs the test files that
+import erddapy. Both directions are covered now. Two erddapy-3.1.0-only
+differences are handled in `tests/test_tutorials.py` (`OLD_ERDDAPY_NUMBERS`),
+not in the server: 3.1.0 reads `.csvp` with pandas, so `griddap_initialize()`
+gives int steps and np.float64 bounds (pandas' fast parser also turns
+`359.91999999999996` into `359.92`), where 3.3 keeps strings. Those two tests
+compare numerically under 3.1.0. The R side has no version pin; it takes
+CRAN's newest rerddap.
+
 The environment problem that makes this worse is recorded in the handoff: this
 is a JupyterHub, and packages change whenever the server restarts.
 
