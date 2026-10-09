@@ -89,7 +89,7 @@ def test_values_are_clean_sorted_and_link_to_their_datasets(client):
     standard = table(client, "/erddap/categorize/standard_name/index.csv")
     assert list(standard["Category"]) == ["_null", SST_NAME]
     ioos = table(client, "/erddap/categorize/ioos_category/index.csv")
-    assert list(ioos["Category"]) == ["_null", "temperature"]
+    assert list(ioos["Category"]) == ["location", "temperature"]
 
 
 def test_third_level_is_the_dataset_table_by_title(client):
