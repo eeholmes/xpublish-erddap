@@ -7,7 +7,7 @@ users' **ERDDAP client code** relies on: erddapy, rerddap, rerddapXtracto, and
 hand-built griddap URLs (the CoastWatch tutorials). When data moves from
 ERDDAP servers to Zarr/Icechunk on Earthmover Arraylake, that code should
 keep working with only the server URL changed. **Client compatibility, not an
-ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
+ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extension (#99, decided on #7).
 
 - Public at https://github.com/eeholmes/xpublish-erddap; the aim is to
   **donate it to xpublish-community**.
@@ -83,8 +83,13 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
 - The repo uses **branches and PRs**. A task stays on its branch until the
   definition of done on its issue is met. EH often says "merge #N when CI is
   green"; merged branches are deleted on GitHub and on the hub.
-- #13 is the hackweek proposal; #14 (the Zarr/Icechunk validator) is its
-  second project.
+- #13 is the hackweek proposal. Its second project, the Zarr/Icechunk
+  validator (was #14), **moved to another repo**; EH deleted #14 here on
+  purpose (2026-10-09). `tools/fluxlint.py` stays as it is.
+- **The `future` label means "good project for an IOOS hackathon, after the
+  move to xpublish-community"** (EH, 2026-10-09; now the label's
+  description). Carrying it: #6 (file types), #53 (EDD*FromErddap), #98
+  (interpolate), #99 (tabledap).
 - **Audit done 2026-10-07 (#50, #52); its findings are issues #55–#72**, in
   the order to do them. Each says its order, dependencies, definition of done
   and which model is enough (EH asked for that; she uses Opus 5.5). Pre-release:
@@ -109,9 +114,12 @@ ERDDAP replacement:** no UI, no images; tabledap is "later" (#7).
   `onlyValue`, coverage globals on axis-only `.nc`, NaN padding, JSON `null`,
   ERDDAP's `&`-clause grammar and error positions, `.jsonp`, stride rounding),
   #68 (PR #96), #5 `categorize` (PR #95; EH kept both defaults: all seven
-  attributes with `_null`, no redirect for a bare URL). **Left of #68–#72:**
-  #69 (Opus), #70 (needs EH), #72 (EH: wait until the repo is in
-  xpublish-community, then use the org's Codecov). The ordered table is
+  attributes with `_null`, no redirect for a bare URL). Later on
+  2026-10-09: #70 (PR #101: every `convert/*` answers ERDDAP's "convert
+  system disabled" 404; `rxtracto(interp=...)` still retries ~33 s, only #98
+  fixes that) and #7 (PR #100, README). **Left of #68–#72:** #69 (Opus), #72
+  (EH: wait until the repo is in xpublish-community, then use the org's
+  Codecov). The ordered table is
   the last-but-one comment on #50; method and what was found fine:
   `notes/audit-2026-10.md`.
 
@@ -163,7 +171,7 @@ run the R tests: `notes/dev-environment.md`.
 - `notes/flux-sim-server.md` — #17: the test server, both data pathways,
   how Flux really routes, AWS account limits, what was measured.
 - `notes/erddap-parity-plan.md` — #1 end to end: the user code that counts,
-  the deployment model, looser-than-ERDDAP rules (for #14), what real servers
+  the deployment model, looser-than-ERDDAP rules (for the validator), what real servers
   do and what is only inferred, how to recapture and add cases.
 - `notes/dev-environment.md` — hub limits, setup checks, running R tests,
   probing real servers.
@@ -177,7 +185,8 @@ run the R tests: `notes/dev-environment.md`.
 - `docs/hosting.md` (not a note: public) — for Earthmover and other hosts.
 - `notes/audit-2026-10.md` — #50/#52: how the audit ran, what was checked
   and found fine (so the next audit does not redo it), and the issues it made.
-- `tools/fluxlint.py` — rough readiness linter; a start for #14.
+- `tools/fluxlint.py` — rough readiness linter (the validator itself moved to
+  another repo).
 
 ## Open threads (a record, not a task list)
 
@@ -191,8 +200,9 @@ run the R tests: `notes/dev-environment.md`.
   `xpublish-erddap` is free on PyPI and conda-forge (checked 2026-10-07).
   Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
   xpublish ecosystem PR) each need EH's yes.
-- **#53, #54** (EH's): research ERDDAP proxying us via `EDD*FromErddap`, and
-  direct Icechunk support in ERDDAP itself.
+- **#53** (EH's, `future`): research ERDDAP proxying us via `EDD*FromErddap`.
+  Direct Icechunk support in ERDDAP itself (was #54) moved to EH's fork,
+  `eeholmes/erddap` issue #1.
 - **Earthmover:** send `docs/hosting.md`; ask how Flux registers a service,
   names its path parameters, and sets `_xpublish_id`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
@@ -201,8 +211,9 @@ run the R tests: `notes/dev-environment.md`.
 - **#71's open question for EH:** honour a store's `time_precision`? It would
   reach csv, json, `onlyValue`, coverage globals and error times; none of 150
   datasets checked sets one. In `design-and-history.md` (#71 section).
-- **#6:** an outside contributor offered (on the issue) to do the
-  formats/entry-point refactor as a first PR. EH has not answered yet.
+- **#6:** ignore the outside contributor's early comment offering the
+  entry-point refactor (EH, 2026-10-09); after the move, xpublish-community's
+  contributing norms apply. #6 is `future`.
 - **Known differences kept on purpose:** some constraint-error wording
   (stride, selector count); 400 where ERDDAP gives 500 for an unknown
   variable; `/erddap/nope` paths get FastAPI's 404. Values off an axis (404,
@@ -210,7 +221,7 @@ run the R tests: `notes/dev-environment.md`.
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
 - **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
-  CoastWatch Python tutorials need it, see its latest comment), #6, #7, #10
-  (an older-erddapy CI job), #14.
+  CoastWatch Python tutorials need it, see its latest comment), #10 (an
+  older-erddapy CI job), #37, #69, #72; `future`: #6, #53, #98, #99.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
