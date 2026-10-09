@@ -64,3 +64,28 @@ def test_calendar_and_coordinates_are_in_ncml_info_and_nc(client):
     nc = xr.open_dataset(io.BytesIO(client.get("/erddap/griddap/g.nc?sst[0][0][0]").content))
     assert nc.time.attrs.get("calendar", nc.time.encoding.get("calendar")) == "gregorian"
     assert nc.sst.attrs.get("coordinates", nc.sst.encoding.get("coordinates"))
+
+
+# -- a one-value axis (Erddap.doInfo, EDVGridAxis.destinationToString) ---------
+def one_value_axes() -> xr.Dataset:
+    return xr.Dataset(
+        {"v": (("time", "altitude", "latitude", "level", "longitude"), np.ones((1, 1, 1, 1, 3)))},
+        coords={
+            "time": ("time", np.array(["2020-02-03T04:05:06"], dtype="datetime64[ns]")),
+            "altitude": ("altitude", np.array([0.0]), {"units": "m"}),
+            "latitude": ("latitude", np.array([34.5], dtype="float32"), {"units": "degrees_north"}),
+            "level": ("level", np.array([5], dtype="int32"), {"units": "1"}),
+            "longitude": ("longitude", [10.0, 11.0, 12.0], {"units": "degrees_east"}),
+        },
+    )
+
+
+def test_one_value_axis_info_says_only_value():
+    rest = xpublish.Rest({"one": one_value_axes()}, plugins={"erddap": ErddapPlugin()})
+    text = TestClient(rest.app).get("/erddap/info/one/index.csv").text
+    rows = {r.split(",", 2)[1]: r for r in text.splitlines() if r.startswith("dimension,")}
+    assert rows["time"].endswith('"nValues=1, onlyValue=2020-02-03T04:05:06Z"')
+    assert rows["altitude"].endswith('"nValues=1, onlyValue=0.0"')
+    assert rows["latitude"].endswith('"nValues=1, onlyValue=34.5"')
+    assert rows["level"].endswith('"nValues=1, onlyValue=5.0"')
+    assert rows["longitude"].endswith('"nValues=3, evenlySpaced=true, averageSpacing=1.0"')

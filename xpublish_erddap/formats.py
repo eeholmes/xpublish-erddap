@@ -644,6 +644,32 @@ def _duration(seconds: float) -> str:
     return sign + hms
 
 
+def _only_value(values: np.ndarray) -> str:
+    """An axis's one value as ERDDAP writes it (``Erddap.doInfo``).
+
+    ``EDVGridAxis.destinationToString``: a double axis prints as a Java
+    double, a float axis as the Java float of its 7-digit "nice" double, any
+    other numeric axis as ``Math.rint`` (a double, so ``5.0``); a time axis as
+    an ISO string (``EDVTimeStampGridAxis``). NaN is ``NaN``.
+    """
+    if np.issubdtype(values.dtype, np.datetime64):
+        ts = pd.Timestamp(values[0])
+        return "NaN" if ts is pd.NaT else ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+    value = nice_doubles(values)[0]
+    if values.dtype == np.float32:
+        return java_number(np.float32(value))
+    if values.dtype != np.float64:
+        value = np.rint(value)
+    return java_number(np.float64(value))
+
+
+def _dimension_value(values: np.ndarray) -> str:
+    """The ``Value`` of an info ``dimension`` row."""
+    if values.size == 1:
+        return f"nValues=1, onlyValue={_only_value(values)}"
+    return f"nValues={values.size}{_spacing(values)}"
+
+
 def info_table(ed: ErddapDataset) -> tuple[list[str], list[list]]:
     """Rows for ``/info/{id}/index.csv``.
 
@@ -666,7 +692,7 @@ def info_table(ed: ErddapDataset) -> tuple[list[str], list[list]]:
                 dim,
                 "",
                 erddap_type(ed.ds[dim]),
-                f"nValues={values.size}{_spacing(values)}",
+                _dimension_value(values),
             ],
         )
         attribute_rows(dim, _axis_attrs(ed, dim))
