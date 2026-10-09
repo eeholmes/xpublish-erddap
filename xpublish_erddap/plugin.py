@@ -677,10 +677,13 @@ class ErddapPlugin(Plugin):
     rename_axes: bool | dict[str, str] = True
 
     #: Refuse a data request (nc, csv, json, ...) whose values would exceed
-    #: this many MB, before reading any data. ``None`` means no limit beyond
-    #: the 2 GB ``.nc`` cap copied from real ERDDAP servers. Responses are
-    #: built in memory, so a public server should set this.
-    max_response_mb: float | None = None
+    #: this many MB, before reading any data, with ERDDAP's 413. Responses are
+    #: built in memory, so the default is a finite 500. ERDDAP has no fixed
+    #: default of its own: it refuses what would not fit in 75% of the JVM's
+    #: heap (``Math2.ensureMemoryAvailable``) and any ``.nc`` over about 2 GB
+    #: (``EDDGrid.saveAsNc``). ``None`` means no limit beyond that 2 GB ``.nc``
+    #: cap; use it only where a whole-variable request is safe.
+    max_response_mb: float | None = 500
 
     #: How a per-dataset root names its dataset, before the datasetID rule:
     #: ``name_dataset(params, group) -> str``, where ``params`` are the URL's
