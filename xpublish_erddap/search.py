@@ -252,8 +252,13 @@ def search_text(ed: ErddapDataset) -> str:
     """ERDDAP's ``searchString`` for a grid dataset, in lower case.
 
     Its order matters: a word found earlier ranks higher. Title and id, then
-    the data variables' names, then all attributes, then the axes.
+    the data variables' names, then all attributes, then the axes. Built once
+    per dataset, as ERDDAP builds it once per load.
     """
+    return ed.memo("search_text", lambda: _search_text(ed))
+
+
+def _search_text(ed: ErddapDataset) -> str:
     lines = [
         "all",
         f"title={ed.globals_.get('title', ed.dataset_id)}",
@@ -351,7 +356,12 @@ def categories(ed: ErddapDataset) -> dict[str, set[str]]:
     Global attributes, then each data and axis variable's attributes (with the
     ``ioos_category`` this plugin fills in), cleaned up as ERDDAP does: file-
     name-safe and lower case. A missing value is ``_null``, as in ERDDAP.
+    Built once per dataset; do not change what it returns.
     """
+    return ed.memo("categories", lambda: _categories(ed))
+
+
+def _categories(ed: ErddapDataset) -> dict[str, set[str]]:
     out: dict[str, set[str]] = {}
     for att in GLOBAL_CATEGORIES:
         value = ed.globals_.get(att)
