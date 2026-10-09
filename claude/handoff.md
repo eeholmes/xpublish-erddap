@@ -186,6 +186,8 @@ run the R tests: `notes/dev-environment.md`.
 - `docs/hosting.md` (not a note: public) — for Earthmover and other hosts.
 - `notes/audit-2026-10.md` — #50/#52: how the audit ran, what was checked
   and found fine (so the next audit does not redo it), and the issues it made.
+- `notes/test-audit-2026-10.md` — #110: test-suite review before the move;
+  what to prune, what only looks redundant, run time. Work: #111–#114.
 - `tools/fluxlint.py` — rough readiness linter (the validator itself moved to
   another repo).
 
