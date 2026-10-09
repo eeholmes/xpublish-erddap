@@ -400,7 +400,7 @@ def griddap_response(  # noqa: PLR0911, PLR0913
                 ed,
                 sub,
                 parsed.variables,
-                all_axes=not query.strip(),
+                all_axes=not parsed.expression,
             ),
         )
     if head and ext in HEAD_MEDIA:

@@ -17,7 +17,7 @@ everything down to integer ``(start, stop, stride)`` triples with an inclusive
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
@@ -65,6 +65,10 @@ class ParsedQuery:
 
     variables: list[str]
     selections: dict[str, DimSelection]
+    #: the query before its first ``&``
+    expression: str = ""
+    #: the ``&`` clauses after it (``.jsonp=name``, ``.draw=surface``)
+    commands: list[str] = field(default_factory=list)
 
 
 class ConstraintError(ValueError):
@@ -436,6 +440,10 @@ def jsonp_name(parts: list[str]) -> str | None:
     return None
 
 
+#: ``Message.QUERY_ERROR_GRID_AMP``
+_GRID_AMP = "Query error: In a griddap query, '&' must be followed by a .graphicsCommand."
+
+
 def _parse_axis_request(
     name: str,
     selectors: list[str],
@@ -454,7 +462,7 @@ def _parse_axis_request(
     return parse_selector(selectors[0], axes[name], allow_reversed=False, where=where)
 
 
-def parse_griddap_query(
+def parse_griddap_query(  # noqa: PLR0912
     query: str,
     axes: dict[str, np.ndarray],
     dim_order: list[str],
@@ -472,9 +480,13 @@ def parse_griddap_query(
         The requested variables and the resolved per-dimension selections.
     """
     full = {d: DimSelection(0, len(axes[d]) - 1, 1) for d in dim_order}
-    query = (query or "").strip()
+    parts = split_amp(query or "")
+    if any(not clause.startswith(".") for clause in parts[1:]):
+        raise ConstraintError(_GRID_AMP)
+    query = parts[0].strip()
+    commands = parts[1:]
     if not query:
-        return ParsedQuery(list(known_variables), full)
+        return ParsedQuery(list(known_variables), full, query, commands)
 
     variables: list[str] = []
     selections: dict[str, DimSelection] | None = None
@@ -522,4 +534,4 @@ def parse_griddap_query(
             msg = "all variables in one griddap request must share the same subset"
             raise ConstraintError(msg)
         out[dim] = sel
-    return ParsedQuery(variables, out)
+    return ParsedQuery(variables, out, query, commands)

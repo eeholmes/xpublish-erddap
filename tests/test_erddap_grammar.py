@@ -292,3 +292,50 @@ def test_a_bad_jsonp_name_is_refused(client, name):
 def test_jsonp_head_says_javascript(client):
     r = client.head("/erddap/griddap/g.json?time[0:1:1]&.jsonp=cb")
     assert r.headers["content-type"] == "application/javascript;charset=UTF-8"
+
+
+# &-clauses (EDDGrid.parseDataDapQuery / parseAxisDapQuery, Table.getDapQueryParts)
+def test_and_clauses_that_start_with_a_dot_are_ignored(client):
+    plain = client.get(f"/erddap/griddap/g.csv?{FULL}")
+    assert client.get(f"/erddap/griddap/g.csv?{FULL}&.draw=surface").text == plain.text
+    assert client.get(f"/erddap/griddap/g.csv?{FULL}&.draw=surface&.vars=a|b").text == plain.text
+    axis = client.get("/erddap/griddap/g.csv?time[0:1:1]")
+    assert client.get("/erddap/griddap/g.csv?time[0:1:1]&.draw=lines").text == axis.text
+
+
+def test_an_and_clause_alone_asks_for_the_whole_dataset(client):
+    whole = client.get("/erddap/griddap/g.csv")
+    r = client.get("/erddap/griddap/g.csv?&.draw=surface")
+    assert r.status_code == 200
+    assert r.text == whole.text
+    assert (
+        client.get("/erddap/griddap/g.dds?&.draw=surface").text
+        == client.get(
+            "/erddap/griddap/g.dds",
+        ).text
+    )
+
+
+def test_jsonp_on_a_whole_dataset_request(client):
+    r = client.get("/erddap/griddap/g.json?&.jsonp=cb")
+    assert r.status_code == 200
+    assert r.text.startswith('cb({\n  "table"')
+
+
+def test_a_comma_in_an_and_clause_is_not_a_variable(client):
+    r = client.get(f"/erddap/griddap/g.csv?{FULL}&.vars=longitude|latitude|sst,nosuchvariable")
+    assert r.status_code == 200
+    assert r.text == client.get(f"/erddap/griddap/g.csv?{FULL}").text
+
+
+@pytest.mark.parametrize("query", [f"{FULL}&foo", f"{FULL}&", f"{FULL}&&.draw=surface", "&", "&x"])
+def test_an_and_clause_must_start_with_a_dot(client, query):
+    assert query_error(client, query) == (
+        "Query error: In a griddap query, '&' must be followed by a .graphicsCommand."
+    )
+
+
+def test_an_unclosed_quote_is_refused(client):
+    assert query_error(client, f'{FULL}&.title="x') == (
+        "Query error: A closing doublequote is missing."
+    )
