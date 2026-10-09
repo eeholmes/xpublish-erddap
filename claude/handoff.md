@@ -24,7 +24,7 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   `ErddapPlugin(name_dataset=...)`; group routing; caching on `_xpublish_id`;
   URLs). EH has it to send; Flux's real internals are still unknown.
 
-## Repo state (2026-10-09, after #5, #68, #71)
+## Repo state (2026-10-09, after #2, #8, #10)
 
 - **Public test server, live until 2026-11-13:**
   https://18-119-42-78.sslip.io/erddap, `deploy/server.py` on EH's AWS
@@ -36,8 +36,8 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
   Since #59 it serves ERDDAP's axis names (`latitude`, `longitude`; the
   decadal forecasts' date-valued `lead` is `time`). Redeploying needs EH's
   `aws login --remote` (profile `litellm-poc`, which `greenfield` sources).
-  **Not redeployed since `bbe53e0`**: #60–#67, #5, #68 and #71 are on `main`
-  but not on the server. `deploy/server.py` already sets `max_response_mb=500`, the new
+  **Not redeployed since `bbe53e0`**: #60–#67, #5, #68, #71 and #2 (`.dods`)
+  are on `main` but not on the server. `deploy/server.py` already sets `max_response_mb=500`, the new
   default, and none of the 12 stores is known to use a model calendar or a
   lead-time axis, so little is expected to change; redeploy before relying
   on it.
@@ -63,17 +63,20 @@ ERDDAP replacement:** no UI, no images; tabledap is in scope as a future extensi
 - **Shipped 2026-10-07:** #34, #18 (per-group root, `docs/hosting.md`), #3,
   #27/#4 (`search.py`, ported), #35, #36 (`errors.py`), #45/#46; 2026-10-06:
   #32, #33, #40.
-- **CI, 13 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
-  `package`, `rerddap`, pre-commit.ci. About 695 passed, 42 skipped,
+- **CI, 14 checks:** the 3x3 matrix, `min-deps` (3.11, lowest versions),
+  `package`, `rerddap`, `erddapy-3-1` (erddapy pinned to 3.1.0, only the
+  erddapy test files; since #10), pre-commit.ci. About 695 passed, 42 skipped,
   4 xfailed on Linux/macOS (all four PRs below merged together, run on the
   hub); min-deps one extra skip (erddapy's xarray engine cannot load under the
   lowest xarray) and now tests `fastapi` 0.115; Windows skips the live-server
   tests. The `rerddap` job has plotdap since #67, and every R check prints
-  `ok -`. **Since #94 (2026-10-09): 845 passed, 43 skipped, 8 xfailed** on
-  Linux/macOS; Windows 823/66/7; min-deps 844/44/8. The
+  `ok -`. **Since #2 (2026-10-09): 911 passed, 43 skipped, 9 xfailed** on
+  Linux/macOS; Windows 887/67/9; min-deps 910/44/9; `erddapy-3-1` 170
+  passed, 1 xfailed. The
   skips are mostly parity media-type checks on error responses, expected; the
   xfails are strict known differences (`KNOWN_MEDIA`: ERDDAP 2.29/2.31 serve
-  `.das` as `text/csv`); `KNOWN` (content) is empty again. Parity has **10
+  `.das` as `text/csv`); `KNOWN` (content) holds only dhw_5km's `.dods`
+  (ERDDAP truncates unsigned bytes, #2). Parity has **10
   cases** since #68 (four coastwatch 2.31: a static 4-D climatology with a
   one-value axis, chla monthly with `calendar`, two-variable currents, Byte
   `.dds`/`.das`); the six older ones were recaptured 2026-10-08,
@@ -206,12 +209,20 @@ run the R tests: `notes/dev-environment.md`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
   `_xpublish_id` and reopen stores now and then, so new commits show up
   without a restart (a live demo of #3).
+- **Shipped late 2026-10-09** (all closed): #8 as docs only, README
+  "Access control" + `hosting.md` "Reaching a private store" (PR #103; the
+  Basic-auth demo is an idea, #105); #10 the `erddapy-3-1` job and tested
+  client versions in README (PR #104; no old-rerddap pin, on purpose); #2
+  `.dods` (PR #106): **encoder ported from opendap-protocol, not imported**
+  (EH's choice: 1.1.1 does not import in a new 3.12 venv), ERDDAP's
+  `grid.grid`/`grid.axis` names, byte-identical to ERDDAP on every parity
+  case; goldens recaptured 2026-10-09. Details: `design-and-history.md`.
 - **Next, as EH planned it (2026-10-09), before the move to
-  xpublish-community:** #10 (an erddapy 3.1.0 CI job, Sonnet) and #8 (at
-  least a README statement that the server does not authenticate its callers,
-  Sonnet) in parallel; then #2 (`.dods`, reusing xpublish-opendap's encoder
-  with our own parsed constraints, Opus); then #69 (Opus). Also before the
-  move: redeploy the test server, re-share the collaborator kit.
+  xpublish-community:** #69 (Opus), started in a fresh session. Also before
+  the move: redeploy the test server (it lacks `.dods`), re-share the
+  collaborator kit. Possibly, after the move and with EH's yes: an upstream
+  issue that xpublish-opendap 0.2.0 likely fails to import in a fresh env
+  (its `opendap-protocol<1.2.0` needs `pkg_resources`; not run).
 - **`time_precision`:** not honoured, EH's decision (2026-10-09, "no for
   now"); kept difference in `design-and-history.md` (#71 section).
 - **#6:** ignore the outside contributor's early comment offering the
@@ -223,8 +234,7 @@ run the R tests: `notes/dev-environment.md`.
   #57) and index and `last` errors (400, #58) now carry ERDDAP's status and
   text. See `design-and-history.md`. Also not copied: ERDDAP's `maxIsMV`
   (a real type-maximum value, e.g. 127 in a Byte with a fill, shown as NaN).
-- **Other open issues:** #8 (auth), #2 (`.dods`: ~14 of ~25 current
-  CoastWatch Python tutorials need it, see its latest comment), #10 (an
-  older-erddapy CI job), #37, #69, #72; `future`: #6, #53, #98, #99.
+- **Other open issues:** #37, #69, #72, #105 (idea only); `future`: #6,
+  #53, #98, #99.
 - **Raw Zarr attributes through a real ERDDAP** (Docker in Actions): not
   covered; needs its own issue first.
