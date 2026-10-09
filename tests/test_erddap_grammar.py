@@ -339,3 +339,89 @@ def test_an_unclosed_quote_is_refused(client):
     assert query_error(client, f'{FULL}&.title="x') == (
         "Query error: A closing doublequote is missing."
     )
+
+
+# text outside the brackets (EDDGrid.parseDataDapQuery, parseAxisDapQuery)
+def test_without_the_ampersand_a_graphics_command_is_a_variable(client):
+    assert query_error(client, ".draw=surface") == "unknown variable '.draw=surface'"
+
+
+def test_text_after_an_axis_request_is_refused(client):
+    assert query_error(client, "time[(last)]garbage") == (
+        'Query error: "g" was not expected at position=13.'
+    )
+    assert (
+        query_error(client, "time[0:1:1]]") == 'Query error: "]" was not expected at position=12.'
+    )
+    assert query_error(client, "time[0][1]") == 'Query error: "[" was not expected at position=8.'
+
+
+@pytest.mark.parametrize(
+    ("query", "text"),
+    [
+        (
+            f"{FULL}x[0][0]",
+            '"," or "[end of query]" was expected at or after position=24, not "x".',
+        ),
+        (
+            f"{FULL}garbage",
+            '"," or "[end of query]" was expected at or after position=24, not "g".',
+        ),
+        (f"{FULL},sst", '"[" was expected at or after position=25, not [end of query].'),
+        (
+            "sst[0:1:1][0:1:1]",
+            'For variable=sst axis#2=longitude: "[" was expected at or after position=17, '
+            "not [end of query].",
+        ),
+        (
+            "sst[0:1:1][0:1:1]x[0]",
+            'For variable=sst axis#2=longitude: "[" was expected at or after position=17, not "x".',
+        ),
+        (
+            "sst[0:1:1[0:1:1][0]",
+            'For variable=sst axis#0=time Constraint="[0:1:1[0:1:1]": '
+            'Stop="1[0:1:1" is invalid.  It must be an integer between 0 and 2.',
+        ),
+        (
+            "sst[0:1:1",
+            'For variable=sst axis#0=time: "]" was not found after position=3.',
+        ),
+    ],
+)
+def test_text_after_a_data_request_is_refused(client, query, text):
+    assert query_error(client, query).removeprefix("Query error: ") == text
+
+
+# duplicate variables and axis + data (EDDGrid.parseDataDapQuery, parseAxisDapQuery)
+@pytest.mark.parametrize(
+    ("query", "text"),
+    [
+        ("time,time", "Variable name=time occurs twice."),
+        ("time[0:1:1],latitude,time", "Variable name=time occurs twice."),
+        (f"{FULL},{FULL}", "Variable name=sst occurs twice."),
+        ("sst,sst", "Variable name='sst' occurs twice."),
+        (
+            f"time[0:1:1],{FULL}",
+            "A griddap axis variable query can't include a data variable (sst).",
+        ),
+        ("time,sst", "A griddap axis variable query can't include a data variable (sst)."),
+        ("sst,time", "A griddap data variable query can't include an axis variable (time)."),
+        (
+            f"{FULL},time[0:1:1]",
+            "A griddap data variable query can't include an axis variable (time).",
+        ),
+    ],
+)
+def test_duplicate_and_mixed_variables_are_refused(client, query, text):
+    assert query_error(client, query) == f"Query error: {text}"
+
+
+def test_two_variables_with_one_subset_are_still_served():
+    ds = gridded(2, 2, 2)
+    ds["sst2"] = ds["sst"] * 2
+    rest = xpublish.Rest({"two": ds}, plugins={"erddap": ErddapPlugin()})
+    r = TestClient(rest.app).get(
+        "/erddap/griddap/two.csv?sst[0:1:1][0][0:1:1],sst2[0:1:1][0][0:1:1]",
+    )
+    assert r.status_code == 200
+    assert r.text.splitlines()[0] == "time,latitude,longitude,sst,sst2"
