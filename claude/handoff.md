@@ -190,13 +190,11 @@ run the R tests: `notes/dev-environment.md`.
 
 ## Open threads (a record, not a task list)
 
-- **#37, first release and listing.** EH wants to talk it through first. The
-  open question: release before or after donating the repo to
-  xpublish-community (PyPI trusted publishing is tied to the repo owner).
+- **#37, first release and listing: after the move** to xpublish-community
+  (EH, 2026-10-09; PyPI trusted publishing is tied to the repo owner).
   Decided 2026-10-09 (#66): bare tags (`0.1.0`, like the siblings); the
   publish workflow uses `environment: pypi`; the GitHub `pypi` environment and
-  the PyPI trusted publisher wait until after the move (recommended; EH left
-  it open). README's `git+https` install line goes at the first release.
+  the PyPI trusted publisher wait until after the move (now decided). README's `git+https` install line goes at the first release.
   `xpublish-erddap` is free on PyPI and conda-forge (checked 2026-10-07).
   Outward steps (PyPI pending publisher, tag, conda-forge staged-recipes, the
   xpublish ecosystem PR) each need EH's yes.
@@ -208,9 +206,14 @@ run the R tests: `notes/dev-environment.md`.
 - **Test server, small idea:** have `deploy/server.py` put the snapshot in
   `_xpublish_id` and reopen stores now and then, so new commits show up
   without a restart (a live demo of #3).
-- **#71's open question for EH:** honour a store's `time_precision`? It would
-  reach csv, json, `onlyValue`, coverage globals and error times; none of 150
-  datasets checked sets one. In `design-and-history.md` (#71 section).
+- **Next, as EH planned it (2026-10-09), before the move to
+  xpublish-community:** #10 (an erddapy 3.1.0 CI job, Sonnet) and #8 (at
+  least a README statement that the server does not authenticate its callers,
+  Sonnet) in parallel; then #2 (`.dods`, reusing xpublish-opendap's encoder
+  with our own parsed constraints, Opus); then #69 (Opus). Also before the
+  move: redeploy the test server, re-share the collaborator kit.
+- **`time_precision`:** not honoured, EH's decision (2026-10-09, "no for
+  now"); kept difference in `design-and-history.md` (#71 section).
 - **#6:** ignore the outside contributor's early comment offering the
   entry-point refactor (EH, 2026-10-09); after the move, xpublish-community's
   contributing norms apply. #6 is `future`.
