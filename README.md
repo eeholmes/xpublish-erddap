@@ -52,9 +52,9 @@ at first request.
 python -m pip install xpublish-erddap
 ```
 
-This installs the plugin with its dependencies (`xpublish`, `xarray`, `pandas`,
-`numpy`, `scipy`); it needs Python 3.11 or newer. Xpublish finds the plugin
-through its `xpublish.plugin` entry point, or you can pass `ErddapPlugin()`
+This installs the plugin with its dependencies (`xpublish`, `fastapi`,
+`xarray`, `pandas`, `numpy`, `scipy`); it needs Python 3.11 or newer.
+Xpublish finds the plugin through its `xpublish.plugin` entry point, or you can pass `ErddapPlugin()`
 explicitly as below. To read Zarr or Icechunk stores, also install what xarray
 needs for them (`zarr`, `icechunk`). Until the first release is on PyPI, install
 from GitHub:

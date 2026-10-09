@@ -10,8 +10,8 @@ requires-python = ">=3.11"
 keywords = ["xarray", "xpublish", "erddap", "griddap", "icechunk", "zarr"]
 license = "BSD-3-Clause"
 license-files = ["LICENSE.txt"]
-authors = [{ name = "Eli Holmes" }]
-maintainers = [{ name = "Eli Holmes" }]
+authors = [{ name = "Eli Holmes", email = "eli.holmes@noaa.gov" }]
+maintainers = [{ name = "Eli Holmes", email = "eli.holmes@noaa.gov" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
