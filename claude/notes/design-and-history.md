@@ -493,7 +493,7 @@ stride. The NcML `%` entity was already right (#64); a test now guards it.
   it touches csv (as written), json (only fractional precisions are kept, see
   `TableWriterJson`), `onlyValue`, the coverage globals and the times in
   error messages, and none of the first 150 datasets of coastwatch.pfeg and ioos
-  sets it in its DAS. Asked of EH in the PR (#71).
+  sets it in its DAS. **EH (2026-10-09): no, not for now.**
 - **`calendar` comes back only for Gregorian-family calendars** (`standard`,
   `gregorian`, `proleptic_gregorian`) on a decoded datetime axis. A converted
   model calendar keeps none (#60: the served values are no longer in that

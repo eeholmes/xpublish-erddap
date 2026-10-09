@@ -94,7 +94,7 @@ A real ERDDAP's rules are not all client requirements:
 - Strictly monotonic axes: **not** loosenable. Value constraints are nearest
   matches and are ambiguous on duplicate/unsorted axes (`strict_axes`).
 
-The validator (#14) should check the client rules, not all of ERDDAP's.
+The validator (was #14, now in another repo) should check the client rules, not all of ERDDAP's.
 
 ## Steps
 
