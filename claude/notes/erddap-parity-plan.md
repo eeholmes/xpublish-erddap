@@ -18,6 +18,35 @@ How to use what it built:
 - The weekly `parity.yml` workflow has **not run yet** (first run: the
   Monday after the merge, or start it by hand).
 
+## More cases from coastwatch.noaa.gov (#68, 2026-10-09)
+
+Four datasets on `coastwatch.noaa.gov/erddap` (2.31) and the server's own
+15-column search header were added (10 cases now): the static 4-D
+`noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol`, `noaacwNPPVIIRSSQchlaMonthly`
+(fixed date, and the search header), `noaacwBLENDEDNRTcurrentsDaily` (two data
+variables in one request) and `noaacrwdhwDaily` (`.dds`/`.das` only: Byte,
+netCDF-C cannot read it over OPeNDAP). Every difference they showed is an item
+on #71 and is `KNOWN` with that reason; the entries leave when #71's fixes
+merge. Capture artifacts found and handled, so the next case does not trip on them:
+
+- **`history`**: ERDDAP's DAS and `.nc` add a `history` of request lines to a
+  dataset that has none. `capture.repair_text` drops a `history` that the
+  info table does not list, and `compare.normalise_text` / `_attrs` drop one
+  that is empty once the request lines are stripped.
+- **`_ChunkSizes`** arrives as int32 over OPeNDAP; `repair_text` casts
+  attributes the info table types as unsigned back to that type.
+- **`_FillValue`**: xarray writes a NaN `_FillValue` on a float variable that
+  has none, so the snapshot grew one the source lacks (the climatology's `sst`
+  has only `missing_value`). `snapshot._keep_encoding` now says "none".
+- **Dataset attributes that name the real server** (`infoUrl`, `publisher_url`,
+  the license's citation link) are replaced by `{SERVER}` on the real side;
+  our side now normalises with both our root and the real server's.
+  `normalise_text`/`comparable`/`dataset_table` accept a tuple of roots.
+- The existing goldens were not recaptured, so they still carry the old
+  snapshot; recapturing them should change nothing.
+- `noaacwBLENDEDNRTcurrentsDaily` is near-real-time: `time_coverage_end` and
+  the time `nValues` move, so the weekly drift report will flag it.
+
 ## What "client code" means here
 
 The target users have ERDDAP code they already run. The examples EH gave:

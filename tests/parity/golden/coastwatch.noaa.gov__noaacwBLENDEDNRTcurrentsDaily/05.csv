@@ -1,0 +1,4 @@
+time,latitude,longitude,u_current,v_current
+UTC,degrees_north,degrees_east,m/s,m/s
+2020-01-01T00:00:00Z,21.625,-158.125,0.0044,-0.0989
+2020-01-01T00:00:00Z,21.625,-157.875,-0.0679,-0.22030000000000002

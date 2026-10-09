@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<netcdf xmlns="https://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2" location="https://coastwatch.noaa.gov/griddap/noaacwNPPVIIRSSQchlaMonthly">
+  <attribute name="cdm_data_type" value="Grid" />
+  <attribute name="comment" value="This is science quality data." />
+  <attribute name="Conventions" value="CF-1.6, COARDS, ACDD-1.3" />
+  <attribute name="creator_email" value="coastwatch.info@noaa.gov" />
+  <attribute name="creator_name" value="NOAA CoastWatch" />
+  <attribute name="creator_type" value="institution" />
+  <attribute name="creator_url" value="https://coastwatch.noaa.gov" />
+  <attribute name="Easternmost_Easting" type="double" value="179.98125" />
+  <attribute name="geospatial_lat_max" type="double" value="89.75625" />
+  <attribute name="geospatial_lat_min" type="double" value="-89.75625" />
+  <attribute name="geospatial_lat_resolution" type="double" value="0.0375" />
+  <attribute name="geospatial_lat_units" value="degrees_north" />
+  <attribute name="geospatial_lon_max" type="double" value="179.98125" />
+  <attribute name="geospatial_lon_min" type="double" value="-179.98125" />
+  <attribute name="geospatial_lon_resolution" type="double" value="0.0375" />
+  <attribute name="geospatial_lon_units" value="degrees_east" />
+  <attribute name="geospatial_vertical_max" type="double" value="0.0" />
+  <attribute name="geospatial_vertical_min" type="double" value="0.0" />
+  <attribute name="geospatial_vertical_positive" value="up" />
+  <attribute name="geospatial_vertical_units" value="m" />
+  <attribute name="grid_mapping_name" value="latitude_longitude" />
+  <attribute name="history" value="Sun Sep 20 01:55:01 2026
+: /data/data652/coastwatch/oc/L3/scripts/bin/nccomposite -M gmean -T Month -m chlor_a /data/data652/coastwatch/oc/L3/scripts/config/chlor_a_comp_config.input /data/aftp/socd1/mecb/coastwatch/viirs/science/L3/global/chlora/monthly/WW00/V2026213_2026243_F31_WW00_chlora.nc" />
+  <attribute name="id" value="noaacwNPPVIIRSSQchlaMonthly" />
+  <attribute name="identifier_product_doi" value="https://dx.doi.org" />
+  <attribute name="identifier_product_doi_authority" value="https://dx.doi.org" />
+  <attribute name="infoUrl" value="https://coastwatch.noaa.gov/cw/satellite-data-products/ocean-color/science-quality/viirs-snpp.html" />
+  <attribute name="institution" value="NOAA NESDIS CoastWatch" />
+  <attribute name="instrument" value="VIIRS" />
+  <attribute name="keywords" value="algorithm, altitude, chemistry, chlor_a, chlorophyll, color, concentration, data, default, Earth Science  &gt; Oceans  &gt; Ocean Chemistry  &gt; Chlorophyll, image, imager, imager/radiometer, imaging, infrared, L3, latitude, level, level-3, longitude, mapped, mass, mass_concentration_of_chlorophyll_a_in_sea_water, monthly, national, npp, ocean, ocean color, oceans, Oceans  &gt; Ocean Optics  &gt; Ocean Color, optics, orbiting, partnership, polar, polar-orbiting, radiometer, sea, seawater, smi, standard, star, suite, suite/suomi-npp, suomi, time, VIIRS, viirs, viirs-n, visible, water, ww00" />
+  <attribute name="keywords_vocabulary" value="GCMD Science Keywords" />
+  <attribute name="l2_flag_names" value="ATMFAIL,LAND,HIGLINT,BADLT,HISATZEN,CLOUD,HISOLZEN,CHLFAIL,NAVWARN,CLDSHDSTL,ALGICE,SEAICE,NAVFAIL,NEGLRC" />
+  <attribute name="license" value="https://science.nasa.gov/earth-science/earth-science-data/data-information-policy/
+The data may be used and redistributed for free but is not intended
+for legal use, since it may contain inaccuracies. Neither the data
+Contributor, ERD, NOAA, nor the United States Government, nor any
+of their employees or contractors, makes any warranty, express or
+implied, including warranties of merchantability and fitness for a
+particular purpose, or assumes any legal liability for the accuracy,
+completeness, or usefulness, of this information.
+
+Please acknowledge the use of these data with the following statement: &quot;These data were provided by NOAA&#39;s Center for Satellite Applications  and  Research (STAR) and the CoastWatch program.&quot; To reference these data as a citation in a paper, please follow the instructions in the license and at this link: https://coastwatch.noaa.gov/erddap/information.html#citeDataset" />
+  <attribute name="map_projection" value="geographic" />
+  <attribute name="measure" value="Mean" />
+  <attribute name="naming_authority" value="gov.noaa.coastwatch" />
+  <attribute name="Northernmost_Northing" type="double" value="89.75625" />
+  <attribute name="platform" value="Suomi-NPP" />
+  <attribute name="processing_level" value="L3 Mapped" />
+  <attribute name="processing_version" value="Unspecified" />
+  <attribute name="product_name" value="NOAA S-NPP VIIRS ocean color products from CoastWatch" />
+  <attribute name="project" value="Ocean Color Science Team (NOAA/NESDIS/STAR/OCST)" />
+  <attribute name="publisher_email" value="coastwatch.info@noaa.gov" />
+  <attribute name="publisher_name" value="NOAA CoastWatch Central" />
+  <attribute name="publisher_type" value="group" />
+  <attribute name="publisher_url" value="https://coastwatch.noaa.gov/erddap/" />
+  <attribute name="references" value="O and #39;Reilly J. E. et al. (1998), Ocean color chlorophyll algorithms for SeaWiFS, J. Geophys. Res., 103(C11), 2493724953" />
+  <attribute name="Satellite" value="Suomi-NPP" />
+  <attribute name="Sensor" value="VIIRS" />
+  <attribute name="source" value="Satellite observations from VIIRS ocean color sensor" />
+  <attribute name="sourceUrl" value="(local files)" />
+  <attribute name="Southernmost_Northing" type="double" value="-89.75625" />
+  <attribute name="spatialResolution" value="4.17 km" />
+  <attribute name="standard_name_vocabulary" value="CF Standard Name Table v29" />
+  <attribute name="summary" value="Level-3 Standard Mapped Image (SMI), Global, 4km, Chlorophyll, Monthly composite data from the Visible and Infrared Imager/Radiometer Suite (VIIRS). These are science quality data with a 15-day latency. The data, processed by the NOAA/STAR Ocean Color Team, are produced from MSL12 v1.2 using OC-SDR v04 and were release by CoastWatch as of 2017-08-07. VIIRS is a multi-disciplinary instrument that flies on the Suomi-NPP (National Polar-orbiting Partnership) satellite and is the successor to MODIS. Suomi-NPP is the initial spacecraft in the JPSS (Joint Polar Satellite Systems) series of spacecraft. JPSS is our Nation&#39;s next generation polar-orbiting operational environmental satellite system. JPSS is a collaborative program between NOAA and its acquisition agent NASA." />
+  <attribute name="temporal_range" value="Month" />
+  <attribute name="testOutOfDate" value="now-33days" />
+  <attribute name="time_coverage_end" value="2026-08-01T12:00:00Z" />
+  <attribute name="time_coverage_resolution" value="PM1" />
+  <attribute name="time_coverage_start" value="2012-01-02T12:00:00Z" />
+  <attribute name="title" value="Chlorophyll, NOAA S-NPP VIIRS, Science Quality, Global 4km, Level 3, 2012-present, Monthly" />
+  <attribute name="Westernmost_Easting" type="double" value="-179.98125" />
+  <dimension name="time" length="172" />
+  <dimension name="altitude" length="1" />
+  <dimension name="latitude" length="4788" />
+  <dimension name="longitude" length="9600" />
+  <variable name="time" shape="time" type="double">
+    <attribute name="_CoordinateAxisType" value="Time" />
+    <attribute name="actual_range" type="double" value="1.3255056E9 1.7855856E9" />
+    <attribute name="axis" value="T" />
+    <attribute name="calendar" value="gregorian" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Time" />
+    <attribute name="long_name" value="Centered Time" />
+    <attribute name="standard_name" value="time" />
+    <attribute name="time_origin" value="01-JAN-1970 00:00:00" />
+    <attribute name="units" value="seconds since 1970-01-01T00:00:00Z" />
+  </variable>
+  <variable name="altitude" shape="altitude" type="double">
+    <attribute name="_CoordinateAxisType" value="Height" />
+    <attribute name="_CoordinateZisPositive" value="up" />
+    <attribute name="actual_range" type="double" value="0.0 0.0" />
+    <attribute name="axis" value="Z" />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Altitude" />
+    <attribute name="positive" value="up" />
+    <attribute name="standard_name" value="altitude" />
+    <attribute name="units" value="m" />
+  </variable>
+  <variable name="latitude" shape="latitude" type="double">
+    <attribute name="_CoordinateAxisType" value="Lat" />
+    <attribute name="actual_range" type="double" value="-89.75625 89.75625" />
+    <attribute name="axis" value="Y" />
+    <attribute name="comment" value="The latitude values are the centers of the grid cells." />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Latitude" />
+    <attribute name="standard_name" value="latitude" />
+    <attribute name="units" value="degrees_north" />
+    <attribute name="valid_max" type="double" value="90.0" />
+    <attribute name="valid_min" type="double" value="-90.0" />
+  </variable>
+  <variable name="longitude" shape="longitude" type="double">
+    <attribute name="_CoordinateAxisType" value="Lon" />
+    <attribute name="actual_range" type="double" value="-179.98125 179.98125" />
+    <attribute name="axis" value="X" />
+    <attribute name="comment" value="The longitude values are the centers of the grid cells." />
+    <attribute name="coverage_content_type" value="coordinate" />
+    <attribute name="ioos_category" value="Location" />
+    <attribute name="long_name" value="Longitude" />
+    <attribute name="standard_name" value="longitude" />
+    <attribute name="units" value="degrees_east" />
+    <attribute name="valid_max" type="double" value="180.0" />
+    <attribute name="valid_min" type="double" value="-180.0" />
+  </variable>
+  <variable name="chlor_a" shape="time altitude latitude longitude" type="float">
+    <attribute name="_FillValue" type="float" value="-999.0" />
+    <attribute name="C_format" value="&#37;.4g" />
+    <attribute name="cell_methods" value="time:mean(interval:1 month)" />
+    <attribute name="colorBarMaximum" type="double" value="30.0" />
+    <attribute name="colorBarMinimum" type="double" value="0.03" />
+    <attribute name="colorBarScale" value="Log" />
+    <attribute name="coverage_content_type" value="physicalMeasurement" />
+    <attribute name="grid_mapping" value="coord_ref" />
+    <attribute name="ioos_category" value="Ocean Color" />
+    <attribute name="long_name" value="Chlorophyll Concentration, Default Algorithm" />
+    <attribute name="references" value="O and #39;Reilly J. E. et al. (1998), Ocean color chlorophyll algorithms for SeaWiFS, J. Geophys. Res., 103(C11), 2493724953" />
+    <attribute name="standard_name" value="mass_concentration_of_chlorophyll_a_in_sea_water" />
+    <attribute name="units" value="mg m^-3" />
+    <attribute name="valid_max" type="float" value="100.0" />
+    <attribute name="valid_min" type="float" value="0.001" />
+  </variable>
+</netcdf>

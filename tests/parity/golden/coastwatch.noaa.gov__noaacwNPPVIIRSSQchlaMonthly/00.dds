@@ -1,0 +1,15 @@
+Dataset {
+  Float64 time[time = 172];
+  Float64 altitude[altitude = 1];
+  Float64 latitude[latitude = 4788];
+  Float64 longitude[longitude = 9600];
+  GRID {
+    ARRAY:
+      Float32 chlor_a[time = 172][altitude = 1][latitude = 4788][longitude = 9600];
+    MAPS:
+      Float64 time[time = 172];
+      Float64 altitude[altitude = 1];
+      Float64 latitude[latitude = 4788];
+      Float64 longitude[longitude = 9600];
+  } chlor_a;
+} noaacwNPPVIIRSSQchlaMonthly;

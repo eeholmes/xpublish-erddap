@@ -1,0 +1,15 @@
+Dataset {
+  Float64 sevenDayPeriodOfYear[sevenDayPeriodOfYear = 52];
+  Float64 level[level = 1];
+  Float64 latitude[latitude = 3885];
+  Float64 longitude[longitude = 4074];
+  GRID {
+    ARRAY:
+      Float32 sst[sevenDayPeriodOfYear = 52][level = 1][latitude = 3885][longitude = 4074];
+    MAPS:
+      Float64 sevenDayPeriodOfYear[sevenDayPeriodOfYear = 52];
+      Float64 level[level = 1];
+      Float64 latitude[latitude = 3885];
+      Float64 longitude[longitude = 4074];
+  } sst;
+} noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol;

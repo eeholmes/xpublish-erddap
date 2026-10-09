@@ -73,6 +73,7 @@ ADVANCED = "search/advanced.csv?page=1&itemsPerPage=1000&protocol=griddap"
 OCEANWATCH = "https://oceanwatch.pifsc.noaa.gov/erddap"
 IOOS = "https://erddap.ioos.us/erddap"
 COASTWATCH = "https://coastwatch.pfeg.noaa.gov/erddap"
+COASTWATCH_NOAA = "https://coastwatch.noaa.gov/erddap"
 PACIOOS = "https://pae-paha.pacioos.hawaii.edu/erddap"
 
 CASES = [
@@ -283,5 +284,59 @@ CASES = [
             "CRW_BAA[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
             "CRW_BAA_mask[(2020-01-01)][(21.45):1:(21.6)][(-158.1):1:(-157.9)]",
         ],
+    ),
+    # coastwatch.noaa.gov (ERDDAP 2.31), cases from #68. A static 4-D set:
+    # descending latitude, a one-value ``level``, and a leading axis that is
+    # not time (``sevenDayPeriodOfYear``).
+    Case(
+        COASTWATCH_NOAA,
+        "noaacwecnAVHRRVIIRSmultiSSTeastcoast7DayClimatol",
+        queries=[
+            "sst[(10)][0][(38):1:(37.99)][(-74):1:(-73.99)]",
+        ],
+        extra=[
+            "griddap/{id}.csv?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
+            "griddap/{id}.nc?latitude[0:1:2],sevenDayPeriodOfYear[0:1:0]",
+            # level (5) is off its one-value axis: 404, as in ERDDAP
+            "griddap/{id}.csv?sst[(10)][(5)][(38)][(-74)]",
+        ],
+    ),
+    # 4-D with a time axis and ``altitude``, and a ``calendar`` attribute. A
+    # fixed date, not ``last``, so the capture does not drift. The box is open
+    # ocean off Oahu, so most cells hold data.
+    Case(
+        COASTWATCH_NOAA,
+        "noaacwNPPVIIRSSQchlaMonthly",
+        queries=[
+            "chlor_a[(2020-01-16)][(0.0)][(21.05):1:(21.0)][(-158.5):1:(-158.45)]",
+        ],
+        extra=[
+            "griddap/{id}.csv?latitude[0:1:3],time[0:1:1],altitude",
+        ],
+        # ERDDAP's own 15-column table header, from the server EH took the
+        # columns from.
+        catalog=[
+            "search/index.csv?searchFor=noaacwNPPVIIRSSQchlaMonthly",
+        ],
+    ),
+    # Two data variables in one request: a regression guard.
+    Case(
+        COASTWATCH_NOAA,
+        "noaacwBLENDEDNRTcurrentsDaily",
+        queries=[
+            "u_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]"
+            ",v_current[(2020-01-01)][(21.5):1:(21.6)][(-158.1):1:(-158.0)]",
+        ],
+    ),
+    # Byte + _Unsigned (#64): the descriptions only, since netCDF-C cannot
+    # read the Byte variable over OPeNDAP.
+    Case(
+        COASTWATCH_NOAA,
+        "noaacrwdhwDaily",
+        extra=[
+            "griddap/{id}.dds",
+            "griddap/{id}.das",
+        ],
+        metadata=False,
     ),
 ]
