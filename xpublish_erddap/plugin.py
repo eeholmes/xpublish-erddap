@@ -467,7 +467,6 @@ ROUTE_PARAMS = {"ext", "erddap_id", "target", "group_path", "attribute", "value"
 CONVERT_DISABLED = 'The "convert" system has been disabled on this ERDDAP.'
 
 
-
 def root_of(request: Request, route_path: str) -> str:
     """The public URL of the ERDDAP root that answered ``request``.
 
