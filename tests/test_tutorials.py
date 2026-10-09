@@ -30,6 +30,15 @@ pytestmark = pytest.mark.skipif(
     reason="Live server tests are unreliable on Windows Github Actions workers",
 )
 
+# erddapy 3.1.0 (the CI job "erddapy-3.1") reads the dimension ranges with
+# pandas.read_csv and keeps numbers: ``latitude_step`` is the int 1 and the
+# bounds are np.float64 (the C parser's fast float conversion turns
+# 359.91999999999996 into 359.92). Current erddapy keeps the strings of the
+# ``.ncml`` / DAS values, as in the erddapy docs. Both are erddapy's own
+# behavior, not the server's, so the exact-string assertions apply only to
+# the string-keeping versions and the old ones are compared numerically.
+OLD_ERDDAPY_NUMBERS = tuple(int(x) for x in erddapy.__version__.split(".")[:2]) < (3, 2)
+
 ORIGINAL = "https://oceanwatch.pifsc.noaa.gov/erddap"
 
 
@@ -111,7 +120,7 @@ def test_erddapy_griddap_example_defaults(etopo):
     These are the strings the erddapy docs show for the real server.
     """
     assert etopo.variables == ["ROSE"]
-    assert etopo.constraints == {
+    expected = {
         "latitude>=": "-90.0",
         "latitude<=": "90.0",
         "latitude_step": "1",
@@ -119,6 +128,12 @@ def test_erddapy_griddap_example_defaults(etopo):
         "longitude<=": "359.91999999999996",
         "longitude_step": "1",
     }
+    if OLD_ERDDAPY_NUMBERS:
+        assert etopo.constraints.keys() == expected.keys()
+        for key, value in expected.items():
+            assert float(etopo.constraints[key]) == pytest.approx(float(value))
+    else:
+        assert etopo.constraints == expected
 
 
 def test_erddapy_griddap_example_download(etopo):
@@ -160,8 +175,8 @@ def test_erddapy_griddap_page_exactly(etopo):
     assert etopo.to_xarray().ROSE.shape == (217, 432)
 
     etopo.griddap_initialize()
-    assert etopo.constraints["latitude_step"] == "1"
-    assert etopo.constraints["longitude_step"] == "1"
+    assert str(etopo.constraints["latitude_step"]) == "1"
+    assert str(etopo.constraints["longitude_step"]) == "1"
 
     etopo.constraints.update(
         {
